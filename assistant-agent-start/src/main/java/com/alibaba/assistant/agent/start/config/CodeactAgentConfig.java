@@ -364,7 +364,7 @@ public class CodeactAgentConfig {
                 .codingChatModel(chatModel)
 				.language(Language.PYTHON)     // CodeactAgentBuilder特有方法
 				// 使用 qwen-coder-plus 模型进行代码生成
-				.codeGenerationModelName("aliyun-qwen3-coder-plus")
+				.codeGenerationModelName("qwen3-coder-plus")
 				.enableInitialCodeGen(true)
 				.allowIO(false)
 				.allowNativeAccess(false)
