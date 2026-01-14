@@ -1,0 +1,6 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: 使用问题 / Q&A
+    url: https://github.com/<OWNER>/<REPO>/discussions
+    about: 使用咨询、安装问题、如何配置等，请优先在 Discussions 提问。

@@ -1,47 +1,55 @@
 ---
-name: Bug Report
-about: Report a bug to help us improve
+name: 缺陷报告 (Bug)
+about: 提交缺陷以帮助我们改进
 title: '[BUG] '
 labels: bug
 assignees: ''
 ---
 
-## Bug Description
+## 修复方式（必选）
 
-A clear and concise description of what the bug is.
+你希望这个问题如何被解决？（请勾选一项）
 
-## Steps to Reproduce
+- [ ] 需要维护者修复（我暂时无法提交 PR）
+- [ ] 我可以自行修复并提交 PR
+- [ ] 不确定 / 需要讨论
 
-1. Go to '...'
-2. Configure '...'
-3. Call method '...'
-4. See error
+## 缺陷描述
 
-## Expected Behavior
+请用简洁清晰的语言描述问题现象。
 
-A clear and concise description of what you expected to happen.
+## 复现步骤
 
-## Actual Behavior
+1. 进入 '...'
+2. 配置 '...'
+3. 调用方法 '...'
+4. 看到错误
 
-What actually happened.
+## 期望行为
 
-## Environment
+你期望发生什么？
 
-- **OS**: [e.g., macOS 14.0, Ubuntu 22.04]
-- **Java Version**: [e.g., OpenJDK 17.0.2]
-- **Assistant Agent Version**: [e.g., 1.0.0]
-- **Spring Boot Version**: [e.g., 3.4.0]
+## 实际行为
 
-## Logs/Stack Trace
+实际发生了什么？
+
+## 环境信息
+
+- **操作系统**: [例如 macOS 14.0, Ubuntu 22.04]
+- **Java 版本**: [例如 OpenJDK 17.0.2]
+- **Assistant Agent 版本**: [例如 1.0.0]
+- **Spring Boot 版本**: [例如 3.4.0]
+
+## 日志/堆栈
 
 ```
-Paste relevant logs or stack trace here
+请粘贴相关日志或堆栈信息（注意去除敏感信息）
 ```
 
-## Configuration
+## 配置
 
 ```yaml
-# Relevant configuration (remove sensitive data)
+# 相关配置（请去除敏感信息）
 spring:
   ai:
     alibaba:
@@ -50,11 +58,10 @@ spring:
           # ...
 ```
 
-## Additional Context
+## 额外上下文
 
-Add any other context about the problem here.
+补充任何其他有助于定位问题的信息（例如：相关链接、截图、录屏、最小复现仓库等）。
 
-## Possible Solution (optional)
+## 可能的解决方案（可选）
 
-If you have an idea of what might be causing this or how to fix it.
-
+如果你已经有初步排查结果或修复思路，请写在这里；如果你愿意提交 PR，也可以说明预计修改点/模块。
