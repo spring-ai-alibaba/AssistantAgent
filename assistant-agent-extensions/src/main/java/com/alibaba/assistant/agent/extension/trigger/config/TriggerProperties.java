@@ -111,7 +111,17 @@ public class TriggerProperties {
 		/**
 		 * 执行超时时间（毫秒），0表示不限制
 		 */
-		private long executionTimeout = 0;
+		private long executionTimeout = 30000;
+
+		/**
+		 * 是否允许IO操作
+		 */
+		private boolean allowIO = false;
+
+		/**
+		 * 是否允许本地访问
+		 */
+		private boolean allowNativeAccess = false;
 
 		public int getDefaultMaxRetries() {
 			return defaultMaxRetries;
@@ -135,6 +145,22 @@ public class TriggerProperties {
 
 		public void setExecutionTimeout(long executionTimeout) {
 			this.executionTimeout = executionTimeout;
+		}
+
+		public boolean isAllowIO() {
+			return allowIO;
+		}
+
+		public void setAllowIO(boolean allowIO) {
+			this.allowIO = allowIO;
+		}
+
+		public boolean isAllowNativeAccess() {
+			return allowNativeAccess;
+		}
+
+		public void setAllowNativeAccess(boolean allowNativeAccess) {
+			this.allowNativeAccess = allowNativeAccess;
 		}
 
 	}

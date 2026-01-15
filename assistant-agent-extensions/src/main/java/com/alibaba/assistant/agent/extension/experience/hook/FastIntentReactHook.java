@@ -12,6 +12,8 @@ import com.alibaba.assistant.agent.extension.experience.spi.ExperienceProvider;
 import com.alibaba.cloud.ai.graph.KeyStrategy;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
+import com.alibaba.assistant.agent.common.hook.AgentPhase;
+import com.alibaba.assistant.agent.common.hook.HookPhases;
 import com.alibaba.cloud.ai.graph.agent.hook.AgentHook;
 import com.alibaba.cloud.ai.graph.agent.hook.HookPosition;
 import com.alibaba.cloud.ai.graph.agent.hook.HookPositions;
@@ -42,6 +44,7 @@ import java.util.concurrent.CompletableFuture;
  *     <li>设置 jump_to=tool 以跳过本轮 model 调用，直接进入 tool 执行</li>
  * </ul>
  */
+@HookPhases(AgentPhase.REACT)
 @HookPositions(HookPosition.BEFORE_AGENT)
 public class FastIntentReactHook extends AgentHook {
 

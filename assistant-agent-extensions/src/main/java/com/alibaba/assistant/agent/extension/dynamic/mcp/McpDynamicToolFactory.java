@@ -133,8 +133,11 @@ public class McpDynamicToolFactory implements DynamicCodeactToolFactory {
 	/**
 	 * 从 ToolCallback 创建 CodeactTool。
 	 *
-	 * <p>类名使用配置的 server 名称转换后的结果。
-	 * 方法名使用工具原始名称归一化后的结果。
+	 * <p>类名和方法名的确定逻辑：
+	 * <ol>
+	 *   <li>如果 callback 实现了 {@link McpServerAwareToolCallback}，使用其提供的 serverName 和 toolName</li>
+	 *   <li>否则使用配置的 serverSpecs 或默认前缀</li>
+	 * </ol>
 	 */
 	private CodeactTool createToolFromCallback(ToolCallback callback, ObjectMapper objectMapper,
 			NameNormalizer nameNormalizer) {
@@ -148,13 +151,30 @@ public class McpDynamicToolFactory implements DynamicCodeactToolFactory {
 		String targetClassName = nameNormalizer.normalizeClassName(defaultTargetClassNamePrefix);
 		String targetClassDescription = defaultTargetClassDescription;
 
-		// 如果有自定义的 serverSpecs，尝试匹配
-		for (Map.Entry<String, McpServerSpec> entry : serverSpecs.entrySet()) {
-			McpServerSpec spec = entry.getValue();
-			// 使用 serverSpec 中的名称
-			targetClassName = nameNormalizer.normalizeClassName(spec.getServerName());
-			targetClassDescription = spec.getDescription();
-			break;  // 目前只支持单个 server，使用第一个
+		// 优先检查是否实现了 McpServerAwareToolCallback 接口
+		if (callback instanceof McpServerAwareToolCallback serverAwareCallback) {
+			String serverName = serverAwareCallback.getServerName();
+			String displayName = serverAwareCallback.getServerDisplayName();
+
+			if (serverName != null && !serverName.isEmpty()) {
+				targetClassName = nameNormalizer.normalizeClassName(serverName);
+				targetClassDescription = displayName != null ? displayName : serverName;
+				// 使用原始工具名而不是 ToolDefinition 中的名称
+				toolName = serverAwareCallback.getToolName();
+
+				logger.debug("McpDynamicToolFactory#createToolFromCallback - reason=从McpServerAwareToolCallback获取服务器信息, " +
+						"serverName={}, toolName={}", serverName, toolName);
+			}
+		}
+		// 如果有自定义的 serverSpecs，尝试匹配（作为后备方案）
+		else if (!serverSpecs.isEmpty()) {
+			for (Map.Entry<String, McpServerSpec> entry : serverSpecs.entrySet()) {
+				McpServerSpec spec = entry.getValue();
+				// 使用 serverSpec 中的名称
+				targetClassName = nameNormalizer.normalizeClassName(spec.getServerName());
+				targetClassDescription = spec.getDescription();
+				break;  // 目前只支持单个 server，使用第一个
+			}
 		}
 
 		// 方法名：使用工具原始名称归一化后的结果

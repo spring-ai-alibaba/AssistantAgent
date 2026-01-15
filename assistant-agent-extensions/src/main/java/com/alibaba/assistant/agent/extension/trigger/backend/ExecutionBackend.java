@@ -16,6 +16,7 @@
 
 package com.alibaba.assistant.agent.extension.trigger.backend;
 
+import com.alibaba.assistant.agent.extension.trigger.executor.TriggerExecutionCallback;
 import com.alibaba.assistant.agent.extension.trigger.model.TriggerDefinition;
 
 /**
@@ -56,6 +57,16 @@ public interface ExecutionBackend {
 	 * @return true表示正在运行
 	 */
 	boolean isRunning(String backendTaskId);
+
+	/**
+	 * 设置执行回调
+	 * 用于在调度触发时执行实际的触发器逻辑
+	 *
+	 * @param callback 执行回调
+	 */
+	default void setExecutionCallback(TriggerExecutionCallback callback) {
+		// 默认空实现，子类可覆盖
+	}
 
 }
 

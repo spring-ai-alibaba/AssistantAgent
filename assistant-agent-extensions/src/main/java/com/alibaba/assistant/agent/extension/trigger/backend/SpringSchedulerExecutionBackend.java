@@ -16,10 +16,12 @@
 
 package com.alibaba.assistant.agent.extension.trigger.backend;
 
+import com.alibaba.assistant.agent.extension.trigger.executor.TriggerExecutionCallback;
 import com.alibaba.assistant.agent.extension.trigger.model.ExecutionStatus;
 import com.alibaba.assistant.agent.extension.trigger.model.ScheduleMode;
 import com.alibaba.assistant.agent.extension.trigger.model.TriggerDefinition;
 import com.alibaba.assistant.agent.extension.trigger.model.TriggerExecutionRecord;
+import com.alibaba.assistant.agent.extension.trigger.model.TriggerExecutionResult;
 import com.alibaba.assistant.agent.extension.trigger.repository.TriggerExecutionLogRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +53,11 @@ public class SpringSchedulerExecutionBackend implements ExecutionBackend {
 
 	private final Map<String, TriggerDefinition> taskDefinitions = new ConcurrentHashMap<>();
 
+	/**
+	 * 执行回调 - 用于实际执行触发器逻辑
+	 */
+	private TriggerExecutionCallback executionCallback;
+
 	public SpringSchedulerExecutionBackend(TaskScheduler taskScheduler,
 			TriggerExecutionLogRepository executionLogRepository) {
 		this.taskScheduler = taskScheduler;
@@ -58,8 +65,14 @@ public class SpringSchedulerExecutionBackend implements ExecutionBackend {
 	}
 
 	@Override
+	public void setExecutionCallback(TriggerExecutionCallback callback) {
+		this.executionCallback = callback;
+		log.info("SpringSchedulerExecutionBackend setExecutionCallback 设置执行回调");
+	}
+
+	@Override
 	public String schedule(TriggerDefinition definition) {
-		log.info("SpringSchedulerExecutionBackend.schedule 注册调度任务: triggerId={}, scheduleMode={}",
+		log.info("SpringSchedulerExecutionBackend schedule 注册调度任务, triggerId={}, scheduleMode={}",
 				definition.getTriggerId(), definition.getScheduleMode());
 
 		String backendTaskId = generateTaskId(definition);
@@ -70,21 +83,21 @@ public class SpringSchedulerExecutionBackend implements ExecutionBackend {
 		ScheduledFuture<?> scheduledFuture = scheduleByMode(definition, task);
 		scheduledTasks.put(backendTaskId, scheduledFuture);
 
-		log.info("SpringSchedulerExecutionBackend.schedule 调度任务注册成功: backendTaskId={}", backendTaskId);
+		log.info("SpringSchedulerExecutionBackend schedule 调度任务注册成功, backendTaskId={}", backendTaskId);
 		return backendTaskId;
 	}
 
 	@Override
 	public void cancel(String backendTaskId) {
-		log.info("SpringSchedulerExecutionBackend.cancel 取消调度任务: backendTaskId={}", backendTaskId);
+		log.info("SpringSchedulerExecutionBackend cancel 取消调度任务, backendTaskId={}", backendTaskId);
 
 		ScheduledFuture<?> future = scheduledTasks.remove(backendTaskId);
 		if (future != null) {
 			future.cancel(false);
-			log.info("SpringSchedulerExecutionBackend.cancel 任务已取消: backendTaskId={}", backendTaskId);
+			log.info("SpringSchedulerExecutionBackend cancel 任务已取消, backendTaskId={}", backendTaskId);
 		}
 		else {
-			log.warn("SpringSchedulerExecutionBackend.cancel 任务不存在: backendTaskId={}", backendTaskId);
+			log.warn("SpringSchedulerExecutionBackend cancel 任务不存在, backendTaskId={}", backendTaskId);
 		}
 
 		taskDefinitions.remove(backendTaskId);
@@ -102,22 +115,22 @@ public class SpringSchedulerExecutionBackend implements ExecutionBackend {
 
 		switch (mode) {
 			case CRON:
-				log.debug("SpringSchedulerExecutionBackend.scheduleByMode CRON调度: expression={}", scheduleValue);
+				log.debug("SpringSchedulerExecutionBackend scheduleByMode CRON调度, expression={}", scheduleValue);
 				return taskScheduler.schedule(task, new CronTrigger(scheduleValue));
 
 			case FIXED_DELAY:
 				long fixedDelay = parseDuration(scheduleValue);
-				log.debug("SpringSchedulerExecutionBackend.scheduleByMode FIXED_DELAY调度: delay={}ms", fixedDelay);
+				log.debug("SpringSchedulerExecutionBackend scheduleByMode FIXED_DELAY调度, delay={}ms", fixedDelay);
 				return taskScheduler.scheduleWithFixedDelay(task, Duration.ofMillis(fixedDelay));
 
 			case FIXED_RATE:
 				long fixedRate = parseDuration(scheduleValue);
-				log.debug("SpringSchedulerExecutionBackend.scheduleByMode FIXED_RATE调度: rate={}ms", fixedRate);
+				log.debug("SpringSchedulerExecutionBackend scheduleByMode FIXED_RATE调度, rate={}ms", fixedRate);
 				return taskScheduler.scheduleAtFixedRate(task, Duration.ofMillis(fixedRate));
 
 			case ONE_TIME:
 				Instant executeTime = parseInstant(scheduleValue);
-				log.debug("SpringSchedulerExecutionBackend.scheduleByMode ONE_TIME调度: time={}", executeTime);
+				log.debug("SpringSchedulerExecutionBackend scheduleByMode ONE_TIME调度, time={}", executeTime);
 				return taskScheduler.schedule(task, executeTime);
 
 			default:
@@ -127,7 +140,7 @@ public class SpringSchedulerExecutionBackend implements ExecutionBackend {
 
 	private void executeTask(String backendTaskId, TriggerDefinition definition) {
 		String executionId = UUID.randomUUID().toString();
-		log.info("SpringSchedulerExecutionBackend.executeTask 开始执行任务: executionId={}, triggerId={}",
+		log.info("SpringSchedulerExecutionBackend executeTask 开始执行任务, executionId={}, triggerId={}",
 				executionId, definition.getTriggerId());
 
 		// 创建执行记录
@@ -139,18 +152,46 @@ public class SpringSchedulerExecutionBackend implements ExecutionBackend {
 		executionLogRepository.save(record);
 
 		try {
-			// TODO: 实际执行业务逻辑
-			// 这里需要集成CodeAct的执行能力
-			log.info("SpringSchedulerExecutionBackend.executeTask 执行函数: function={}, params={}",
-					definition.getExecuteFunction(), definition.getParameters());
+			// 使用执行回调执行触发器
+			if (executionCallback != null) {
+				log.info("SpringSchedulerExecutionBackend executeTask 使用回调执行触发器, triggerId={}",
+						definition.getTriggerId());
 
-			// 模拟执行成功
-			executionLogRepository.updateStatus(executionId, ExecutionStatus.SUCCESS, null, null);
-			log.info("SpringSchedulerExecutionBackend.executeTask 任务执行成功: executionId={}", executionId);
+				TriggerExecutionResult result = executionCallback.execute(definition);
+
+				// 根据执行结果更新记录
+				if (result.getExecutionSuccess() != null && result.getExecutionSuccess()) {
+					// 将执行结果包装为Map
+					Map<String, Object> outputSummary = null;
+					if (result.getExecutionResult() != null) {
+						outputSummary = new java.util.HashMap<>();
+						outputSummary.put("result", result.getExecutionResult());
+					}
+					executionLogRepository.updateStatus(executionId, ExecutionStatus.SUCCESS,
+							null, outputSummary);
+					log.info("SpringSchedulerExecutionBackend executeTask 任务执行成功, executionId={}", executionId);
+				}
+				else {
+					executionLogRepository.updateStatus(executionId, ExecutionStatus.FAILED,
+							result.getErrorMessage(), null);
+					log.warn("SpringSchedulerExecutionBackend executeTask 任务执行失败, executionId={}, error={}",
+							executionId, result.getErrorMessage());
+				}
+			}
+			else {
+				// 没有设置回调，使用兼容模式
+				log.warn("SpringSchedulerExecutionBackend executeTask 未设置执行回调, 使用兼容模式, triggerId={}",
+						definition.getTriggerId());
+				log.info("SpringSchedulerExecutionBackend executeTask 执行函数, function={}, params={}",
+						definition.getExecuteFunction(), definition.getParameters());
+
+				// 兼容模式：标记为成功但实际未执行
+				executionLogRepository.updateStatus(executionId, ExecutionStatus.SUCCESS, null, null);
+			}
 
 		}
 		catch (Exception e) {
-			log.error("SpringSchedulerExecutionBackend.executeTask 任务执行失败: executionId={}", executionId, e);
+			log.error("SpringSchedulerExecutionBackend executeTask 任务执行异常, executionId={}", executionId, e);
 			executionLogRepository.updateStatus(executionId, ExecutionStatus.FAILED, e.getMessage(), null);
 		}
 	}

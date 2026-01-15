@@ -16,6 +16,8 @@
 
 package com.alibaba.assistant.agent.extension.learning.hook;
 
+import com.alibaba.assistant.agent.common.hook.AgentPhase;
+import com.alibaba.assistant.agent.common.hook.HookPhases;
 import com.alibaba.assistant.agent.extension.learning.internal.DefaultLearningContext;
 import com.alibaba.assistant.agent.extension.learning.internal.DefaultLearningTask;
 import com.alibaba.assistant.agent.extension.learning.model.LearningContext;
@@ -23,7 +25,6 @@ import com.alibaba.assistant.agent.extension.learning.model.LearningResult;
 import com.alibaba.assistant.agent.extension.learning.model.LearningTask;
 import com.alibaba.assistant.agent.extension.learning.model.LearningTriggerContext;
 import com.alibaba.assistant.agent.extension.learning.model.LearningTriggerSource;
-import com.alibaba.assistant.agent.extension.learning.model.*;
 import com.alibaba.assistant.agent.extension.learning.spi.LearningExecutor;
 import com.alibaba.assistant.agent.extension.learning.spi.LearningStrategy;
 import com.alibaba.cloud.ai.graph.OverAllState;
@@ -46,6 +47,7 @@ import java.util.concurrent.CompletableFuture;
  * @author Assistant Agent Team
  * @since 1.0.0
  */
+@HookPhases(AgentPhase.REACT)
 @HookPositions(HookPosition.AFTER_AGENT)
 public class AfterAgentLearningHook extends AgentHook {
 

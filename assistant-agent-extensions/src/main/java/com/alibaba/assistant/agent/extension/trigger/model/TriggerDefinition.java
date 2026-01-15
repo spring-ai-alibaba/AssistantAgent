@@ -100,6 +100,27 @@ public class TriggerDefinition {
 	private String executeFunction;
 
 	/**
+	 * 放弃条件函数名（可选，用于判断是否停止监听）
+	 */
+	private String abandonFunction;
+
+	/**
+	 * 函数代码快照（执行时恢复）
+	 * key: 函数名, value: 函数代码
+	 */
+	private Map<String, String> functionCodeSnapshot;
+
+	/**
+	 * 是否需要用户确认才能激活
+	 */
+	private boolean requireConfirmation = true;
+
+	/**
+	 * 确认卡片类型（用于前端渲染）
+	 */
+	private String confirmCardType;
+
+	/**
 	 * 执行参数
 	 */
 	private Map<String, Object> parameters;
@@ -147,9 +168,11 @@ public class TriggerDefinition {
 	public TriggerDefinition() {
 		this.parameters = new HashMap<>();
 		this.metadata = new HashMap<>();
+		this.functionCodeSnapshot = new HashMap<>();
 		this.createdAt = Instant.now();
 		this.updatedAt = Instant.now();
 		this.status = TriggerStatus.PENDING_ACTIVATE;
+		this.requireConfirmation = true;
 	}
 
 	// Getters and Setters
@@ -264,6 +287,38 @@ public class TriggerDefinition {
 
 	public void setExecuteFunction(String executeFunction) {
 		this.executeFunction = executeFunction;
+	}
+
+	public String getAbandonFunction() {
+		return abandonFunction;
+	}
+
+	public void setAbandonFunction(String abandonFunction) {
+		this.abandonFunction = abandonFunction;
+	}
+
+	public Map<String, String> getFunctionCodeSnapshot() {
+		return functionCodeSnapshot;
+	}
+
+	public void setFunctionCodeSnapshot(Map<String, String> functionCodeSnapshot) {
+		this.functionCodeSnapshot = functionCodeSnapshot;
+	}
+
+	public boolean isRequireConfirmation() {
+		return requireConfirmation;
+	}
+
+	public void setRequireConfirmation(boolean requireConfirmation) {
+		this.requireConfirmation = requireConfirmation;
+	}
+
+	public String getConfirmCardType() {
+		return confirmCardType;
+	}
+
+	public void setConfirmCardType(String confirmCardType) {
+		this.confirmCardType = confirmCardType;
 	}
 
 	public Map<String, Object> getParameters() {

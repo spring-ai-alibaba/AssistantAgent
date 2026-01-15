@@ -19,9 +19,12 @@ package com.alibaba.assistant.agent.extension.trigger.config;
 import com.alibaba.assistant.agent.common.tools.TriggerCodeactTool;
 import com.alibaba.assistant.agent.extension.trigger.backend.ExecutionBackend;
 import com.alibaba.assistant.agent.extension.trigger.backend.SpringSchedulerExecutionBackend;
+import com.alibaba.assistant.agent.extension.trigger.executor.TriggerExecutor;
 import com.alibaba.assistant.agent.extension.trigger.manager.TriggerManager;
+import com.alibaba.assistant.agent.extension.trigger.repository.InMemorySessionSnapshotRepository;
 import com.alibaba.assistant.agent.extension.trigger.repository.InMemoryTriggerExecutionLogRepository;
 import com.alibaba.assistant.agent.extension.trigger.repository.InMemoryTriggerRepository;
+import com.alibaba.assistant.agent.extension.trigger.repository.SessionSnapshotRepository;
 import com.alibaba.assistant.agent.extension.trigger.repository.TriggerExecutionLogRepository;
 import com.alibaba.assistant.agent.extension.trigger.repository.TriggerRepository;
 import com.alibaba.assistant.agent.extension.trigger.tools.TriggerCodeactToolFactory;
@@ -54,18 +57,29 @@ public class TriggerAutoConfiguration {
 	@Bean
 	@ConditionalOnMissingBean
 	public TriggerRepository triggerRepository() {
+		log.info("TriggerAutoConfiguration triggerRepository 创建默认InMemoryTriggerRepository");
 		return new InMemoryTriggerRepository();
 	}
 
 	@Bean
 	@ConditionalOnMissingBean
 	public TriggerExecutionLogRepository triggerExecutionLogRepository() {
+		log.info("TriggerAutoConfiguration triggerExecutionLogRepository 创建默认InMemoryTriggerExecutionLogRepository");
 		return new InMemoryTriggerExecutionLogRepository();
+	}
+
+	@Bean
+	@ConditionalOnMissingBean
+	public SessionSnapshotRepository sessionSnapshotRepository() {
+		log.info("TriggerAutoConfiguration sessionSnapshotRepository 创建默认InMemorySessionSnapshotRepository");
+		return new InMemorySessionSnapshotRepository();
 	}
 
 	@Bean(name = "triggerTaskScheduler")
 	@ConditionalOnMissingBean(name = "triggerTaskScheduler")
 	public TaskScheduler triggerTaskScheduler(TriggerProperties properties) {
+		log.info("TriggerAutoConfiguration triggerTaskScheduler 创建调度器, poolSize={}",
+				properties.getScheduler().getPoolSize());
 		ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
 		scheduler.setPoolSize(properties.getScheduler().getPoolSize());
 		scheduler.setThreadNamePrefix("trigger-scheduler-");
@@ -77,21 +91,43 @@ public class TriggerAutoConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean
+	public TriggerExecutor triggerExecutor(SessionSnapshotRepository snapshotRepository,
+			TriggerProperties properties) {
+		TriggerProperties.ExecutionConfig config = properties.getExecution();
+		log.info("TriggerAutoConfiguration triggerExecutor 创建触发器执行器, timeout={}ms, allowIO={}, allowNativeAccess={}",
+				config.getExecutionTimeout(), config.isAllowIO(), config.isAllowNativeAccess());
+		return new TriggerExecutor(
+				snapshotRepository,
+				config.isAllowIO(),
+				config.isAllowNativeAccess(),
+				config.getExecutionTimeout()
+		);
+	}
+
+	@Bean
+	@ConditionalOnMissingBean
 	public ExecutionBackend executionBackend(TaskScheduler triggerTaskScheduler,
-			TriggerExecutionLogRepository executionLogRepository) {
-		return new SpringSchedulerExecutionBackend(triggerTaskScheduler, executionLogRepository);
+			TriggerExecutionLogRepository executionLogRepository,
+			TriggerExecutor triggerExecutor) {
+		log.info("TriggerAutoConfiguration executionBackend 创建执行后端并设置回调");
+		SpringSchedulerExecutionBackend backend = new SpringSchedulerExecutionBackend(
+				triggerTaskScheduler, executionLogRepository);
+		// 设置执行回调
+		backend.setExecutionCallback(triggerExecutor);
+		return backend;
 	}
 
 	@Bean
 	@ConditionalOnMissingBean
 	public TriggerManager triggerManager(TriggerRepository triggerRepository,
 			TriggerExecutionLogRepository executionLogRepository, ExecutionBackend executionBackend) {
+		log.info("TriggerAutoConfiguration triggerManager 创建触发器管理器");
 		return new TriggerManager(triggerRepository, executionLogRepository, executionBackend);
 	}
 
 	@Bean
 	public TriggerCodeactToolFactory triggerCodeactToolFactory(TriggerManager triggerManager) {
-		log.info("TriggerAutoConfiguration#triggerCodeactToolFactory - reason=创建TriggerCodeactTool工厂");
+		log.info("TriggerAutoConfiguration triggerCodeactToolFactory 创建TriggerCodeactTool工厂");
 		return new TriggerCodeactToolFactory(triggerManager);
 	}
 
@@ -100,16 +136,16 @@ public class TriggerAutoConfiguration {
 	 */
 	@Bean
 	public List<TriggerCodeactTool> triggerCodeactTools(TriggerCodeactToolFactory factory) {
-		log.info("TriggerAutoConfiguration#triggerCodeactTools - reason=开始创建Trigger工具");
+		log.info("TriggerAutoConfiguration triggerCodeactTools 开始创建Trigger工具");
 
 		List<TriggerCodeactTool> tools = factory.createTools();
 
-		log.info("TriggerAutoConfiguration#triggerCodeactTools - reason=Trigger工具创建完成, count={}", tools.size());
+		log.info("TriggerAutoConfiguration triggerCodeactTools Trigger工具创建完成, count={}", tools.size());
 
 		// 打印每个工具的详情
 		for (int i = 0; i < tools.size(); i++) {
 			TriggerCodeactTool tool = tools.get(i);
-			log.info("TriggerAutoConfiguration#triggerCodeactTools - reason=创建Trigger工具, index={}, name={}, description={}",
+			log.info("TriggerAutoConfiguration triggerCodeactTools 创建Trigger工具, index={}, name={}, description={}",
 				i + 1, tool.getToolDefinition().name(), tool.getToolDefinition().description());
 		}
 

@@ -70,11 +70,16 @@ public class CodeactAgentConfig {
 			- 通过代码调用工具（search、reply、notification等）
 			- 处理查询、计算、触发器创建等多种任务
 			
+			【工作模式】
+			你的工作分为两个阶段：
+			1. React阶段（思考）：快速判断任务意图，决定需要执行什么操作
+			2. Codeact阶段（执行）：通过write_code编写代码，通过execute_code执行代码
+
 			【可用工具】
 			1. write_code: 编写普通的Python函数
 			2. write_condition_code: 编写触发器条件判断函数（返回bool值）
 			3. execute_code: 执行已编写的函数
-			4. search/reply/notification: 可在代码中调用的辅助工具
+			4. 其它工具: 可以在思考过后调用的其他工具
 			
 			【核心原则】
 			- 代码优先：优先通过编写代码来解决问题，而不是直接使用React阶段的工具
