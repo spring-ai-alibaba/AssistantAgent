@@ -23,6 +23,7 @@ import com.alibaba.assistant.agent.core.executor.RuntimeEnvironmentManager;
 import com.alibaba.assistant.agent.core.executor.python.PythonEnvironmentManager;
 import com.alibaba.assistant.agent.core.tool.CodeactToolRegistry;
 import com.alibaba.assistant.agent.core.tool.DefaultCodeactToolRegistry;
+import com.alibaba.assistant.agent.core.tool.ToolRegistryBridgeFactory;
 import com.alibaba.assistant.agent.core.tool.schema.ReturnSchemaRegistry;
 import com.alibaba.assistant.agent.extension.experience.config.ExperienceExtensionProperties;
 import com.alibaba.assistant.agent.extension.experience.fastintent.FastIntentService;
@@ -173,6 +174,9 @@ public class CodeactAgent extends ReactAgent {
 
 		// ReturnSchemaRegistry (进程内单例)
 		private ReturnSchemaRegistry returnSchemaRegistry;
+
+		// ToolRegistryBridgeFactory (用于自定义 ToolRegistryBridge)
+		private ToolRegistryBridgeFactory toolRegistryBridgeFactory;
 
 		// CodeactTool support (新机制)
 		private List<CodeactTool> codeactTools = new ArrayList<>();
@@ -328,6 +332,20 @@ public class CodeactAgent extends ReactAgent {
 		}
 
 		/**
+		 * Set the ToolRegistryBridgeFactory for customizing ToolRegistryBridge creation.
+		 *
+		 * <p>If not set, the default factory will be used which creates standard
+		 * ToolRegistryBridge instances.
+		 *
+		 * @param factory the ToolRegistryBridgeFactory to use
+		 * @return CodeactAgentBuilder instance for chaining
+		 */
+		public CodeactAgentBuilder toolRegistryBridgeFactory(ToolRegistryBridgeFactory factory) {
+			this.toolRegistryBridgeFactory = factory;
+			return this;
+		}
+
+		/**
 		 * Set the model name for code generation
 		 * For example: "qwen-coder-plus", "qwen-max", etc.
 		 */
@@ -478,6 +496,11 @@ public class CodeactAgent extends ReactAgent {
 				}
 			}
 
+			if (this.toolRegistryBridgeFactory != null) {
+				logger.info("CodeactAgentBuilder#build 使用自定义ToolRegistryBridgeFactory: {}",
+						this.toolRegistryBridgeFactory.getClass().getSimpleName());
+			}
+
 			// 处理 CodeactTool (新机制)
 			if (!this.codeactTools.isEmpty()) {
 				logger.info("CodeactAgentBuilder#build - reason=开始注册CodeactTool, count={}", this.codeactTools.size());
@@ -509,6 +532,7 @@ public class CodeactAgent extends ReactAgent {
 				null, // Will be set by ReactAgent
 				new OverAllState(), // Placeholder
 				this.codeactToolRegistry,  // Pass CodeactTool registry
+				this.toolRegistryBridgeFactory,  // Pass custom factory (null will use default)
 				this.allowIO,
 				this.allowNativeAccess,
 				this.executionTimeoutMs
