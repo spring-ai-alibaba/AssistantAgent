@@ -1,0 +1,67 @@
+# 库存查询 - 单步骤动作示例配置
+# 此配置展示了如何定义一个简单的 API 调用动作
+
+action:
+  actionId: query-stock
+  actionName: 查询库存
+  description: 查询指定产品的库存数量和状态
+  actionType: API_CALL
+  category: 供应链
+  tags:
+    - 库存
+    - 查询
+    - 供应链
+  triggerKeywords:
+    - 查询库存
+    - 库存多少
+    - 库存数量
+    - 有没有货
+    - 库存情况
+  synonyms:
+    - 查库存
+    - 看库存
+    - 存货查询
+  exampleInputs:
+    - 查一下产品A的库存
+    - P12345库存多少
+    - 看看这个商品还有货吗
+  priority: 5
+  timeoutMinutes: 5
+  enabled: true
+
+  # 参数定义
+  parameters:
+    - name: productId
+      label: 产品ID
+      description: 请输入产品ID或名称
+      type: string
+      required: true
+      pattern: "^P\\d{5}$"
+      placeholder: 例如：P12345
+      source: USER_INPUT
+
+    - name: warehouseId
+      label: 仓库ID
+      description: 可选，指定查询的仓库
+      type: string
+      required: false
+      source: USER_INPUT
+
+  # 单步骤动作直接使用 interfaceBinding
+  interfaceBinding:
+    type: HTTP
+    url: "${inventory.service.url}/api/stock/query"
+    method: GET
+    headers:
+      Content-Type: application/json
+    queryParams:
+      productId: "${productId}"
+      warehouseId: "${warehouseId}"
+    responseMapping:
+      productId: "$.data.productId"
+      productName: "$.data.productName"
+      stockQuantity: "$.data.quantity"
+      availableQuantity: "$.data.available"
+      reservedQuantity: "$.data.reserved"
+      warehouseList: "$.data.warehouses"
+      lastUpdateTime: "$.data.updateTime"

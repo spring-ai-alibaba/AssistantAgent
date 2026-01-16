@@ -14,6 +14,7 @@
         <module>assistant-agent-extensions</module>
         <module>assistant-agent-prompt-builder</module>
         <module>assistant-agent-evaluation</module>
+        <module>assistant-agent-planning</module>
         <module>assistant-agent-start</module>
     </modules>
 
@@ -74,6 +75,18 @@
             <dependency>
                 <groupId>com.alibaba.agent.assistant</groupId>
                 <artifactId>assistant-agent-autoconfigure</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.alibaba.agent.assistant</groupId>
+                <artifactId>assistant-agent-planning-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.alibaba.agent.assistant</groupId>
+                <artifactId>assistant-agent-planning-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

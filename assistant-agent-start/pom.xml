@@ -43,6 +43,33 @@
             <artifactId>python-community</artifactId>
             <type>pom</type>
         </dependency>
+
+        <!-- ==================== Planning 模块 ==================== -->
+        <dependency>
+            <groupId>com.alibaba.agent.assistant</groupId>
+            <artifactId>assistant-agent-planning-core</artifactId>
+        </dependency>
+
+        <!-- ==================== 持久化依赖 ==================== -->
+
+        <!-- MyBatis Plus for MySQL -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+            <version>3.5.5</version>
+        </dependency>
+
+        <!-- MySQL Driver -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+        </dependency>
+
+        <!-- Elasticsearch -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

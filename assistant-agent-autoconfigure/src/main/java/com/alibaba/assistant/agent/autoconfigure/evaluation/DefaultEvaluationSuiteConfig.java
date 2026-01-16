@@ -36,6 +36,7 @@ import com.alibaba.cloud.ai.graph.agent.hook.Hook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -44,6 +45,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -68,39 +70,51 @@ public class DefaultEvaluationSuiteConfig {
 
     private final DefaultEvaluationProperties properties;
     private final ChatModel chatModel;
-    private final List<EvaluationCriterionProvider> criterionProviders;
+    private final ObjectProvider<List<EvaluationCriterionProvider>> criterionProvidersProvider;
     private final ExperienceProvider experienceProvider;
 
     public DefaultEvaluationSuiteConfig(
             DefaultEvaluationProperties properties,
             ChatModel chatModel,
-            @Autowired(required = false) List<EvaluationCriterionProvider> criterionProviders,
+            ObjectProvider<List<EvaluationCriterionProvider>> criterionProvidersProvider,
             @Autowired(required = false) ExperienceProvider experienceProvider) {
         this.properties = properties;
         this.chatModel = chatModel;
-        this.criterionProviders = criterionProviders;
+        this.criterionProvidersProvider = criterionProvidersProvider;
         this.experienceProvider = experienceProvider;
         log.info("DefaultEvaluationSuiteConfig#<init> - reason=初始化默认评估套件配置, experienceProviderAvailable={}", experienceProvider != null);
     }
 
     /**
+     * 获取所有评估标准提供者（延迟获取，避免循环依赖）
+     */
+    private List<EvaluationCriterionProvider> getCriterionProviders() {
+        List<EvaluationCriterionProvider> providers = criterionProvidersProvider.getIfAvailable();
+        return providers != null ? providers : Collections.emptyList();
+    }
+
+    /**
      * 默认的 EvaluationService Bean（带套件注册）
+     *
+     * <p>依赖 EvaluatorRegistry bean，确保自定义 Evaluator（如 ActionIntentEvaluator）
+     * 在 Suite 构建前已注册。
      */
     @Bean
     @ConditionalOnMissingBean
-    public EvaluationService evaluationService() {
-        log.info("DefaultEvaluationSuiteConfig#evaluationService - reason=创建默认 EvaluationService");
+    public EvaluationService evaluationService(EvaluatorRegistry sharedRegistry) {
+        log.info("DefaultEvaluationSuiteConfig#evaluationService - reason=创建默认 EvaluationService, sharedRegistryEvaluators={}",
+                sharedRegistry.getEvaluatorIds());
         DefaultEvaluationService service = new DefaultEvaluationService();
 
-        // 在创建 service 时就注册默认套件
+        // 在创建 service 时就注册默认套件（使用共享的 registry）
         if (properties.getReactPhase().isEnabled()) {
-            EvaluationSuite reactSuite = createReactPhaseSuite();
+            EvaluationSuite reactSuite = createReactPhaseSuite(sharedRegistry);
             service.registerSuite(reactSuite);
             log.info("DefaultEvaluationSuiteConfig#evaluationService - reason=注册 React Phase Suite, suiteId={}", REACT_PHASE_SUITE_ID);
         }
 
         if (properties.getCodeactPhase().isEnabled()) {
-            EvaluationSuite codeactSuite = createCodeActPhaseSuite();
+            EvaluationSuite codeactSuite = createCodeActPhaseSuite(sharedRegistry);
             service.registerSuite(codeactSuite);
             log.info("DefaultEvaluationSuiteConfig#evaluationService - reason=注册 CodeAct Phase Suite, suiteId={}", CODEACT_PHASE_SUITE_ID);
         }
@@ -186,26 +200,25 @@ public class DefaultEvaluationSuiteConfig {
 
     /**
      * 创建 React 阶段评估套件
+     *
+     * @param sharedRegistry 共享的评估器注册表（包含所有已注册的 Evaluator）
      */
-    private EvaluationSuite createReactPhaseSuite() {
-        EvaluatorRegistry registry = createDefaultEvaluatorRegistry();
-
+    private EvaluationSuite createReactPhaseSuite(EvaluatorRegistry sharedRegistry) {
         List<EvaluationCriterion> criteria = new ArrayList<>();
 
         // 添加用户自定义的 Criterion（由 example 层提供，包括 enhanced_user_input）
-        if (criterionProviders != null) {
-            for (EvaluationCriterionProvider provider : criterionProviders) {
-                List<EvaluationCriterion> customCriteria = provider.getReactPhaseCriteria();
-                if (customCriteria != null && !customCriteria.isEmpty()) {
-                    criteria.addAll(customCriteria);
-                    log.info("DefaultEvaluationSuiteConfig#createReactPhaseSuite - reason=添加自定义 Criterion, provider={}, count={}",
-                            provider.getClass().getSimpleName(), customCriteria.size());
-                }
+        List<EvaluationCriterionProvider> providers = getCriterionProviders();
+        for (EvaluationCriterionProvider provider : providers) {
+            List<EvaluationCriterion> customCriteria = provider.getReactPhaseCriteria();
+            if (customCriteria != null && !customCriteria.isEmpty()) {
+                criteria.addAll(customCriteria);
+                log.info("DefaultEvaluationSuiteConfig#createReactPhaseSuite - reason=添加自定义 Criterion, provider={}, count={}",
+                        provider.getClass().getSimpleName(), customCriteria.size());
             }
         }
 
         return EvaluationSuiteBuilder
-                .create(REACT_PHASE_SUITE_ID, registry)
+                .create(REACT_PHASE_SUITE_ID, sharedRegistry)
                 .name("React Phase Evaluation Suite")
                 .description("React阶段默认评估套件：用户输入增强")
                 .defaultEvaluator("llm-based")
@@ -215,26 +228,25 @@ public class DefaultEvaluationSuiteConfig {
 
     /**
      * 创建 CodeAct 阶段评估套件
+     *
+     * @param sharedRegistry 共享的评估器注册表（包含所有已注册的 Evaluator）
      */
-    private EvaluationSuite createCodeActPhaseSuite() {
-        EvaluatorRegistry registry = createDefaultEvaluatorRegistry();
-
+    private EvaluationSuite createCodeActPhaseSuite(EvaluatorRegistry sharedRegistry) {
         List<EvaluationCriterion> criteria = new ArrayList<>();
 
         // 添加用户自定义的 Criterion（由 example 层提供，包括 enhanced_user_input）
-        if (criterionProviders != null) {
-            for (EvaluationCriterionProvider provider : criterionProviders) {
-                List<EvaluationCriterion> customCriteria = provider.getCodeActPhaseCriteria();
-                if (customCriteria != null && !customCriteria.isEmpty()) {
-                    criteria.addAll(customCriteria);
-                    log.info("DefaultEvaluationSuiteConfig#createCodeActPhaseSuite - reason=添加自定义 Criterion, provider={}, count={}",
-                            provider.getClass().getSimpleName(), customCriteria.size());
-                }
+        List<EvaluationCriterionProvider> providers = getCriterionProviders();
+        for (EvaluationCriterionProvider provider : providers) {
+            List<EvaluationCriterion> customCriteria = provider.getCodeActPhaseCriteria();
+            if (customCriteria != null && !customCriteria.isEmpty()) {
+                criteria.addAll(customCriteria);
+                log.info("DefaultEvaluationSuiteConfig#createCodeActPhaseSuite - reason=添加自定义 Criterion, provider={}, count={}",
+                        provider.getClass().getSimpleName(), customCriteria.size());
             }
         }
 
         return EvaluationSuiteBuilder
-                .create(CODEACT_PHASE_SUITE_ID, registry)
+                .create(CODEACT_PHASE_SUITE_ID, sharedRegistry)
                 .name("CodeAct Phase Evaluation Suite")
                 .description("CodeAct阶段默认评估套件：代码任务增强")
                 .defaultEvaluator("llm-based")

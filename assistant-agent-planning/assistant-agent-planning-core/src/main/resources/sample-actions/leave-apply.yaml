@@ -1,0 +1,278 @@
+# 请假申请 - 多步骤动作示例配置
+# 此配置展示了如何定义一个完整的多步骤业务流程
+
+action:
+  actionId: leave-apply
+  actionName: 请假申请
+  description: 员工请假申请流程，包括信息校验、审批人查询和申请提交
+  actionType: MULTI_STEP
+  category: HR
+  tags:
+    - 请假
+    - HR
+    - 审批
+    - 人事
+  triggerKeywords:
+    - 请假
+    - 休假
+    - 年假
+    - 病假
+    - 事假
+    - 调休
+  synonyms:
+    - 申请休假
+    - 请假条
+    - 休假申请
+  exampleInputs:
+    - 我想请两天年假
+    - 帮我申请下周一的事假
+    - 明天请个病假
+  priority: 10
+  timeoutMinutes: 60
+  enabled: true
+
+  # 参数定义
+  parameters:
+    - name: leaveType
+      label: 请假类型
+      description: 请选择请假类型
+      type: enum
+      required: true
+      enumValues:
+        - 年假
+        - 病假
+        - 事假
+        - 调休
+        - 婚假
+        - 产假
+        - 陪产假
+      source: USER_INPUT
+
+    - name: startDate
+      label: 开始日期
+      description: 请假开始日期
+      type: date
+      required: true
+      dateFormat: yyyy-MM-dd
+      source: USER_INPUT
+
+    - name: endDate
+      label: 结束日期
+      description: 请假结束日期
+      type: date
+      required: true
+      dateFormat: yyyy-MM-dd
+      source: USER_INPUT
+
+    - name: reason
+      label: 请假原因
+      description: 请详细说明请假原因
+      type: string
+      required: true
+      minLength: 10
+      maxLength: 500
+      placeholder: 请详细说明请假原因...
+      source: USER_INPUT
+
+    - name: employeeId
+      label: 员工ID
+      type: string
+      required: true
+      source: CONTEXT
+      sourceRef: userId
+
+  # 步骤定义
+  steps:
+    # 步骤1：校验请假信息
+    - stepId: validate-leave
+      name: 校验请假信息
+      type: INTERNAL_SERVICE
+      description: 校验请假信息是否合法，包括日期、假期余额等
+      inputParams:
+        - name: leaveType
+          type: enum
+          source: USER_INPUT
+        - name: startDate
+          type: date
+          source: USER_INPUT
+        - name: endDate
+          type: date
+          source: USER_INPUT
+        - name: employeeId
+          type: string
+          source: CONTEXT
+          sourceRef: userId
+      outputSchema:
+        type: object
+        properties:
+          isValid:
+            type: boolean
+          leaveDays:
+            type: number
+          remainingDays:
+            type: number
+          message:
+            type: string
+      interfaceBinding:
+        type: INTERNAL_SERVICE
+        serviceName: leaveValidationService
+        method: validateLeaveRequest
+      executionStrategy:
+        retryCount: 2
+        retryDelayMs: 1000
+
+    # 步骤2：查询审批人
+    - stepId: query-approver
+      name: 查询审批人
+      type: API_CALL
+      description: 根据请假天数和员工信息查询审批人
+      inputParams:
+        - name: employeeId
+          type: string
+          source: CONTEXT
+          sourceRef: userId
+        - name: leaveDays
+          type: number
+          source: PREVIOUS_STEP
+          sourceRef: validate-leave
+          expression: "$.leaveDays"
+      outputSchema:
+        type: object
+        properties:
+          approverId:
+            type: string
+          approverName:
+            type: string
+          approverEmail:
+            type: string
+      interfaceBinding:
+        type: HTTP
+        url: "${hr.service.url}/api/approver/query"
+        method: POST
+        headers:
+          Content-Type: application/json
+        bodyTemplate: |
+          {
+            "employeeId": "${employeeId}",
+            "leaveDays": ${leaveDays}
+          }
+        responseMapping:
+          approverId: "$.data.approverId"
+          approverName: "$.data.approverName"
+          approverEmail: "$.data.approverEmail"
+      executionStrategy:
+        timeout: 10000
+        retryCount: 3
+
+    # 步骤3：确认审批人
+    - stepId: confirm-approver
+      name: 确认审批人
+      type: INPUT
+      description: 请确认审批人信息
+      userPrompt: |
+        您的请假申请将提交给 ${approverName} 审批，是否确认？
+      inputParams:
+        - name: approverName
+          type: string
+          source: PREVIOUS_STEP
+          sourceRef: query-approver
+          expression: "$.approverName"
+      options:
+        - label: 确认提交
+          value: confirm
+        - label: 取消
+          value: cancel
+
+    # 步骤4：提交请假申请
+    - stepId: submit-leave
+      name: 提交请假申请
+      type: API_CALL
+      description: 向OA系统提交请假申请
+      inputParams:
+        - name: leaveType
+          type: enum
+          source: USER_INPUT
+        - name: startDate
+          type: date
+          source: USER_INPUT
+        - name: endDate
+          type: date
+          source: USER_INPUT
+        - name: reason
+          type: string
+          source: USER_INPUT
+        - name: employeeId
+          type: string
+          source: CONTEXT
+          sourceRef: userId
+        - name: approverId
+          type: string
+          source: PREVIOUS_STEP
+          sourceRef: query-approver
+          expression: "$.approverId"
+        - name: leaveDays
+          type: number
+          source: PREVIOUS_STEP
+          sourceRef: validate-leave
+          expression: "$.leaveDays"
+      outputSchema:
+        type: object
+        properties:
+          requestId:
+            type: string
+          status:
+            type: string
+      interfaceBinding:
+        type: HTTP
+        url: "${oa.service.url}/api/leave/submit"
+        method: POST
+        headers:
+          Content-Type: application/json
+        bodyTemplate: |
+          {
+            "leaveType": "${leaveType}",
+            "startDate": "${startDate}",
+            "endDate": "${endDate}",
+            "reason": "${reason}",
+            "employeeId": "${employeeId}",
+            "approverId": "${approverId}",
+            "leaveDays": ${leaveDays}
+          }
+      # SAGA 补偿配置
+      compensation:
+        enabled: true
+        interfaceBinding:
+          type: HTTP
+          url: "${oa.service.url}/api/leave/cancel"
+          method: POST
+          bodyTemplate: |
+            {
+              "requestId": "${requestId}"
+            }
+
+    # 步骤5：发送通知
+    - stepId: send-notification
+      name: 发送通知
+      type: NOTIFICATION
+      description: 向审批人发送通知
+      inputParams:
+        - name: approverEmail
+          type: string
+          source: PREVIOUS_STEP
+          sourceRef: query-approver
+          expression: "$.approverEmail"
+        - name: requestId
+          type: string
+          source: PREVIOUS_STEP
+          sourceRef: submit-leave
+          expression: "$.requestId"
+        - name: employeeId
+          type: string
+          source: CONTEXT
+          sourceRef: userId
+      interfaceBinding:
+        type: INTERNAL_SERVICE
+        serviceName: notificationService
+        method: sendApprovalNotification
+      executionStrategy:
+        skippable: true  # 通知失败不影响整体流程

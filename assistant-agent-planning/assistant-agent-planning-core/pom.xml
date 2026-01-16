@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.alibaba.agent.assistant</groupId>
+        <artifactId>assistant-agent-planning</artifactId>
+        <version>0.1.1</version>
+    </parent>
+
+    <artifactId>assistant-agent-planning-core</artifactId>
+    <name>Assistant Agent Planning Core</name>
+    <description>规划引擎核心实现 - 默认实现和 CodeactTool 集成</description>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <!-- Planning API -->
+        <dependency>
+            <groupId>com.alibaba.agent.assistant</groupId>
+            <artifactId>assistant-agent-planning-api</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+
+        <!-- Assistant Agent Common - CodeactTool 接口 -->
+        <dependency>
+            <groupId>com.alibaba.agent.assistant</groupId>
+            <artifactId>assistant-agent-common</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+
+        <!-- Prompt Builder - PromptBuilder 接口 -->
+        <dependency>
+            <groupId>com.alibaba.agent.assistant</groupId>
+            <artifactId>assistant-agent-prompt-builder</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+
+        <!-- Evaluation - Evaluator 接口 -->
+        <dependency>
+            <groupId>com.alibaba.agent.assistant</groupId>
+            <artifactId>assistant-agent-evaluation</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+
+        <!-- AutoConfiguration - EvaluationCriterionProvider 接口 -->
+        <dependency>
+            <groupId>com.alibaba.agent.assistant</groupId>
+            <artifactId>assistant-agent-autoconfigure</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+
+        <!-- Spring Boot AutoConfiguration -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+
+        <!-- Spring AI is available via assistant-agent-common dependency -->
+
+        <!-- Lombok for reducing boilerplate -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- SLF4J API for logging -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+
+        <!-- Jackson for JSON processing -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <!-- Spring Web for RestTemplate (optional, for HTTP calls) -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- MyBatis Plus for MySQL persistence (optional) -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+            <version>3.5.5</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- MySQL Driver (optional) -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Elasticsearch for vector search (optional) -->
+        <dependency>
+            <groupId>co.elastic.clients</groupId>
+            <artifactId>elasticsearch-java</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Spring AI Alibaba DashScope for embedding (optional) -->
+        <dependency>
+            <groupId>com.alibaba.cloud.ai</groupId>
+            <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Test dependencies -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+
+</project>

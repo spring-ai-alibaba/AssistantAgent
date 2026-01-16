@@ -1,0 +1,230 @@
+# 电脑申领 - 多步骤动作示例配置（带外键校验）
+# 此配置展示了如何处理外键依赖和多选项查询
+
+action:
+  actionId: computer-apply
+  actionName: 申领电脑
+  description: 员工申领办公电脑流程
+  actionType: MULTI_STEP
+  category: IT资产
+  tags:
+    - 电脑
+    - 申领
+    - IT资产
+    - 办公设备
+  triggerKeywords:
+    - 申领电脑
+    - 领电脑
+    - 要电脑
+    - 换电脑
+  synonyms:
+    - 申请电脑
+    - 领用电脑
+    - 电脑申请
+  exampleInputs:
+    - 我想申领一台新电脑
+    - 帮我申请一台MacBook
+    - 我的电脑坏了，需要换一台
+  priority: 8
+  timeoutMinutes: 30
+  enabled: true
+
+  # 参数定义
+  parameters:
+    - name: computerType
+      label: 电脑类型
+      description: 请选择需要的电脑类型
+      type: enum
+      required: true
+      enumValues:
+        - 笔记本
+        - 台式机
+      source: USER_INPUT
+
+    - name: brandPreference
+      label: 品牌偏好
+      description: 可选，输入品牌偏好
+      type: string
+      required: false
+      source: USER_INPUT
+      foreignKey:
+        entity: brand
+        field: brand_name
+        displayField: brand_display_name
+        validationStepId: check-brand
+
+    - name: reason
+      label: 申领原因
+      description: 请说明申领原因
+      type: enum
+      required: true
+      enumValues:
+        - 新入职
+        - 设备老化
+        - 设备损坏
+        - 岗位变更
+      source: USER_INPUT
+
+    - name: employeeId
+      label: 员工ID
+      type: string
+      required: true
+      source: CONTEXT
+      sourceRef: userId
+
+  # 步骤定义
+  steps:
+    # 步骤1：校验品牌（外键校验）
+    - stepId: check-brand
+      name: 校验品牌
+      type: VALIDATION
+      description: 校验用户输入的品牌是否存在
+      condition: "${brandPreference != null && brandPreference != ''}"
+      inputParams:
+        - name: brandPreference
+          type: string
+          source: USER_INPUT
+      outputSchema:
+        type: object
+        properties:
+          isValid:
+            type: boolean
+          brandId:
+            type: string
+          brandName:
+            type: string
+          message:
+            type: string
+      interfaceBinding:
+        type: INTERNAL_SERVICE
+        serviceName: brandService
+        method: validateBrand
+      executionStrategy:
+        skippable: false
+
+    # 步骤2：查询可申领电脑列表
+    - stepId: query-computers
+      name: 查询可申领电脑
+      type: QUERY
+      description: 查询当前可申领的电脑列表
+      inputParams:
+        - name: computerType
+          type: enum
+          source: USER_INPUT
+        - name: brandId
+          type: string
+          source: PREVIOUS_STEP
+          sourceRef: check-brand
+          expression: "$.brandId"
+      outputSchema:
+        type: array
+        items:
+          type: object
+          properties:
+            computerId:
+              type: string
+            computerName:
+              type: string
+            brand:
+              type: string
+            model:
+              type: string
+            specs:
+              type: string
+            location:
+              type: string
+      interfaceBinding:
+        type: HTTP
+        url: "${asset.service.url}/api/computers/available"
+        method: GET
+        queryParams:
+          type: "${computerType}"
+          brandId: "${brandId}"
+      userPrompt: |
+        以下是可申领的电脑列表，请选择一台：
+
+    # 步骤3：用户选择电脑
+    - stepId: select-computer
+      name: 选择电脑
+      type: INPUT
+      description: 用户从列表中选择一台电脑
+      inputParams:
+        - name: computerList
+          type: array
+          source: PREVIOUS_STEP
+          sourceRef: query-computers
+      optionsFromPreviousStep:
+        stepId: query-computers
+        labelExpression: "${computerName} - ${brand} ${model} (${specs})"
+        valueExpression: "${computerId}"
+
+    # 步骤4：填写申领理由详情
+    - stepId: input-details
+      name: 填写详情
+      type: INPUT
+      description: 填写详细的申领说明
+      userPrompt: 请简要说明您的申领需求和用途
+      inputParams:
+        - name: detailReason
+          label: 详细说明
+          type: string
+          required: true
+          minLength: 20
+          maxLength: 500
+          placeholder: 请详细说明您的工作需求和电脑用途...
+
+    # 步骤5：提交申领申请
+    - stepId: submit-apply
+      name: 提交申请
+      type: EXECUTE
+      description: 提交电脑申领申请
+      inputParams:
+        - name: employeeId
+          type: string
+          source: CONTEXT
+          sourceRef: userId
+        - name: computerId
+          type: string
+          source: PREVIOUS_STEP
+          sourceRef: select-computer
+          expression: "$.selectedValue"
+        - name: reason
+          type: enum
+          source: USER_INPUT
+        - name: detailReason
+          type: string
+          source: PREVIOUS_STEP
+          sourceRef: input-details
+          expression: "$.detailReason"
+      outputSchema:
+        type: object
+        properties:
+          applyId:
+            type: string
+          status:
+            type: string
+          estimatedDeliveryDate:
+            type: string
+      interfaceBinding:
+        type: HTTP
+        url: "${asset.service.url}/api/computers/apply"
+        method: POST
+        headers:
+          Content-Type: application/json
+        bodyTemplate: |
+          {
+            "employeeId": "${employeeId}",
+            "computerId": "${computerId}",
+            "reason": "${reason}",
+            "detailReason": "${detailReason}"
+          }
+      compensation:
+        enabled: true
+        interfaceBinding:
+          type: HTTP
+          url: "${asset.service.url}/api/computers/apply/cancel"
+          method: POST
+          bodyTemplate: |
+            {
+              "applyId": "${applyId}"
+            }

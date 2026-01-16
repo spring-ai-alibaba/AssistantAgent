@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(planning-with-files)",
+      "Bash(mvn compile:*)",
+      "Bash(mvn clean compile:*)",
+      "Bash(powershell:*)",
+      "Bash(Out-Null)",
+      "Bash(powershell -Command \"New-Item -ItemType Directory -Force -Path ''D:\\\\devfive\\\\AssistantAgent\\\\assistant-agent-planning\\\\assistant-agent-planning-core\\\\src\\\\test\\\\java\\\\com\\\\alibaba\\\\assistant\\\\agent\\\\planning\\\\internal''\")",
+      "Bash(mvn test:*)",
+      "Bash(wc:*)",
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "Bash(mysql:*)",
+      "Bash(curl:*)",
+      "Bash(mvn:*)",
+      "Bash(find:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(cd:*)"
+    ]
+  }
+}

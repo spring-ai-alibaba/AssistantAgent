@@ -15,19 +15,25 @@ server:
 # DashScope Configuration
 # ============================================================================
 spring.ai.dashscope:
-  api-key: ${DASHSCOPE_API_KEY}
+  api-key: ${DASHSCOPE_API_KEY:sk-aa53c23886144d71a6128763863288e1}
   chat:
     options:
       model: qwen-max
+  # Embedding model for vectorization
+  embedding:
+    options:
+      model: text-embedding-v3
 
 # ============================================================================
-# Experience Module - with FastIntent enabled
+# Experience Module - FastIntent disabled to avoid conflict with Planning Intent
 # ============================================================================
 spring.ai.alibaba.codeact.extension.experience:
   enabled: true
-  fast-intent-enabled: true
-  fast-intent-react-enabled: true
-  fast-intent-code-enabled: true
+  in-memory:
+    enabled: false  # Disable InMemory, use Elasticsearch instead
+  fast-intent-enabled: false
+  fast-intent-react-enabled: false
+  fast-intent-code-enabled: false
   fast-intent-allowed-tools:
     - send_success_message
     - send_error_message
@@ -99,8 +105,49 @@ spring.ai.alibaba.codeact.extension.evaluation:
     suite-id: code_generation_input_suite
 
 # ============================================================================
+# MySQL DataSource Configuration
+# ============================================================================
+spring.datasource:
+  url: jdbc:mysql://localhost:3306/assistant_agent?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+  username: root
+  password: ${MYSQL_PASSWORD:StrongRootPwd}
+  driver-class-name: com.mysql.cj.jdbc.Driver
+
+# ============================================================================
+# MyBatis Plus Configuration
+# ============================================================================
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+
+# ============================================================================
+# Elasticsearch Configuration
+# ============================================================================
+spring.elasticsearch:
+  uris: http://localhost:9200
+  username: elastic
+  password: XWuH_rhjfz5ZD+Brrn0D
+
+# Experience ES index name
+spring.ai.alibaba.codeact.extension.experience.elasticsearch:
+  index-name: experiences
+
+# ============================================================================
+# Planning Module - with Elasticsearch for SemanticActionProvider
+# ============================================================================
+spring.ai.alibaba.codeact.extension.planning:
+  enabled: true
+  elasticsearch:
+    enabled: true
+
+# ============================================================================
 # Logging - Debug level for development
 # ============================================================================
 logging:
   level:
     com.alibaba.assistant.agent: DEBUG
+
