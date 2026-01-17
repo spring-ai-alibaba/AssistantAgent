@@ -1,0 +1,89 @@
+2026-01-18T00:05:01.433+08:00 ERROR --- [           main] o.s.boot.SpringApplication               : Application run failed
+
+org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'agentStaticLoader' defined in URL [jar:file:/C:/Users/zhou_/.m2/repository/com/alibaba/agent/assistant/assistant-agent-autoconfigure/0.1.1/assistant-agent-autoconfigure-0.1.1.jar!/com/alibaba/assistant/agent/autoconfigure/AgentStaticLoader.class]: Failed to instantiate [com.alibaba.assistant.agent.autoconfigure.AgentStaticLoader]: Constructor threw exception
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiate(ConstructorResolver.java:321)
+	at org.springframework.beans.factory.support.ConstructorResolver.autowireConstructor(ConstructorResolver.java:309)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.autowireConstructor(AbstractAutowireCapableBeanFactory.java:1395)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1232)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:569)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.instantiateSingleton(DefaultListableBeanFactory.java:1222)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.preInstantiateSingleton(DefaultListableBeanFactory.java:1188)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.preInstantiateSingletons(DefaultListableBeanFactory.java:1123)
+	at org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:987)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:627)
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:146)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:752)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:439)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:318)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350)
+	at com.alibaba.assistant.agent.start.AssistantAgentApplication.main(AssistantAgentApplication.java:62)
+Caused by: org.springframework.beans.BeanInstantiationException: Failed to instantiate [com.alibaba.assistant.agent.autoconfigure.AgentStaticLoader]: Constructor threw exception
+	at org.springframework.beans.BeanUtils.instantiateClass(BeanUtils.java:223)
+	at org.springframework.beans.factory.support.SimpleInstantiationStrategy.instantiate(SimpleInstantiationStrategy.java:146)
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiate(ConstructorResolver.java:318)
+	... 21 common frames omitted
+Caused by: java.lang.RuntimeException: com.alibaba.cloud.ai.graph.exception.GraphStateException: edge sourceId '_AGENT_HOOK_ParamCollectionResponseHook.beforeModel' refers to undefined node!
+	at com.alibaba.cloud.ai.graph.agent.Agent.getAndCompileGraph(Agent.java:128)
+	at com.alibaba.assistant.agent.autoconfigure.AgentStaticLoader.<init>(AgentStaticLoader.java:55)
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:486)
+	at org.springframework.beans.BeanUtils.instantiateClass(BeanUtils.java:210)
+	... 23 common frames omitted
+Caused by: com.alibaba.cloud.ai.graph.exception.GraphStateException: edge sourceId '_AGENT_HOOK_ParamCollectionResponseHook.beforeModel' refers to undefined node!
+	at com.alibaba.cloud.ai.graph.exception.Errors.exception(Errors.java:52)
+	at com.alibaba.cloud.ai.graph.internal.edge.Edge.validate(Edge.java:109)
+	at com.alibaba.cloud.ai.graph.internal.edge.Edge.validate(Edge.java:101)
+	at com.alibaba.cloud.ai.graph.StateGraph.validateGraph(StateGraph.java:437)
+	at com.alibaba.cloud.ai.graph.StateGraph.compile(StateGraph.java:450)
+	at com.alibaba.cloud.ai.graph.agent.Agent.getAndCompileGraph(Agent.java:125)
+	... 28 common frames omitted
+
+2026-01-18T00:10:06.713+08:00 ERROR --- [           main] o.s.b.d.LoggingFailureAnalysisReporter   : 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Web server failed to start. Port 8080 was already in use.
+
+Action:
+
+Identify and stop the process that's listening on port 8080 or configure this application to listen on another port.
+
+2026-01-18T00:18:39.067+08:00 ERROR --- [           main] o.s.b.d.LoggingFailureAnalysisReporter   : 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Web server failed to start. Port 8080 was already in use.
+
+Action:
+
+Identify and stop the process that's listening on port 8080 or configure this application to listen on another port.
+
+2026-01-18T00:30:01.233+08:00 ERROR --- [           main] o.s.b.d.LoggingFailureAnalysisReporter   : 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Web server failed to start. Port 8080 was already in use.
+
+Action:
+
+Identify and stop the process that's listening on port 8080 or configure this application to listen on another port.
+

@@ -1,0 +1,278 @@
+2026-01-17T22:51:53.652+08:00 ERROR --- [           main] o.s.boot.SpringApplication               : Application run failed
+
+org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'codeactAgentConfig': Unsatisfied dependency expressed through field 'reactPhaseEvaluationHooks': Error creating bean with name 'reactPhaseEvaluationHooks' defined in class path resource [com/alibaba/assistant/agent/autoconfigure/evaluation/DefaultEvaluationSuiteConfig.class]: Unsatisfied dependency expressed through method 'reactPhaseEvaluationHooks' parameter 0: Error creating bean with name 'evaluationService' defined in class path resource [com/alibaba/assistant/agent/autoconfigure/evaluation/DefaultEvaluationSuiteConfig.class]: Failed to instantiate [com.alibaba.assistant.agent.evaluation.EvaluationService]: Factory method 'evaluationService' threw exception with message: Criterion 'action_intent_match' references unknown evaluator 'action_intent_evaluator'. Available evaluators: [llm-based, passthrough, codeact_experience_evaluator, react_experience_evaluator]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.resolveFieldValue(AutowiredAnnotationBeanPostProcessor.java:788)
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.inject(AutowiredAnnotationBeanPostProcessor.java:768)
+	at org.springframework.beans.factory.annotation.InjectionMetadata.inject(InjectionMetadata.java:146)
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.postProcessProperties(AutowiredAnnotationBeanPostProcessor.java:509)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.populateBean(AbstractAutowireCapableBeanFactory.java:1459)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:606)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.instantiateSingleton(DefaultListableBeanFactory.java:1222)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.preInstantiateSingleton(DefaultListableBeanFactory.java:1188)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.preInstantiateSingletons(DefaultListableBeanFactory.java:1123)
+	at org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:987)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:627)
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:146)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:752)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:439)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:318)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350)
+	at com.alibaba.assistant.agent.start.AssistantAgentApplication.main(AssistantAgentApplication.java:62)
+Caused by: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'reactPhaseEvaluationHooks' defined in class path resource [com/alibaba/assistant/agent/autoconfigure/evaluation/DefaultEvaluationSuiteConfig.class]: Unsatisfied dependency expressed through method 'reactPhaseEvaluationHooks' parameter 0: Error creating bean with name 'evaluationService' defined in class path resource [com/alibaba/assistant/agent/autoconfigure/evaluation/DefaultEvaluationSuiteConfig.class]: Failed to instantiate [com.alibaba.assistant.agent.evaluation.EvaluationService]: Factory method 'evaluationService' threw exception with message: Criterion 'action_intent_match' references unknown evaluator 'action_intent_evaluator'. Available evaluators: [llm-based, passthrough, codeact_experience_evaluator, react_experience_evaluator]
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:804)
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiateUsingFactoryMethod(ConstructorResolver.java:546)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.instantiateUsingFactoryMethod(AbstractAutowireCapableBeanFactory.java:1375)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1205)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:569)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1683)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1628)
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.resolveFieldValue(AutowiredAnnotationBeanPostProcessor.java:785)
+	... 22 common frames omitted
+Caused by: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'evaluationService' defined in class path resource [com/alibaba/assistant/agent/autoconfigure/evaluation/DefaultEvaluationSuiteConfig.class]: Failed to instantiate [com.alibaba.assistant.agent.evaluation.EvaluationService]: Factory method 'evaluationService' threw exception with message: Criterion 'action_intent_match' references unknown evaluator 'action_intent_evaluator'. Available evaluators: [llm-based, passthrough, codeact_experience_evaluator, react_experience_evaluator]
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiate(ConstructorResolver.java:657)
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiateUsingFactoryMethod(ConstructorResolver.java:645)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.instantiateUsingFactoryMethod(AbstractAutowireCapableBeanFactory.java:1375)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1205)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:569)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202)
+	at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:254)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1745)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1628)
+	at org.springframework.beans.factory.support.ConstructorResolver.resolveAutowiredArgument(ConstructorResolver.java:913)
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:791)
+	... 34 common frames omitted
+Caused by: org.springframework.beans.BeanInstantiationException: Failed to instantiate [com.alibaba.assistant.agent.evaluation.EvaluationService]: Factory method 'evaluationService' threw exception with message: Criterion 'action_intent_match' references unknown evaluator 'action_intent_evaluator'. Available evaluators: [llm-based, passthrough, codeact_experience_evaluator, react_experience_evaluator]
+	at org.springframework.beans.factory.support.SimpleInstantiationStrategy.lambda$instantiate$0(SimpleInstantiationStrategy.java:200)
+	at org.springframework.beans.factory.support.SimpleInstantiationStrategy.instantiateWithFactoryMethod(SimpleInstantiationStrategy.java:89)
+	at org.springframework.beans.factory.support.SimpleInstantiationStrategy.instantiate(SimpleInstantiationStrategy.java:169)
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiate(ConstructorResolver.java:653)
+	... 48 common frames omitted
+Caused by: java.lang.IllegalStateException: Criterion 'action_intent_match' references unknown evaluator 'action_intent_evaluator'. Available evaluators: [llm-based, passthrough, codeact_experience_evaluator, react_experience_evaluator]
+	at com.alibaba.assistant.agent.evaluation.builder.EvaluationSuiteBuilder.validateEvaluatorReferences(EvaluationSuiteBuilder.java:260)
+	at com.alibaba.assistant.agent.evaluation.builder.EvaluationSuiteBuilder.build(EvaluationSuiteBuilder.java:129)
+	at com.alibaba.assistant.agent.autoconfigure.evaluation.DefaultEvaluationSuiteConfig.createReactPhaseSuite(DefaultEvaluationSuiteConfig.java:226)
+	at com.alibaba.assistant.agent.autoconfigure.evaluation.DefaultEvaluationSuiteConfig.evaluationService(DefaultEvaluationSuiteConfig.java:111)
+	at com.alibaba.assistant.agent.autoconfigure.evaluation.DefaultEvaluationSuiteConfig$$SpringCGLIB$$0.CGLIB$evaluationService$4(<generated>)
+	at com.alibaba.assistant.agent.autoconfigure.evaluation.DefaultEvaluationSuiteConfig$$SpringCGLIB$$FastClass$$1.invoke(<generated>)
+	at org.springframework.cglib.proxy.MethodProxy.invokeSuper(MethodProxy.java:258)
+	at org.springframework.context.annotation.ConfigurationClassEnhancer$BeanMethodInterceptor.intercept(ConfigurationClassEnhancer.java:400)
+	at com.alibaba.assistant.agent.autoconfigure.evaluation.DefaultEvaluationSuiteConfig$$SpringCGLIB$$0.evaluationService(<generated>)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.beans.factory.support.SimpleInstantiationStrategy.lambda$instantiate$0(SimpleInstantiationStrategy.java:172)
+	... 51 common frames omitted
+
+2026-01-17T22:56:01.895+08:00 ERROR --- [pool-3-thread-1] c.a.c.a.a.s.c.ExecutionController        : Error occurred during agent stream execution
+
+com.fasterxml.jackson.core.JsonParseException: Duplicate field '@class'
+ at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 1, column: 2136]
+	at com.fasterxml.jackson.core.json.JsonReadContext._checkDup(JsonReadContext.java:250)
+	at com.fasterxml.jackson.core.json.JsonReadContext.setCurrentName(JsonReadContext.java:244)
+	at com.fasterxml.jackson.core.json.ReaderBasedJsonParser.nextFieldName(ReaderBasedJsonParser.java:940)
+	at com.fasterxml.jackson.databind.deser.std.BaseNodeDeserializer._deserializeContainerNoRecursion(JsonNodeDeserializer.java:539)
+	at com.fasterxml.jackson.databind.deser.std.JsonNodeDeserializer.deserialize(JsonNodeDeserializer.java:100)
+	at com.fasterxml.jackson.databind.deser.std.JsonNodeDeserializer.deserialize(JsonNodeDeserializer.java:25)
+	at com.fasterxml.jackson.databind.deser.DefaultDeserializationContext.readRootValue(DefaultDeserializationContext.java:342)
+	at com.fasterxml.jackson.databind.ObjectMapper._readValue(ObjectMapper.java:4904)
+	at com.fasterxml.jackson.databind.ObjectMapper.readTree(ObjectMapper.java:3146)
+	at com.alibaba.cloud.ai.graph.serializer.plain_text.jackson.GenericMapDeserializer.deserialize(GenericMapDeserializer.java:42)
+	at com.alibaba.cloud.ai.graph.serializer.plain_text.jackson.GenericMapDeserializer.deserialize(GenericMapDeserializer.java:30)
+	at com.fasterxml.jackson.databind.deser.DefaultDeserializationContext.readRootValue(DefaultDeserializationContext.java:342)
+	at com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4931)
+	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3868)
+	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3851)
+	at com.alibaba.cloud.ai.graph.serializer.plain_text.jackson.JacksonStateSerializer.readData(JacksonStateSerializer.java:106)
+	at com.alibaba.cloud.ai.graph.serializer.StateSerializer.read(StateSerializer.java:60)
+	at com.alibaba.cloud.ai.graph.serializer.StateSerializer.read(StateSerializer.java:31)
+	at com.alibaba.cloud.ai.graph.serializer.Serializer.bytesToObject(Serializer.java:55)
+	at com.alibaba.cloud.ai.graph.serializer.Serializer.readObject(Serializer.java:66)
+	at com.alibaba.cloud.ai.graph.serializer.Serializer.cloneObject(Serializer.java:71)
+	at com.alibaba.cloud.ai.graph.serializer.StateSerializer.cloneObject(StateSerializer.java:50)
+	at com.alibaba.cloud.ai.graph.CompiledGraph.cloneState(CompiledGraph.java:407)
+	at com.alibaba.cloud.ai.graph.GraphRunnerContext.cloneState(GraphRunnerContext.java:280)
+	at com.alibaba.cloud.ai.graph.GraphRunnerContext.addCheckpoint(GraphRunnerContext.java:228)
+	at com.alibaba.cloud.ai.graph.GraphRunnerContext.buildNodeOutputAndAddCheckpoint(GraphRunnerContext.java:428)
+	at com.alibaba.cloud.ai.graph.executor.NodeExecutor.handleActionResult(NodeExecutor.java:178)
+	at com.alibaba.cloud.ai.graph.executor.NodeExecutor.lambda$executeNode$1(NodeExecutor.java:126)
+	at reactor.core.publisher.MonoFlatMapMany$FlatMapManyMain.onNext(MonoFlatMapMany.java:163)
+	at reactor.core.publisher.MonoCompletionStage$MonoCompletionStageSubscription.apply(MonoCompletionStage.java:121)
+	at reactor.core.publisher.MonoCompletionStage$MonoCompletionStageSubscription.apply(MonoCompletionStage.java:67)
+	at java.base/java.util.concurrent.CompletableFuture.uniHandle(CompletableFuture.java:934)
+	at java.base/java.util.concurrent.CompletableFuture$UniHandle.tryFire(CompletableFuture.java:911)
+	at java.base/java.util.concurrent.CompletableFuture.postComplete(CompletableFuture.java:510)
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1773)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+
+2026-01-17T23:02:04.581+08:00 ERROR --- [           main] o.s.b.d.LoggingFailureAnalysisReporter   : 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Web server failed to start. Port 8080 was already in use.
+
+Action:
+
+Identify and stop the process that's listening on port 8080 or configure this application to listen on another port.
+
+2026-01-17T23:17:13.074+08:00 ERROR --- [           main] o.s.b.d.LoggingFailureAnalysisReporter   : 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Web server failed to start. Port 8080 was already in use.
+
+Action:
+
+Identify and stop the process that's listening on port 8080 or configure this application to listen on another port.
+
+2026-01-17T23:24:55.059+08:00 ERROR --- [           main] o.s.boot.SpringApplication               : Application run failed
+
+org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'codeactAgentConfig' defined in file [D:\devfive\AssistantAgent\assistant-agent-start\target\classes\com\alibaba\assistant\agent\start\config\CodeactAgentConfig.class]: Post-processing of merged bean definition failed
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:584)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.instantiateSingleton(DefaultListableBeanFactory.java:1222)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.preInstantiateSingleton(DefaultListableBeanFactory.java:1188)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.preInstantiateSingletons(DefaultListableBeanFactory.java:1123)
+	at org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:987)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:627)
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:146)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:752)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:439)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:318)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350)
+	at com.alibaba.assistant.agent.start.AssistantAgentApplication.main(AssistantAgentApplication.java:62)
+Caused by: java.lang.IllegalStateException: Failed to introspect Class [com.alibaba.assistant.agent.start.config.CodeactAgentConfig] from ClassLoader [jdk.internal.loader.ClassLoaders$AppClassLoader@6bc7c054]
+	at org.springframework.util.ReflectionUtils.getDeclaredFields(ReflectionUtils.java:756)
+	at org.springframework.util.ReflectionUtils.doWithLocalFields(ReflectionUtils.java:689)
+	at org.springframework.context.annotation.CommonAnnotationBeanPostProcessor.buildResourceMetadata(CommonAnnotationBeanPostProcessor.java:432)
+	at org.springframework.context.annotation.CommonAnnotationBeanPostProcessor.findResourceMetadata(CommonAnnotationBeanPostProcessor.java:413)
+	at org.springframework.context.annotation.CommonAnnotationBeanPostProcessor.postProcessMergedBeanDefinition(CommonAnnotationBeanPostProcessor.java:313)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.applyMergedBeanDefinitionPostProcessors(AbstractAutowireCapableBeanFactory.java:1123)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:581)
+	... 17 common frames omitted
+Caused by: java.lang.NoClassDefFoundError: com/alibaba/assistant/agent/planning/integration/ParamCollectionResponseHook
+	at java.base/java.lang.Class.getDeclaredFields0(Native Method)
+	at java.base/java.lang.Class.privateGetDeclaredFields(Class.java:3475)
+	at java.base/java.lang.Class.getDeclaredFields(Class.java:2544)
+	at org.springframework.util.ReflectionUtils.getDeclaredFields(ReflectionUtils.java:751)
+	... 23 common frames omitted
+Caused by: java.lang.ClassNotFoundException: com.alibaba.assistant.agent.planning.integration.ParamCollectionResponseHook
+	at java.base/jdk.internal.loader.BuiltinClassLoader.loadClass(BuiltinClassLoader.java:641)
+	at java.base/jdk.internal.loader.ClassLoaders$AppClassLoader.loadClass(ClassLoaders.java:188)
+	at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:526)
+	... 27 common frames omitted
+
+2026-01-17T23:49:07.811+08:00 ERROR --- [oundedElastic-1] c.a.a.a.core.executor.GraalCodeExecutor  : GraalCodeExecutor#execute 执行失败: functionName=create_product_unit
+
+java.lang.RuntimeException: GraalVM execution error: [To redirect Truffle log output to a file use one of the following options:
+* '--log.file=<path>' if the option is passed using a guest language launcher.
+* '-Dpolyglot.log.file=<path>' if the option is passed using the host Java launcher.
+* Configure logging using the polyglot embedding API.]
+[engine] WARNING: The polyglot engine uses a fallback runtime that does not support runtime compilation to native code.
+Execution without runtime compilation will negatively impact the guest application performance.
+The following cause was found: JVMCI is not enabled for this JVM. Enable JVMCI using -XX:+EnableJVMCI.
+For more information see: https://www.graalvm.org/latest/reference-manual/embed-languages/#runtime-optimization-support.
+To disable this warning use the '--engine.WarnInterpreterOnly=false' option or the '-Dpolyglot.engine.WarnInterpreterOnly=false' system property.
+
+	at com.alibaba.assistant.agent.core.executor.GraalCodeExecutor.executeWithGraal(GraalCodeExecutor.java:447)
+	at com.alibaba.assistant.agent.core.executor.GraalCodeExecutor.execute(GraalCodeExecutor.java:226)
+	at com.alibaba.assistant.agent.autoconfigure.tools.ExecuteCodeTool.apply(ExecuteCodeTool.java:115)
+	at com.alibaba.assistant.agent.autoconfigure.tools.ExecuteCodeTool.apply(ExecuteCodeTool.java:43)
+	at org.springframework.ai.tool.function.FunctionToolCallback.callMethod(FunctionToolCallback.java:113)
+	at org.springframework.ai.tool.function.FunctionToolCallback.call(FunctionToolCallback.java:104)
+	at com.alibaba.cloud.ai.graph.agent.node.AgentToolNode.lambda$executeToolCallWithInterceptors$0(AgentToolNode.java:218)
+	at com.alibaba.cloud.ai.graph.agent.node.AgentToolNode.executeToolCallWithInterceptors(AgentToolNode.java:245)
+	at com.alibaba.cloud.ai.graph.agent.node.AgentToolNode.apply(AgentToolNode.java:116)
+	at com.alibaba.cloud.ai.graph.action.AsyncNodeActionWithConfig.lambda$node_async$0(AsyncNodeActionWithConfig.java:41)
+	at com.alibaba.cloud.ai.graph.executor.NodeExecutor.executeNode(NodeExecutor.java:122)
+	at com.alibaba.cloud.ai.graph.executor.NodeExecutor.execute(NodeExecutor.java:84)
+	at com.alibaba.cloud.ai.graph.executor.MainGraphExecutor.execute(MainGraphExecutor.java:108)
+	at com.alibaba.cloud.ai.graph.executor.NodeExecutor.lambda$processGraphResponseFlux$15(NodeExecutor.java:442)
+	at reactor.core.publisher.FluxDefer.subscribe(FluxDefer.java:46)
+	at reactor.core.publisher.Flux.subscribe(Flux.java:8891)
+	at reactor.core.publisher.FluxConcatArray$ConcatArraySubscriber.onComplete(FluxConcatArray.java:238)
+	at reactor.core.publisher.FluxConcatArray.subscribe(FluxConcatArray.java:79)
+	at reactor.core.publisher.Flux.subscribe(Flux.java:8891)
+	at reactor.core.publisher.FluxConcatArray$ConcatArraySubscriber.onComplete(FluxConcatArray.java:238)
+	at reactor.core.publisher.FluxFilter$FilterSubscriber.onComplete(FluxFilter.java:166)
+	at reactor.core.publisher.FluxMap$MapConditionalSubscriber.onComplete(FluxMap.java:275)
+	at reactor.core.publisher.FluxConcatArray$ConcatArraySubscriber.onComplete(FluxConcatArray.java:209)
+	at reactor.core.publisher.Operators$MultiSubscriptionSubscriber.onComplete(Operators.java:2230)
+	at reactor.core.publisher.FluxMap$MapSubscriber.onComplete(FluxMap.java:144)
+	at reactor.core.publisher.FluxSwitchIfEmpty$SwitchIfEmptySubscriber.onComplete(FluxSwitchIfEmpty.java:85)
+	at reactor.core.publisher.FluxFilter$FilterSubscriber.onComplete(FluxFilter.java:166)
+	at reactor.core.publisher.FluxHandle$HandleConditionalSubscriber.onComplete(FluxHandle.java:440)
+	at reactor.core.publisher.FluxMapFuseable$MapFuseableConditionalSubscriber.onComplete(FluxMapFuseable.java:350)
+	at reactor.core.publisher.FluxPeekFuseable$PeekFuseableConditionalSubscriber.onComplete(FluxPeekFuseable.java:595)
+	at reactor.core.publisher.FluxPeekFuseable$PeekFuseableConditionalSubscriber.onComplete(FluxPeekFuseable.java:595)
+	at reactor.core.publisher.FluxPeekFuseable$PeekFuseableConditionalSubscriber.onComplete(FluxPeekFuseable.java:595)
+	at reactor.core.publisher.FluxPeekFuseable$PeekFuseableConditionalSubscriber.onComplete(FluxPeekFuseable.java:595)
+	at reactor.core.publisher.FluxHandleFuseable$HandleFuseableConditionalSubscriber.onComplete(FluxHandleFuseable.java:605)
+	at reactor.core.publisher.FluxContextWrite$ContextWriteSubscriber.onComplete(FluxContextWrite.java:126)
+	at reactor.core.publisher.FluxDoFinally$DoFinallySubscriber.onComplete(FluxDoFinally.java:128)
+	at reactor.core.publisher.FluxPeekFuseable$PeekConditionalSubscriber.onComplete(FluxPeekFuseable.java:940)
+	at reactor.core.publisher.FluxMap$MapConditionalSubscriber.onComplete(FluxMap.java:275)
+	at reactor.core.publisher.FluxPeekFuseable$PeekConditionalSubscriber.onComplete(FluxPeekFuseable.java:940)
+	at reactor.core.publisher.FluxPeekFuseable$PeekConditionalSubscriber.onComplete(FluxPeekFuseable.java:940)
+	at reactor.core.publisher.FluxPeekFuseable$PeekConditionalSubscriber.onComplete(FluxPeekFuseable.java:940)
+	at reactor.core.publisher.FluxPeekFuseable$PeekConditionalSubscriber.onComplete(FluxPeekFuseable.java:940)
+	at reactor.core.publisher.FluxHandle$HandleConditionalSubscriber.onComplete(FluxHandle.java:440)
+	at reactor.core.publisher.FluxContextWrite$ContextWriteSubscriber.onComplete(FluxContextWrite.java:126)
+	at reactor.core.publisher.FluxDoFinally$DoFinallySubscriber.onComplete(FluxDoFinally.java:128)
+	at reactor.core.publisher.FluxPeekFuseable$PeekFuseableConditionalSubscriber.onComplete(FluxPeekFuseable.java:595)
+	at reactor.core.publisher.FluxPublishOn$PublishOnConditionalSubscriber.doComplete(FluxPublishOn.java:1106)
+	at reactor.core.publisher.FluxPublishOn$PublishOnConditionalSubscriber.checkTerminated(FluxPublishOn.java:1140)
+	at reactor.core.publisher.FluxPublishOn$PublishOnConditionalSubscriber.runAsync(FluxPublishOn.java:996)
+	at reactor.core.publisher.FluxPublishOn$PublishOnConditionalSubscriber.run(FluxPublishOn.java:1079)
+	at reactor.core.scheduler.WorkerTask.call(WorkerTask.java:84)
+	at reactor.core.scheduler.WorkerTask.call(WorkerTask.java:37)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:304)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+Caused by: org.graalvm.polyglot.PolyglotException: NameError: name 'erp_client' is not defined
+	at <python>.create_product_unit(Unknown)
+	at <python>.<module>(Unknown)
+	at org.graalvm.polyglot.Context.eval(Context.java:446)
+	at com.alibaba.assistant.agent.core.executor.GraalCodeExecutor.executeWithGraal(GraalCodeExecutor.java:313)
+	... 56 common frames omitted
+
+2026-01-17T23:49:07.815+08:00 ERROR --- [oundedElastic-1] c.a.a.a.a.tools.ExecuteCodeTool          : ExecuteCodeTool#apply 代码执行失败: functionName=create_product_unit, error=GraalVM execution error: [To redirect Truffle log output to a file use one of the following options:
+* '--log.file=<path>' if the option is passed using a guest language launcher.
+* '-Dpolyglot.log.file=<path>' if the option is passed using the host Java launcher.
+* Configure logging using the polyglot embedding API.]
+[engine] WARNING: The polyglot engine uses a fallback runtime that does not support runtime compilation to native code.
+Execution without runtime compilation will negatively impact the guest application performance.
+The following cause was found: JVMCI is not enabled for this JVM. Enable JVMCI using -XX:+EnableJVMCI.
+For more information see: https://www.graalvm.org/latest/reference-manual/embed-languages/#runtime-optimization-support.
+To disable this warning use the '--engine.WarnInterpreterOnly=false' option or the '-Dpolyglot.engine.WarnInterpreterOnly=false' system property.
+

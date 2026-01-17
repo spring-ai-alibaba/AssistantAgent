@@ -1,0 +1,156 @@
+/*
+ * Copyright 2024-2025 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.alibaba.assistant.agent.planning.session;
+
+import com.alibaba.assistant.agent.planning.model.ParamCollectionSession;
+import com.alibaba.assistant.agent.planning.spi.SessionProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.RedisTemplate;
+
+import java.time.Duration;
+
+/**
+ * Redis 会话存储提供者
+ *
+ * <p>使用 Redis 存储会话，适用于分布式应用和生产环境。
+ *
+ * @author Assistant Agent Team
+ * @since 1.0.0
+ */
+public class RedisSessionProvider implements SessionProvider {
+
+    private static final Logger logger = LoggerFactory.getLogger(RedisSessionProvider.class);
+
+    private static final String SESSION_KEY_PREFIX = "param:collection:session:";
+    private static final String ASSISTANT_SESSION_INDEX_PREFIX = "param:collection:index:";
+    private static final Duration DEFAULT_TTL = Duration.ofMinutes(30);
+
+    private final RedisTemplate<String, Object> redisTemplate;
+
+    public RedisSessionProvider(RedisTemplate<String, Object> redisTemplate) {
+        this.redisTemplate = redisTemplate;
+        logger.info("RedisSessionProvider#init - provider initialized");
+    }
+
+    @Override
+    public void saveSession(ParamCollectionSession session) {
+        if (session == null) {
+            throw new IllegalArgumentException("Session cannot be null");
+        }
+
+        String sessionKey = buildSessionKey(session.getSessionId());
+        logger.debug("RedisSessionProvider#saveSession - sessionId={}", session.getSessionId());
+
+        redisTemplate.opsForValue().set(sessionKey, session, DEFAULT_TTL);
+
+        if (session.getAssistantSessionId() != null) {
+            String indexKey = buildIndexKey(session.getAssistantSessionId());
+            redisTemplate.opsForValue().set(indexKey, session.getSessionId(), DEFAULT_TTL);
+        }
+    }
+
+    @Override
+    public ParamCollectionSession getSession(String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) {
+            throw new IllegalArgumentException("SessionId cannot be null or empty");
+        }
+
+        String sessionKey = buildSessionKey(sessionId);
+        logger.debug("RedisSessionProvider#getSession - sessionId={}", sessionId);
+
+        Object value = redisTemplate.opsForValue().get(sessionKey);
+        if (value == null) {
+            return null;
+        }
+
+        if (!(value instanceof ParamCollectionSession)) {
+            logger.error("RedisSessionProvider#getSession - invalid type, sessionId={}, type={}",
+                    sessionId, value.getClass());
+            return null;
+        }
+
+        ParamCollectionSession session = (ParamCollectionSession) value;
+        if (session.isExpired()) {
+            deleteSession(sessionId);
+            return null;
+        }
+
+        return session;
+    }
+
+    @Override
+    public ParamCollectionSession getActiveSessionByAssistantSessionId(String assistantSessionId) {
+        if (assistantSessionId == null || assistantSessionId.isBlank()) {
+            throw new IllegalArgumentException("AssistantSessionId cannot be null or empty");
+        }
+
+        String indexKey = buildIndexKey(assistantSessionId);
+        logger.debug("RedisSessionProvider#getActiveSessionByAssistantSessionId - assistantSessionId={}",
+                assistantSessionId);
+
+        Object sessionIdObj = redisTemplate.opsForValue().get(indexKey);
+        if (sessionIdObj == null) {
+            return null;
+        }
+
+        String sessionId = sessionIdObj.toString();
+        ParamCollectionSession session = getSession(sessionId);
+
+        if (session != null && !session.canCollect()) {
+            return null;
+        }
+
+        return session;
+    }
+
+    @Override
+    public void deleteSession(String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) {
+            throw new IllegalArgumentException("SessionId cannot be null or empty");
+        }
+
+        String sessionKey = buildSessionKey(sessionId);
+        logger.debug("RedisSessionProvider#deleteSession - sessionId={}", sessionId);
+
+        ParamCollectionSession session = getSession(sessionId);
+        if (session != null && session.getAssistantSessionId() != null) {
+            String indexKey = buildIndexKey(session.getAssistantSessionId());
+            redisTemplate.delete(indexKey);
+        }
+
+        redisTemplate.delete(sessionKey);
+    }
+
+    @Override
+    public int cleanupExpiredSessions() {
+        logger.debug("RedisSessionProvider#cleanupExpiredSessions - Redis handles TTL automatically");
+        return 0;
+    }
+
+    @Override
+    public String getProviderType() {
+        return "Redis";
+    }
+
+    private String buildSessionKey(String sessionId) {
+        return SESSION_KEY_PREFIX + sessionId;
+    }
+
+    private String buildIndexKey(String assistantSessionId) {
+        return ASSISTANT_SESSION_INDEX_PREFIX + assistantSessionId;
+    }
+}
