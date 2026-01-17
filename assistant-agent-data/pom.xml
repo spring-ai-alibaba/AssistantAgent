@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.alibaba.agent.assistant</groupId>
+        <artifactId>assistant-agent</artifactId>
+        <version>0.1.1</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>assistant-agent-data</artifactId>
+    <packaging>pom</packaging>
+    <name>Assistant Agent Data</name>
+    <description>Data integration module for AssistantAgent</description>
+
+    <modules>
+        <module>assistant-agent-data-api</module>
+        <module>assistant-agent-data-core</module>
+    </modules>
+
+</project>
