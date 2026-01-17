@@ -18,7 +18,7 @@
 
     <modules>
         <module>assistant-agent-data-api</module>
-        <module>assistant-agent-data-core</module>
+        <!-- assistant-agent-data-core will be added in a subsequent task -->
     </modules>
 
 </project>
