@@ -267,15 +267,36 @@ public class ActionVectorizationService {
             );
 
             List<VectorSearchResult> results = new ArrayList<>();
+
+            // 先收集所有分数，用于动态归一化
+            double maxScore = 0.0;
+            for (Hit<ActionVectorDocument> hit : response.hits().hits()) {
+                if (hit.score() != null && hit.score() > maxScore) {
+                    maxScore = hit.score();
+                }
+            }
+
+            // 如果没有结果或分数为0，返回空
+            if (maxScore <= 0) {
+                return results;
+            }
+
             for (Hit<ActionVectorDocument> hit : response.hits().hits()) {
                 ActionVectorDocument doc = hit.source();
                 if (doc != null) {
+                    // 动态归一化：最高分映射到 0.95，保证高相似度的结果有高置信度
+                    double normalizedScore = hit.score() != null ?
+                            Math.min(0.95, (hit.score() / maxScore) * 0.95) : 0.0;
+
+                    logger.debug("ActionVectorizationService#hybridSearch - actionId={}, rawScore={}, maxScore={}, normalizedScore={}",
+                            doc.getActionId(), hit.score(), maxScore, normalizedScore);
+
                     results.add(VectorSearchResult.builder()
                             .actionId(doc.getActionId())
                             .actionName(doc.getActionName())
                             .description(doc.getDescription())
                             .category(doc.getCategory())
-                            .score(hit.score() != null ? hit.score() / 10.0 : 0.0) // 归一化
+                            .score(normalizedScore)
                             .build());
                 }
             }

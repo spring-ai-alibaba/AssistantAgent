@@ -157,7 +157,7 @@ public class StepDefinition {
     @AllArgsConstructor
     public static class InterfaceBinding {
         /**
-         * 接口类型（HTTP, MCP, INTERNAL）
+         * 接口类型（HTTP, MCP, INTERNAL, DATA_AGENT）
          */
         private String type;
 
@@ -175,6 +175,11 @@ public class StepDefinition {
          * 内部服务配置
          */
         private InternalConfig internal;
+
+        /**
+         * DataAgent 配置
+         */
+        private DataAgentConfig dataAgent;
     }
 
     /**
@@ -214,6 +219,55 @@ public class StepDefinition {
     public static class InternalConfig {
         private String beanName;
         private String methodName;
+
+        /**
+         * 方法参数定义（用于支持方法重载）
+         */
+        private List<MethodParam> methodParams;
+    }
+
+    /**
+     * 方法参数定义
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class MethodParam {
+        /**
+         * 参数名称
+         */
+        private String name;
+
+        /**
+         * 参数类型（完整类名，如 java.lang.Long）
+         */
+        private String type;
+    }
+
+    /**
+     * DataAgent 配置
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class DataAgentConfig {
+        /**
+         * 数据源 ID
+         */
+        private String dataSourceId;
+
+        /**
+         * 查询类型（NATURAL_LANGUAGE, SQL_TEMPLATE）
+         */
+        @Builder.Default
+        private String queryType = "NATURAL_LANGUAGE";
+
+        /**
+         * SQL 模板（当 queryType 为 SQL_TEMPLATE 时使用）
+         */
+        private String sqlTemplate;
     }
 
     /**

@@ -143,6 +143,20 @@ spring.ai.alibaba.codeact.extension.planning:
   enabled: true
   elasticsearch:
     enabled: true
+  # 评估集成配置 - 启用参数收集流程和 LLM 二次验证
+  evaluation:
+    enabled: true
+    param-collection-enabled: true
+    llm-verification-enabled: true  # 启用 LLM 二次验证（关键词+向量匹配后由 LLM 判断最终结果）
+    llm-verification-max-candidates: 5  # LLM 验证的最大候选数量
+    session-timeout-minutes: 60
+    min-match-confidence: 0.5
+  # 意图识别配置 - 调低阈值以便触发参数收集
+  intent:
+    enabled: true
+    direct-execute-threshold: 0.95
+    hint-threshold: 0.5
+    keyword-filter-enabled: true
 
 # ============================================================================
 # Logging - Debug level for development

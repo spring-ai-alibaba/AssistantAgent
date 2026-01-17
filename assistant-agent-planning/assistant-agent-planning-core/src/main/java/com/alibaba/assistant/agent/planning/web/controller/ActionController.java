@@ -25,6 +25,7 @@ import com.alibaba.assistant.agent.planning.intent.UnifiedIntentRecognitionHook;
 import com.alibaba.assistant.agent.planning.web.dto.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -52,9 +53,9 @@ public class ActionController {
 
     public ActionController(ActionRepository actionRepository,
                             ActionProvider actionProvider,
-                            ActionVectorizationService vectorizationService,
-                            PlanningIntentHook planningIntentHook,
-                            UnifiedIntentRecognitionHook unifiedIntentHook) {
+                            @Autowired(required = false) ActionVectorizationService vectorizationService,
+                            @Autowired(required = false) PlanningIntentHook planningIntentHook,
+                            @Autowired(required = false) UnifiedIntentRecognitionHook unifiedIntentHook) {
         this.actionRepository = actionRepository;
         this.actionProvider = actionProvider;
         this.vectorizationService = vectorizationService;

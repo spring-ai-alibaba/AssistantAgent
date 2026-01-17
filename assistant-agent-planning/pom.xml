@@ -17,6 +17,7 @@
     <modules>
         <module>assistant-agent-planning-api</module>
         <module>assistant-agent-planning-core</module>
+        <module>assistant-agent-planning-integration</module>
     </modules>
 
 </project>

@@ -18,6 +18,8 @@ package com.alibaba.assistant.agent.planning.config;
 import com.alibaba.assistant.agent.common.tools.CodeactTool;
 import com.alibaba.assistant.agent.planning.internal.*;
 import com.alibaba.assistant.agent.planning.internal.executor.*;
+import com.alibaba.assistant.agent.planning.param.StructuredParamExtractor;
+import com.alibaba.assistant.agent.planning.param.ParameterValidator;
 import com.alibaba.assistant.agent.planning.persistence.MybatisPlusActionRepository;
 import com.alibaba.assistant.agent.planning.persistence.converter.ActionEntityConverter;
 import com.alibaba.assistant.agent.planning.persistence.mapper.ActionRegistryMapper;
@@ -25,17 +27,19 @@ import com.alibaba.assistant.agent.planning.spi.*;
 import com.alibaba.assistant.agent.planning.tools.*;
 import com.alibaba.assistant.agent.planning.vector.ActionVectorizationService;
 import com.alibaba.assistant.agent.planning.web.controller.ActionController;
+import com.alibaba.assistant.agent.planning.session.InMemorySessionProvider;
 import com.alibaba.assistant.agent.planning.web.controller.PlanController;
 import com.alibaba.assistant.agent.planning.internal.SemanticActionProvider;
 import com.alibaba.assistant.agent.planning.intent.KeywordMatcher;
 import com.alibaba.assistant.agent.planning.intent.PlanningIntentHook;
-import com.alibaba.assistant.agent.planning.evaluation.ActionIntentPromptBuilder;
-import com.alibaba.assistant.agent.planning.evaluation.PlanningEvaluationCriterionProvider;
+// ActionIntentPromptBuilder 和 PlanningEvaluationCriterionProvider 在 integration 模块中
 import com.alibaba.assistant.agent.evaluation.evaluator.EvaluatorRegistry;
 import com.alibaba.assistant.agent.prompt.PromptBuilder;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -48,6 +52,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -94,7 +100,48 @@ public class PlanningExtensionAutoConfiguration {
 
     // ==================== SPI Beans ====================
 
+    /**
+     * RestTemplate Bean - 用于 HTTP 请求执行
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public RestTemplate restTemplate() {
+        logger.info("PlanningExtensionAutoConfiguration#restTemplate - reason=creating RestTemplate bean");
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5000);
+        factory.setReadTimeout(30000);
+        return new RestTemplate(factory);
+    }
 
+    /**
+     * SessionProvider Bean - 用于参数收集会话存储
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public SessionProvider sessionProvider() {
+        logger.info("PlanningExtensionAutoConfiguration#sessionProvider - reason=creating in-memory session provider");
+        return new InMemorySessionProvider();
+    }
+
+    /**
+     * StructuredParamExtractor Bean - 用于 LLM 参数提取
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public StructuredParamExtractor structuredParamExtractor(ChatModel chatModel, ObjectMapper objectMapper) {
+        logger.info("PlanningExtensionAutoConfiguration#structuredParamExtractor - reason=creating structured param extractor");
+        return new StructuredParamExtractor(chatModel, objectMapper);
+    }
+
+    /**
+     * ParameterValidator Bean - 用于参数验证
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public ParameterValidator parameterValidator() {
+        logger.info("PlanningExtensionAutoConfiguration#parameterValidator - reason=creating parameter validator");
+        return new ParameterValidator();
+    }
 
 
     @Bean
@@ -245,43 +292,9 @@ public class PlanningExtensionAutoConfiguration {
 
     // ==================== Evaluation Integration ====================
 
-    /**
-     * Planning 评估标准提供者
-     *
-     * <p>提供动作意图匹配评估标准，用于在评估阶段识别用户意图。
-     * <p>仅在启用评估模块时创建。
-     * <p>使用 @Lazy 避免循环依赖
-     */
-    @Bean
-    @Lazy
-    @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = "spring.ai.alibaba.codeact.extension.evaluation", name = "enabled", havingValue = "true", matchIfMissing = true)
-    public PlanningEvaluationCriterionProvider planningEvaluationCriterionProvider(
-            @Lazy ActionProvider actionProvider,
-            @Lazy @Autowired(required = false) EvaluatorRegistry evaluatorRegistry) {
-        if (evaluatorRegistry == null) {
-            logger.warn("PlanningExtensionAutoConfiguration#planningEvaluationCriterionProvider - reason=EvaluatorRegistry not found, skipping");
-            return null;
-        }
-        logger.info("PlanningExtensionAutoConfiguration#planningEvaluationCriterionProvider - reason=creating planning evaluation criterion provider");
-        return new PlanningEvaluationCriterionProvider(actionProvider, evaluatorRegistry);
-    }
-
-    /**
-     * 动作意图提示构建器
-     *
-     * <p>根据动作匹配评估结果生成提示，处理中等置信度（0.7-0.95）的匹配。
-     * <p>高置信度（>=0.95）由 UnifiedIntentRecognitionHook 处理。
-     * <p>使用 @Lazy 避免循环依赖
-     */
-    @Bean
-    @Lazy
-    @ConditionalOnMissingBean(name = "actionIntentPromptBuilder")
-    @ConditionalOnProperty(prefix = "spring.ai.alibaba.codeact.extension.evaluation", name = "enabled", havingValue = "true", matchIfMissing = true)
-    public PromptBuilder actionIntentPromptBuilder() {
-        logger.info("PlanningExtensionAutoConfiguration#actionIntentPromptBuilder - reason=creating action intent prompt builder");
-        return new ActionIntentPromptBuilder();
-    }
+    // 以下 Bean 已移至 integration 模块：
+    // - PlanningEvaluationCriterionProvider
+    // - ActionIntentPromptBuilder
 
     // ==================== Intent Recognition Hook ====================
 
@@ -376,14 +389,16 @@ public class PlanningExtensionAutoConfiguration {
                 PlanExecutor planExecutor,
                 KeywordMatcher keywordMatcher,
                 @Autowired(required = false) com.alibaba.assistant.agent.extension.experience.spi.ExperienceProvider experienceProvider,
+                @Autowired(required = false) org.springframework.ai.chat.model.ChatModel chatModel,
                 PlanningExtensionProperties properties) {
             logger.info("UnifiedIntentHookConfiguration#unifiedIntentRecognitionHook - reason=creating unified intent hook, " +
-                            "experienceProviderPresent={}, directExecuteThreshold={}, hintThreshold={}",
+                            "experienceProviderPresent={}, chatModelPresent={}, directExecuteThreshold={}, hintThreshold={}",
                     experienceProvider != null,
+                    chatModel != null,
                     properties.getIntent().getDirectExecuteThreshold(),
                     properties.getIntent().getHintThreshold());
             return new com.alibaba.assistant.agent.planning.intent.UnifiedIntentRecognitionHook(
-                    actionProvider, planGenerator, planExecutor, keywordMatcher, experienceProvider, properties);
+                    actionProvider, planGenerator, planExecutor, keywordMatcher, experienceProvider, chatModel, properties);
         }
     }
 

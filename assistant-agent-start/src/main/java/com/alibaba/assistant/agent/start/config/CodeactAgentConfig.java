@@ -230,6 +230,12 @@ public class CodeactAgentConfig {
 	@org.springframework.beans.factory.annotation.Qualifier("codeactPhaseEvaluationHooks")
 	private List<Hook> codeactPhaseEvaluationHooks;
 
+	@Autowired(required = false)
+	private com.alibaba.assistant.agent.planning.intent.UnifiedIntentRecognitionHook unifiedIntentRecognitionHook;
+
+	@Autowired(required = false)
+	private com.alibaba.assistant.agent.planning.integration.ParamCollectionResponseHook paramCollectionResponseHook;
+
 
 	/**
 	 * 创建 CodeactAgent
@@ -350,10 +356,22 @@ public class CodeactAgentConfig {
             logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=已准备注入AfterAgentLearningHook");
         }
 
-		// 注入 FastIntent Hook（只在命中时才会跳过LLM；未命中时不做“经验注入”，避免与评估注入重复）
+		// 注入 FastIntent Hook（只在命中时才会跳过LLM；未命中时不做"经验注入"，避免与评估注入重复）
 		if (fastIntentReactHook != null) {
 			reactHooks.add(fastIntentReactHook);
 			logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=已准备注入FastIntentReactHook");
+		}
+
+		// 注入 UnifiedIntentRecognitionHook（Planning 意图识别）
+		if (unifiedIntentRecognitionHook != null) {
+			reactHooks.add(unifiedIntentRecognitionHook);
+			logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=已准备注入UnifiedIntentRecognitionHook");
+		}
+
+		// 注入 ParamCollectionResponseHook（参数收集响应 Hook）
+		if (paramCollectionResponseHook != null) {
+			reactHooks.add(paramCollectionResponseHook);
+			logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=已准备注入ParamCollectionResponseHook");
 		}
 
 		CodeactAgent.CodeactAgentBuilder builder = CodeactAgent.builder()

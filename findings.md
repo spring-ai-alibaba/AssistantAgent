@@ -1,180 +1,204 @@
-# Findings: assistant-management 项目分析
+# Findings: "添加单位"无法匹配 Action 问题调查
 
-## 项目信息
-- **路径**: D:\devfive\dataagent\assistant-management
-- **类型**: 企业 AI 助手平台 - 智能规划引擎
-- **框架**: Spring Boot 3.4+, Spring AI Alibaba 1.0.0.4
-- **核心能力**: 意图识别、知识问答(RAG)、数据查询(DataAgent)、动作执行、多步骤编排
+## 调查记录
 
-## 项目结构
+### 1. 发现内容
 
-```
-assistant-management/
-├── entity/          # ActionRegistry, ActionExecutionLog, MultiStepActionState
-├── dto/             # ActionDefinition, ActionMatch, ActionResult
-├── service/         # ActionService, KnowledgeService, MultiStepActionService
-├── executor/        # StepExecutor, QueryStepExecutor, ExecuteStepExecutor
-├── workflow/node/   # StateGraph 工作流节点
-├── adapter/         # InterfaceAdapter, HttpInterfaceAdapter
-└── resources/
-    └── multi-step-actions/  # YAML 配置文件
-```
+#### 1.1 关键文件位置
+- **ActionIntentEvaluator**: `assistant-agent-planning/assistant-agent-planning-core/src/main/java/com/alibaba/assistant/agent/planning/evaluation/ActionIntentEvaluator.java`
+- **SemanticActionProvider**: `assistant-agent-planning/assistant-agent-planning-core/src/main/java/com/alibaba/assistant/agent/planning/internal/SemanticActionProvider.java`
+- **ActionEntityConverter**: `assistant-agent-planning/assistant-agent-planning-core/src/main/java/com/alibaba/assistant/agent/planning/persistence/converter/ActionEntityConverter.java`
+- **ActionDefinition**: `assistant-agent-planning/assistant-agent-planning-api/src/main/java/com/alibaba/assistant/agent/planning/model/ActionDefinition.java`
+- **ActionRegistryEntity**: `assistant-agent-planning/assistant-agent-planning-core/src/main/java/com/alibaba/assistant/agent/planning/persistence/entity/ActionRegistryEntity.java`
 
-## 动作系统（核心）
+#### 1.2 匹配流程
+1. 用户输入 → ActionIntentEvaluator.evaluate()
+2. 调用 ActionProvider.matchActions(userInput, context)
+3. SemanticActionProvider 执行两种匹配：
+   - **向量语义搜索** (60% 权重)
+   - **关键词匹配** (40% 权重)
+4. 融合两种结果，返回超过阈值(0.5)的匹配
 
-### 1. 动作注册表 (ActionRegistry Entity)
+#### 1.3 关键词匹配逻辑 (SemanticActionProvider.java:158-197)
 ```java
-- actionId: 动作唯一标识
-- actionName: 动作名称
-- description: 动作描述
-- keywords: 关键词数组（JSON）
-- synonyms: 同义词数组（JSON）
-- parameters: 参数定义（JSON）
-- actionType: API_CALL/PAGE_NAVIGATION/FORM_PREFILL/WORKFLOW_TRIGGER/MULTI_STEP
-- handler: 处理器类名
-- category: 分类
-- steps: 多步骤配置（JSON，仅MULTI_STEP类型）
-- stateSchema: 状态Schema（JSON，仅MULTI_STEP类型）
-- timeoutMinutes: 超时时间（分钟）
-- priority: 优先级
-- usageCount: 使用次数
-- successRate: 成功率
-```
+private double computeKeywordScore(String normalizedInput, ActionDefinition action) {
+    double score = 0.0;
 
-### 2. 动作类型
-- **API_CALL**: 调用外部API
-- **PAGE_NAVIGATION**: 页面跳转
-- **FORM_PREFILL**: 表单预填
-- **WORKFLOW_TRIGGER**: 触发工作流
-- **MULTI_STEP**: 多步骤编排（核心）
+    // 1. 精确关键词匹配 (score=0.95)
+    if (action.getTriggerKeywords() != null) {
+        for (String keyword : action.getTriggerKeywords()) {
+            if (normalizedInput.contains(keyword.toLowerCase())) {
+                score = Math.max(score, 0.95);
+            }
+        }
+    }
 
-## 参数标准（ActionParameter）
+    // 2. 同义词匹配 (score=0.85)
+    if (action.getSynonyms() != null && score < 0.95) {
+        for (String synonym : action.getSynonyms()) {
+            if (normalizedInput.contains(synonym.toLowerCase())) {
+                score = Math.max(score, 0.85);
+            }
+        }
+    }
 
-```java
-class ActionParameter {
-    String name;           // 参数名
-    String label;          // 显示标签
-    String type;           // string/number/boolean/enum/array/object
-    List<String> values;   // 枚举值列表
-    Boolean required;      // 是否必填
-    Integer minLength;     // 最小长度
-    Integer maxLength;     // 最大长度
-    String pattern;        // 正则表达式
-    String defaultValue;   // 默认值
-    String placeholder;    // 占位符
-    String description;    // 描述
+    // 3. 示例匹配 (score=similarity*0.8)
+    // 4. 名称匹配 (score=0.7)
+
+    return score;
 }
 ```
 
-### 参数来源类型（Source）
-- **USER_INPUT**: 用户输入
-- **CONTEXT**: 上下文（如 userId, sessionId）
-- **PREVIOUS_STEP**: 前序步骤输出
-- **SYSTEM**: 系统自动填充
+#### 1.4 日志分析
+从 `logs/assistant-agent.log` 发现：
+- ✅ 输入 **"添加产品单位"** → 成功匹配到 `erp:product-unit:create` (confidence=0.54, matchType=KEYWORD_FUZZY)
+- ❓ 输入 **"添加单位"** → 日志中没有找到相关记录
 
-## 多步骤执行逻辑
+---
 
-### 步骤类型（StepType）
-1. **QUERY**: 查询数据（如：查询可申领电脑列表）
-2. **INPUT**: 收集用户输入（如：填写申领理由）
-3. **EXECUTE**: 执行动作（如：提交申请）
-4. **API_CALL**: 调用外部API（如：查询审批人）
-5. **INTERNAL_SERVICE**: 调用内部服务（如：校验信息）
-6. **NOTIFICATION**: 发送通知
+## 代码片段
 
-### 执行流程
-```
-1. MultiStepActionNode 加载/创建状态
-   ↓
-2. 根据 current_step_index 确定当前步骤
-   ↓
-3. StepExecutor 执行步骤
-   ├─ QueryStepExecutor: 查询数据 → 返回选项 → interrupt（等待用户选择）
-   ├─ InputStepExecutor: 验证输入 → 存储到 state_data → 继续下一步
-   └─ ExecuteStepExecutor: 调用接口 → 返回最终结果
-   ↓
-4. 更新 MultiStepActionState
-   ↓
-5. 如果未完成，返回提示，等待下次用户输入
-   ↓
-6. 用户回复 → resume with threadId → 继续执行
-```
+### 关键代码：关键词匹配逻辑
 
-### 状态管理（MultiStepActionState）
+**SemanticActionProvider.java:162-168**
 ```java
-- stateId: 状态唯一ID（UUID）
-- sessionId: 会话ID
-- actionId: 动作ID
-- current_step_index: 当前步骤索引
-- current_step_id: 当前步骤ID
-- state_data: 状态数据（JSON）- 存储中间结果
-- user_inputs: 用户输入历史（JSON）
-- status: in_progress/completed/cancelled/timeout
-- expire_time: 过期时间
+// 精确关键词匹配
+if (action.getTriggerKeywords() != null) {
+    for (String keyword : action.getTriggerKeywords()) {
+        if (normalizedInput.contains(keyword.toLowerCase())) {
+            score = Math.max(score, 0.95);
+        }
+    }
+}
 ```
 
-## 外键依赖处理
+### 数据解析：ActionEntityConverter.java:73
 
-### 参数校验步骤
-1. **check_foreign_key**: 检查外键是否存在
-   - 示例：检查品牌名 "Tesla" 是否存在于 brand 表
-   - 如果存在，获取 brand_id
-   - 如果不存在，提示用户或创建新记录
-
-2. **参数来源映射**:
-```yaml
-inputParams:
-  - name: brand_id
-    type: STRING
-    required: true
-    source:
-      sourceType: PREVIOUS_STEP
-      sourceRef: check-brand
-      expression: "$.brandInfo.brandId"  # JSONPath 提取
+```java
+.triggerKeywords(parseJsonList(entity.getTriggerKeywords()))
 ```
 
-## 知识库对接
+**parseJsonList 方法 (169-179行)**:
+```java
+private List<String> parseJsonList(String json) {
+    if (json == null || json.isBlank()) {
+        return Collections.emptyList();
+    }
+    try {
+        return objectMapper.readValue(json, new TypeReference<List<String>>() {});
+    } catch (JsonProcessingException e) {
+        logger.warn("ActionEntityConverter#parseJsonList - reason=failed to parse json list, error={}", e.getMessage());
+        return Collections.emptyList();
+    }
+}
+```
 
-### RAG 流程
-1. **向量化**: EmbeddingService → VectorStoreService
-2. **检索**: Elasticsearch HNSW 索引查询
-3. **重排序**: 基于相似度和业务规则
-4. **答案生成**: LLM 结合检索内容生成答案
+---
 
-### 集成点
-- **KnowledgeService**: 知识库管理
-- **VectorStoreService**: 向量存储
-- **ActionVectorizationService**: 动作向量化（用于语义匹配）
+## 匹配逻辑分析
 
-## 示例配置（leave-apply.yaml）
+### 当前实现
+1. **数据流**:
+   - 数据库 `action_registry.keywords` (TEXT/JSON) → ActionRegistryEntity.triggerKeywords
+   - ActionEntityConverter.parseJsonList() → List<String>
+   - ActionDefinition.triggerKeywords → SemanticActionProvider
 
-### 步骤1: 校验请假信息（INTERNAL_SERVICE）
-- 输入: leaveType, startDate, endDate（来自 USER_INPUT）
-- 输出: validationResult（包含 isValid, remainingDays, message）
-- 接口: 内部Bean调用 leaveValidationService.validateLeaveRequest()
+2. **匹配算法**:
+   - 用户输入转小写: `normalizedInput = userInput.toLowerCase().trim()`
+   - 关键词也转小写: `keyword.toLowerCase()`
+   - 使用 `String.contains()` 进行子串匹配
+   - 精确关键词匹配得分: 0.95
 
-### 步骤2: 查询审批人（API_CALL）
-- 输入: employeeId（来自 CONTEXT），leaveDays（来自 PREVIOUS_STEP）
-- 输出: approverInfo（包含 approverId, approverName, approverEmail）
-- 接口: HTTP REST API 调用 hr-service
+3. **阈值**:
+   - 默认匹配阈值: 0.5
+   - 语义权重: 0.6
+   - 关键词权重: 0.4
+   - 最高可能得分: 0.95 * 0.4 = 0.38 (仅关键词匹配)
 
-### 步骤3: 提交请假申请（API_CALL + SAGA）
-- 输入: 综合前序步骤的所有数据
-- 输出: submitResult（包含 requestId, status）
-- 接口: HTTP REST API 调用 oa-service
-- **补偿机制**: 如果失败，调用 cancel 接口回滚
+### 问题分析
 
-### 步骤4: 发送通知（NOTIFICATION）
-- 输入: approverEmail, requestId（来自 PREVIOUS_STEP）
-- 接口: 内部通知服务
-- 策略: skippable=true（失败不影响整体流程）
+#### 可能的原因
+1. **数据库字段映射问题**:
+   - ActionRegistryEntity.java:86 - 字段名是 `triggerKeywords`
+   - 但数据库列名是 `keywords`
+   - 使用 `@TableField("keywords")` 注解映射 ✅
 
-## 关键技术点
+2. **JSON 解析失败**:
+   - 如果 JSON 格式不正确，parseJsonList 会返回空列表
+   - 需要检查日志中是否有 "failed to parse json list" 警告
 
-1. **StateGraph 工作流引擎**: Spring AI Alibaba Graph
-2. **状态持久化**: MySQL 存储 MultiStepActionState
-3. **中断与恢复**: interrupt → 等待用户输入 → resume with threadId
-4. **SAGA 事务**: 支持补偿机制，失败自动回滚
-5. **接口适配器**: HttpInterfaceAdapter, McpToolAdapter, InternalServiceAdapter
-6. **参数映射**: JSONPath 表达式提取前序步骤输出
-7. **流式响应**: SSE (Server-Sent Events) 实时推送
+3. **阈值问题**:
+   - 关键词匹配最高得分: 0.95 * 0.4 = 0.38
+   - 如果没有语义搜索结果，总分 0.38 < 0.5 阈值 ❌
+   - **这是最可能的问题！**
+
+4. **匹配类型判断问题** (SemanticActionProvider.java:223-224):
+   ```java
+   if (hasKeyword && keywordScores.get(actionId) > 0.9) {
+       return ActionMatch.MatchType.KEYWORD_EXACT;
+   }
+   ```
+   - 这里检查的是原始 keywordScore (> 0.9)
+   - 但最终 confidence 是融合后的分数 (keywordScore * keywordWeight)
+
+---
+
+## 数据分析
+
+### Action Registry 记录
+```sql
+INSERT INTO `assistant_agent`.`action_registry` (...) VALUES (
+  2,
+  'erp:product-unit:create',
+  '添加产品单位',
+  '在ERP系统中创建新的产品计量单位，如：个、台、箱、件等',
+  'API_CALL',
+  'erp-basic',
+  NULL,
+  '["添加单位", "新建单位", "创建单位", "新增计量单位", "加单位"]',  -- keywords
+  '["加个单位", "建个单位", "录入单位"]',  -- synonyms
+  ...
+);
+```
+
+### Keywords 字段
+```json
+["添加单位", "新建单位", "创建单位", "新增计量单位", "加单位"]
+```
+
+### Synonyms 字段
+```json
+["加个单位", "建个单位", "录入单位"]
+```
+
+---
+
+## 待确认问题
+- [x] keywords 字段是 TEXT 类型还是 JSON 类型？ → TEXT 存储 JSON 字符串
+- [x] JSON 数组是如何解析和匹配的？ → Jackson ObjectMapper 解析为 List<String>
+- [x] 匹配算法是精确匹配还是模糊匹配？ → String.contains() 子串匹配
+- [x] 是否有大小写敏感问题？ → 都转小写，不敏感
+- [x] 是否有分词或tokenizer处理？ → 无，直接子串匹配
+- [ ] **关键问题**: 阈值配置是多少？默认 0.5
+- [ ] **关键问题**: 关键词权重是多少？默认 0.4
+- [ ] **关键问题**: 纯关键词匹配最高得分 0.38 < 0.5，无法通过阈值！
+
+---
+
+## 初步结论
+
+**最可能的问题**: 匹配阈值设置不合理
+
+- 纯关键词匹配最高得分: 0.95 * 0.4 = **0.38**
+- 默认匹配阈值: **0.5**
+- 0.38 < 0.5 → **匹配失败** ❌
+
+**验证方法**:
+1. 查看是否有语义搜索结果贡献分数
+2. 测试输入"添加单位"，查看日志中的 score
+3. 检查 vectorService 是否正常工作
+
+**可能的解决方案**:
+1. 降低 matchThreshold (从 0.5 降到 0.3)
+2. 提高 keywordWeight (从 0.4 提高到 0.6)
+3. 提高关键词匹配基础分 (从 0.95 提高到 1.0)

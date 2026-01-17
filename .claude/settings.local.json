@@ -17,7 +17,15 @@
       "Bash(find:*)",
       "Bash(netstat:*)",
       "Bash(findstr:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "WebSearch",
+      "Bash(javac:*)",
+      "Bash(java:*)",
+      "Bash(del:*)",
+      "Skill(superpowers:systematic-debugging)",
+      "WebFetch(domain:java2ai.com)",
+      "Bash(cat:*)",
+      "Bash(taskkill:*)"
     ]
   }
 }

@@ -15,6 +15,7 @@
  */
 package com.alibaba.assistant.agent.planning.internal;
 
+import com.alibaba.assistant.agent.planning.context.TenantContext;
 import com.alibaba.assistant.agent.planning.model.ActionDefinition;
 import com.alibaba.assistant.agent.planning.model.ActionMatch;
 import com.alibaba.assistant.agent.planning.spi.ActionProvider;
@@ -64,7 +65,22 @@ public class SemanticActionProvider implements ActionProvider {
 
     @Override
     public List<ActionDefinition> getAllActions() {
-        return actionRepository.findByEnabled(true);
+        List<ActionDefinition> allActions = actionRepository.findByEnabled(true);
+
+        // 如果设置了租户上下文，过滤租户相关的 Action
+        if (TenantContext.isPresent()) {
+            Long tenantId = TenantContext.getTenantId();
+            Long systemId = TenantContext.getSystemId();
+
+            allActions = allActions.stream()
+                    .filter(action -> action.belongsToTenant(tenantId, systemId))
+                    .collect(Collectors.toList());
+
+            logger.debug("SemanticActionProvider#getAllActions - filtered by tenant, tenantId={}, systemId={}, count={}",
+                    tenantId, systemId, allActions.size());
+        }
+
+        return allActions;
     }
 
     @Override
@@ -102,12 +118,22 @@ public class SemanticActionProvider implements ActionProvider {
                     result.getScore() * semanticWeight);
         }
 
-        // 融合关键词得分
+        // 融合关键词得分（关键词精确匹配时给予更高权重）
         for (Map.Entry<String, Double> entry : keywordScores.entrySet()) {
             allActionIds.add(entry.getKey());
-            combinedScores.merge(entry.getKey(),
-                    entry.getValue() * keywordWeight,
-                    Double::sum);
+            double kwScore = entry.getValue();
+
+            // 精确匹配（>=0.9）时，使用 max 策略而非加权平均，保证高置信度
+            if (kwScore >= 0.9) {
+                double existingScore = combinedScores.getOrDefault(entry.getKey(), 0.0);
+                // 精确匹配时，取较高值，并给予 boost
+                combinedScores.put(entry.getKey(), Math.max(existingScore, kwScore));
+            } else {
+                // 非精确匹配时，使用加权融合
+                combinedScores.merge(entry.getKey(),
+                        kwScore * keywordWeight,
+                        Double::sum);
+            }
         }
 
         // 4. 构建匹配结果

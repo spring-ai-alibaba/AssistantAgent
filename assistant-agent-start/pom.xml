@@ -50,6 +50,12 @@
             <artifactId>assistant-agent-planning-core</artifactId>
         </dependency>
 
+        <!-- Planning 模块与 Evaluation 模块的集成 -->
+        <dependency>
+            <groupId>com.alibaba.agent.assistant</groupId>
+            <artifactId>assistant-agent-planning-integration</artifactId>
+        </dependency>
+
         <!-- ==================== 持久化依赖 ==================== -->
 
         <!-- MyBatis Plus for MySQL -->

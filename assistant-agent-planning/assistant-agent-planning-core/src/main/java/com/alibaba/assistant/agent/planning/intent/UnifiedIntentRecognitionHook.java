@@ -35,11 +35,14 @@ import com.alibaba.cloud.ai.graph.agent.hook.HookPositions;
 import com.alibaba.cloud.ai.graph.agent.hook.JumpTo;
 import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
@@ -81,6 +84,7 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
     private final PlanExecutor planExecutor;
     private final KeywordMatcher keywordMatcher;
     private final ExperienceProvider experienceProvider;  // 可选，Experience 模块启用时注入
+    private final ChatModel chatModel;  // 用于 LLM 参数验证
     private final PlanningExtensionProperties properties;
 
     private final double directExecuteThreshold;
@@ -91,12 +95,14 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
                                         PlanExecutor planExecutor,
                                         KeywordMatcher keywordMatcher,
                                         ExperienceProvider experienceProvider,
+                                        ChatModel chatModel,
                                         PlanningExtensionProperties properties) {
         this.actionProvider = actionProvider;
         this.planGenerator = planGenerator;
         this.planExecutor = planExecutor;
         this.keywordMatcher = keywordMatcher;
         this.experienceProvider = experienceProvider;
+        this.chatModel = chatModel;
         this.properties = properties;
 
         // 从配置读取阈值
@@ -161,6 +167,17 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
                 return CompletableFuture.completedFuture(Map.of());
             }
 
+            // 🔥 检查是否在参数收集会话中（多轮对话）
+            Optional<Map<String, Object>> paramCollectionOpt = state.value("param_collection");
+            if (paramCollectionOpt.isPresent()) {
+                Map<String, Object> paramCollection = paramCollectionOpt.get();
+                if (Boolean.TRUE.equals(paramCollection.get("active")) &&
+                    Boolean.TRUE.equals(paramCollection.get("awaitingInput"))) {
+                    logger.info("UnifiedIntentRecognitionHook#beforeAgent - reason=continuing param collection session, userInput={}", userInput);
+                    return handleParamCollectionContinuation(paramCollection, userInput, state, config);
+                }
+            }
+
             // 第一层：关键词快速过滤
             if (!keywordMatcher.mayMatch(userInput)) {
                 logger.debug("UnifiedIntentRecognitionHook#beforeAgent - reason=keyword filter: no match");
@@ -185,12 +202,26 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
 
             // 第三层：置信度分流
             if (confidence >= directExecuteThreshold) {
-                // 高置信度（>=0.95）：检查 Experience，决定执行方式（Hook层处理）
-                return handleHighConfidence(bestMatch, userInput, context, state, config);
+                // 高置信度（>=0.95）：检查是否有 Experience 可以快速执行
+                Optional<Experience> experienceOpt = findMatchingExperience(bestMatch.getAction(), userInput, state, config);
+                if (experienceOpt.isPresent()) {
+                    // 有 Experience：使用 FastIntent 快速执行（不需要参数提取）
+                    logger.info("UnifiedIntentRecognitionHook#beforeAgent - reason=found experience, using FastIntent, actionId={}, expId={}",
+                            bestMatch.getAction().getActionId(), experienceOpt.get().getId());
+                    return handleFastIntentExecution(experienceOpt.get(), bestMatch.getAction(), bestMatch);
+                }
+                // 无 Experience：使用 LLM 进行参数提取和验证
+                logger.info("UnifiedIntentRecognitionHook#beforeAgent - reason=high confidence, using LLM for param extraction, actionId={}, confidence={}",
+                        bestMatch.getAction().getActionId(), confidence);
+                return handleLlmParamExtraction(bestMatch, userInput, context);
+            } else if (confidence >= hintThreshold) {
+                // 中等置信度（>=0.7）：也使用 LLM 进行参数提取和验证
+                logger.info("UnifiedIntentRecognitionHook#beforeAgent - reason=medium confidence, using LLM for param extraction, actionId={}, confidence={}",
+                        bestMatch.getAction().getActionId(), confidence);
+                return handleLlmParamExtraction(bestMatch, userInput, context);
             } else {
-                // 中低置信度（<0.95）：不在Hook层处理，放行到评估模块
-                // 评估模块会根据置信度注入不同的提示
-                logger.debug("UnifiedIntentRecognitionHook#beforeAgent - reason=confidence < 0.95, defer to evaluation module, confidence={}", confidence);
+                // 低置信度（<0.7）：放行到正常 ReAct 流程
+                logger.debug("UnifiedIntentRecognitionHook#beforeAgent - reason=confidence < 0.7, defer to normal flow, confidence={}", confidence);
                 return CompletableFuture.completedFuture(Map.of());
             }
 
@@ -362,11 +393,21 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
                 action.getActionId());
 
         try {
+            // 0. 检查必填参数是否缺失
+            Map<String, Object> extractedParams = match.getExtractedParameters() != null ?
+                    match.getExtractedParameters() : Collections.emptyMap();
+            List<ActionParameter> missingRequiredParams = findMissingRequiredParameters(action, extractedParams);
+
+            if (!missingRequiredParams.isEmpty()) {
+                // 有缺失的必填参数，生成追问问题
+                logger.info("UnifiedIntentRecognitionHook#handlePlanningDirectExecution - reason=missing required params, count={}, actionId={}",
+                        missingRequiredParams.size(), action.getActionId());
+                return handleMissingParameters(action, match, missingRequiredParams);
+            }
+
             // 1. 生成执行计划
             PlanGenerator.PlanGenerationContext genContext = createGenerationContext(userInput, context);
-            Map<String, Object> params = match.getExtractedParameters() != null ?
-                    match.getExtractedParameters() : Collections.emptyMap();
-            ExecutionPlan plan = planGenerator.generate(action, params, genContext);
+            ExecutionPlan plan = planGenerator.generate(action, extractedParams, genContext);
 
             // 2. 执行计划
             PlanExecutionResult result = planExecutor.execute(plan, context);
@@ -401,6 +442,482 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
             // 执行失败，降级到提示注入
             return handleHintInjection(match, userInput);
         }
+    }
+
+    /**
+     * 查找缺失的必填参数
+     */
+    private List<ActionParameter> findMissingRequiredParameters(ActionDefinition action, Map<String, Object> extractedParams) {
+        List<ActionParameter> missing = new ArrayList<>();
+
+        if (action.getParameters() == null || action.getParameters().isEmpty()) {
+            return missing;
+        }
+
+        for (ActionParameter param : action.getParameters()) {
+            // 检查是否为必填参数
+            if (Boolean.TRUE.equals(param.getRequired())) {
+                String paramName = param.getName();
+                // 检查参数是否已提供
+                if (!extractedParams.containsKey(paramName) ||
+                        extractedParams.get(paramName) == null ||
+                        (extractedParams.get(paramName) instanceof String && ((String) extractedParams.get(paramName)).isBlank())) {
+                    missing.add(param);
+                }
+            }
+        }
+
+        return missing;
+    }
+
+    /**
+     * 处理缺失参数：生成追问问题返回给用户
+     */
+    private CompletableFuture<Map<String, Object>> handleMissingParameters(
+            ActionDefinition action,
+            ActionMatch match,
+            List<ActionParameter> missingParams) {
+
+        // 生成追问问题（询问第一个缺失的必填参数）
+        ActionParameter firstMissing = missingParams.get(0);
+        String question = generateParameterQuestion(firstMissing, action);
+
+        logger.info("UnifiedIntentRecognitionHook#handleMissingParameters - reason=asking for param, paramName={}, actionId={}",
+                firstMissing.getName(), action.getActionId());
+
+        AssistantMessage assistantMessage = new AssistantMessage(question);
+
+        // 构造参数收集状态
+        Map<String, Object> paramCollectionState = new HashMap<>();
+        paramCollectionState.put("active", true);
+        paramCollectionState.put("actionId", action.getActionId());
+        paramCollectionState.put("actionName", action.getActionName());
+        paramCollectionState.put("awaitingParam", firstMissing.getName());
+        paramCollectionState.put("missingParams", missingParams.stream().map(ActionParameter::getName).toList());
+        paramCollectionState.put("collectedParams", match.getExtractedParameters() != null ?
+                match.getExtractedParameters() : Collections.emptyMap());
+
+        Map<String, Object> intentState = Map.of(
+                "hit", true,
+                "mode", "param_collection",
+                "action_id", action.getActionId(),
+                "action_name", action.getActionName(),
+                "confidence", match.getConfidence() != null ? match.getConfidence() : 0.0
+        );
+
+        return CompletableFuture.completedFuture(Map.of(
+                "messages", List.of(assistantMessage),
+                "jump_to", JumpTo.end,
+                "unified_intent", intentState,
+                "param_collection", paramCollectionState
+        ));
+    }
+
+    /**
+     * 生成参数询问问题
+     */
+    private String generateParameterQuestion(ActionParameter param, ActionDefinition action) {
+        StringBuilder question = new StringBuilder();
+
+        // 使用参数的 label 或 name 作为显示名称
+        String displayName = StringUtils.hasText(param.getLabel()) ? param.getLabel() : param.getName();
+
+        // 使用参数的 placeholder 或 description 作为提示
+        if (StringUtils.hasText(param.getPlaceholder())) {
+            question.append("请输入").append(displayName).append("（").append(param.getPlaceholder()).append("）");
+        } else if (StringUtils.hasText(param.getDescription())) {
+            question.append("请输入").append(displayName).append("：").append(param.getDescription());
+        } else {
+            question.append("请输入").append(displayName);
+        }
+
+        return question.toString();
+    }
+
+    /**
+     * 处理参数收集会话的后续轮次
+     *
+     * <p>当用户已经在参数收集会话中时，将用户输入作为参数值处理。
+     */
+    @SuppressWarnings("unchecked")
+    private CompletableFuture<Map<String, Object>> handleParamCollectionContinuation(
+            Map<String, Object> paramCollection,
+            String userInput,
+            OverAllState state,
+            RunnableConfig config) {
+
+        String actionId = (String) paramCollection.get("actionId");
+        String actionName = (String) paramCollection.get("actionName");
+        Map<String, Object> collectedParams = paramCollection.get("collectedParams") != null ?
+                new HashMap<>((Map<String, Object>) paramCollection.get("collectedParams")) : new HashMap<>();
+
+        logger.info("UnifiedIntentRecognitionHook#handleParamCollectionContinuation - reason=processing param input, actionId={}, userInput={}",
+                actionId, userInput);
+
+        // 获取动作定义
+        ActionDefinition action = null;
+        try {
+            List<ActionDefinition> allActions = actionProvider.getAllActions();
+            for (ActionDefinition a : allActions) {
+                if (actionId.equals(a.getActionId())) {
+                    action = a;
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            logger.error("UnifiedIntentRecognitionHook#handleParamCollectionContinuation - reason=failed to get action", e);
+        }
+
+        if (action == null) {
+            logger.warn("UnifiedIntentRecognitionHook#handleParamCollectionContinuation - reason=action not found, actionId={}", actionId);
+            // 清除参数收集状态，让正常流程处理
+            return CompletableFuture.completedFuture(Map.of(
+                    "param_collection", Map.of("active", false)
+            ));
+        }
+
+        // 使用 LLM 继续参数提取
+        if (chatModel != null) {
+            try {
+                String prompt = buildContinuationPrompt(action, collectedParams, userInput);
+                String llmResponse = chatModel.call(new Prompt(prompt)).getResult().getOutput().getText();
+
+                logger.info("UnifiedIntentRecognitionHook#handleParamCollectionContinuation - reason=LLM response, response={}", llmResponse);
+
+                LlmParamResult result = parseLlmParamResult(llmResponse);
+
+                if (result != null) {
+                    // 合并新提取的参数
+                    if (result.extractedParams != null) {
+                        collectedParams.putAll(result.extractedParams);
+                    }
+
+                    // 检查是否还有 nextQuestion
+                    if (StringUtils.hasText(result.nextQuestion)) {
+                        logger.info("UnifiedIntentRecognitionHook#handleParamCollectionContinuation - reason=still has missing params, nextQuestion={}",
+                                result.nextQuestion);
+
+                        AssistantMessage assistantMessage = new AssistantMessage(result.nextQuestion);
+
+                        Map<String, Object> newParamCollection = new HashMap<>();
+                        newParamCollection.put("active", true);
+                        newParamCollection.put("actionId", actionId);
+                        newParamCollection.put("actionName", actionName);
+                        newParamCollection.put("nextQuestion", result.nextQuestion);
+                        newParamCollection.put("awaitingInput", true);
+                        newParamCollection.put("collectedParams", collectedParams);
+                        if (result.missingParams != null) {
+                            newParamCollection.put("missingParams", result.missingParams);
+                        }
+
+                        return CompletableFuture.completedFuture(Map.of(
+                                "messages", List.of(assistantMessage),
+                                "jump_to", JumpTo.end,
+                                "param_collection", newParamCollection
+                        ));
+                    }
+
+                    // 参数收集完成，执行动作
+                    logger.info("UnifiedIntentRecognitionHook#handleParamCollectionContinuation - reason=params complete, executing action, actionId={}, params={}",
+                            actionId, collectedParams);
+
+                    // 创建 ActionMatch 并执行
+                    ActionMatch match = new ActionMatch();
+                    match.setAction(action);
+                    match.setConfidence(1.0);
+                    match.setExtractedParameters(collectedParams);
+
+                    // 清除参数收集状态
+                    Map<String, Object> clearedParamCollection = Map.of("active", false);
+
+                    // 执行动作
+                    Map<String, Object> context = buildMatchContext(state, config);
+                    CompletableFuture<Map<String, Object>> executionResult = handlePlanningDirectExecution(match, userInput, context);
+
+                    // 合并清除状态
+                    return executionResult.thenApply(result1 -> {
+                        Map<String, Object> merged = new HashMap<>(result1);
+                        merged.put("param_collection", clearedParamCollection);
+                        return merged;
+                    });
+                }
+            } catch (Exception e) {
+                logger.error("UnifiedIntentRecognitionHook#handleParamCollectionContinuation - reason=LLM call failed", e);
+            }
+        }
+
+        // LLM 不可用或失败，使用简单策略：将用户输入作为第一个缺失参数的值
+        List<String> missingParams = paramCollection.get("missingParams") != null ?
+                (List<String>) paramCollection.get("missingParams") : List.of();
+
+        if (!missingParams.isEmpty()) {
+            String firstMissing = missingParams.get(0);
+            collectedParams.put(firstMissing, userInput);
+            logger.info("UnifiedIntentRecognitionHook#handleParamCollectionContinuation - reason=assigned input to param (fallback), param={}, value={}",
+                    firstMissing, userInput);
+        }
+
+        // 检查是否还有其他必填参数缺失
+        List<ActionParameter> stillMissing = findMissingRequiredParameters(action, collectedParams);
+
+        if (!stillMissing.isEmpty()) {
+            // 还有缺失参数，继续询问
+            ActionParameter nextParam = stillMissing.get(0);
+            String question = generateParameterQuestion(nextParam, action);
+
+            AssistantMessage assistantMessage = new AssistantMessage(question);
+
+            Map<String, Object> newParamCollection = new HashMap<>();
+            newParamCollection.put("active", true);
+            newParamCollection.put("actionId", actionId);
+            newParamCollection.put("actionName", actionName);
+            newParamCollection.put("nextQuestion", question);
+            newParamCollection.put("awaitingInput", true);
+            newParamCollection.put("collectedParams", collectedParams);
+            newParamCollection.put("missingParams", stillMissing.stream().map(ActionParameter::getName).toList());
+
+            return CompletableFuture.completedFuture(Map.of(
+                    "messages", List.of(assistantMessage),
+                    "jump_to", JumpTo.end,
+                    "param_collection", newParamCollection
+            ));
+        }
+
+        // 参数收集完成，执行动作
+        logger.info("UnifiedIntentRecognitionHook#handleParamCollectionContinuation - reason=params complete (fallback), executing action, actionId={}",
+                actionId);
+
+        ActionMatch match = new ActionMatch();
+        match.setAction(action);
+        match.setConfidence(1.0);
+        match.setExtractedParameters(collectedParams);
+
+        Map<String, Object> clearedParamCollection = Map.of("active", false);
+        Map<String, Object> context = buildMatchContext(state, config);
+
+        CompletableFuture<Map<String, Object>> executionResult = handlePlanningDirectExecution(match, userInput, context);
+
+        return executionResult.thenApply(result -> {
+            Map<String, Object> merged = new HashMap<>(result);
+            merged.put("param_collection", clearedParamCollection);
+            return merged;
+        });
+    }
+
+    /**
+     * 构建参数收集后续轮次的 LLM Prompt
+     *
+     * <p>委托给 {@link ParamExtractionPromptBuilder} 进行统一管理。
+     */
+    private String buildContinuationPrompt(ActionDefinition action, Map<String, Object> collectedParams, String userInput) {
+        return ParamExtractionPromptBuilder.getInstance().buildContinuationPrompt(action, collectedParams, userInput);
+    }
+
+    /**
+     * 使用 LLM 进行参数提取和验证
+     *
+     * <p>调用 LLM 分析用户输入，提取动作参数，检查必填参数是否缺失。
+     * 如果有缺失参数，返回 nextQuestion 给用户；如果参数完整，执行动作。
+     */
+    private CompletableFuture<Map<String, Object>> handleLlmParamExtraction(
+            ActionMatch match,
+            String userInput,
+            Map<String, Object> context) {
+
+        ActionDefinition action = match.getAction();
+
+        if (chatModel == null) {
+            logger.warn("UnifiedIntentRecognitionHook#handleLlmParamExtraction - reason=chatModel is null, falling back to rule-based check");
+            // 降级到规则检查
+            Map<String, Object> extractedParams = match.getExtractedParameters() != null ?
+                    match.getExtractedParameters() : Collections.emptyMap();
+            List<ActionParameter> missingParams = findMissingRequiredParameters(action, extractedParams);
+            if (!missingParams.isEmpty()) {
+                return handleMissingParameters(action, match, missingParams);
+            }
+            return handlePlanningDirectExecution(match, userInput, context);
+        }
+
+        try {
+            // 构建 LLM Prompt
+            String prompt = buildParamExtractionPrompt(action, userInput);
+
+            logger.debug("UnifiedIntentRecognitionHook#handleLlmParamExtraction - reason=calling LLM, actionId={}", action.getActionId());
+
+            // 调用 LLM
+            String llmResponse = chatModel.call(new Prompt(prompt)).getResult().getOutput().getText();
+
+            logger.info("UnifiedIntentRecognitionHook#handleLlmParamExtraction - reason=LLM response received, actionId={}, response={}",
+                    action.getActionId(), llmResponse);
+
+            // 解析 LLM 返回结果
+            LlmParamResult result = parseLlmParamResult(llmResponse);
+
+            if (result == null) {
+                logger.warn("UnifiedIntentRecognitionHook#handleLlmParamExtraction - reason=failed to parse LLM response, falling back to rule-based check");
+                // 解析失败，降级到规则检查
+                Map<String, Object> extractedParams = match.getExtractedParameters() != null ?
+                        match.getExtractedParameters() : Collections.emptyMap();
+                List<ActionParameter> missingParams = findMissingRequiredParameters(action, extractedParams);
+                if (!missingParams.isEmpty()) {
+                    return handleMissingParameters(action, match, missingParams);
+                }
+                return handlePlanningDirectExecution(match, userInput, context);
+            }
+
+            // 检查是否有 nextQuestion
+            if (StringUtils.hasText(result.nextQuestion)) {
+                logger.info("UnifiedIntentRecognitionHook#handleLlmParamExtraction - reason=has nextQuestion, returning to user, question={}",
+                        result.nextQuestion);
+                return handleNextQuestion(action, match, result);
+            }
+
+            // 参数完整，更新 match 中的参数并执行
+            if (result.extractedParams != null && !result.extractedParams.isEmpty()) {
+                // 合并参数
+                Map<String, Object> mergedParams = new HashMap<>();
+                if (match.getExtractedParameters() != null) {
+                    mergedParams.putAll(match.getExtractedParameters());
+                }
+                mergedParams.putAll(result.extractedParams);
+                match.setExtractedParameters(mergedParams);
+            }
+
+            logger.info("UnifiedIntentRecognitionHook#handleLlmParamExtraction - reason=params complete, executing action, actionId={}",
+                    action.getActionId());
+            return handlePlanningDirectExecution(match, userInput, context);
+
+        } catch (Exception e) {
+            logger.error("UnifiedIntentRecognitionHook#handleLlmParamExtraction - reason=LLM call failed, actionId={}",
+                    action.getActionId(), e);
+            // LLM 调用失败，降级到规则检查
+            Map<String, Object> extractedParams = match.getExtractedParameters() != null ?
+                    match.getExtractedParameters() : Collections.emptyMap();
+            List<ActionParameter> missingParams = findMissingRequiredParameters(action, extractedParams);
+            if (!missingParams.isEmpty()) {
+                return handleMissingParameters(action, match, missingParams);
+            }
+            return handlePlanningDirectExecution(match, userInput, context);
+        }
+    }
+
+    /**
+     * 构建参数提取的 LLM Prompt
+     *
+     * <p>委托给 {@link ParamExtractionPromptBuilder} 进行统一管理。
+     */
+    private String buildParamExtractionPrompt(ActionDefinition action, String userInput) {
+        return ParamExtractionPromptBuilder.getInstance().buildInitialExtractionPrompt(action, userInput);
+    }
+
+    /**
+     * 解析 LLM 返回的参数提取结果
+     */
+    private LlmParamResult parseLlmParamResult(String response) {
+        try {
+            // 尝试提取 JSON
+            String json = response;
+
+            // 去除 markdown 代码块
+            if (json.contains("```json")) {
+                int start = json.indexOf("```json") + 7;
+                int end = json.indexOf("```", start);
+                if (end > start) {
+                    json = json.substring(start, end).trim();
+                }
+            } else if (json.contains("```")) {
+                int start = json.indexOf("```") + 3;
+                int end = json.indexOf("```", start);
+                if (end > start) {
+                    json = json.substring(start, end).trim();
+                }
+            }
+
+            // 尝试找到 JSON 对象
+            int braceStart = json.indexOf("{");
+            int braceEnd = json.lastIndexOf("}");
+            if (braceStart >= 0 && braceEnd > braceStart) {
+                json = json.substring(braceStart, braceEnd + 1);
+            }
+
+            JSONObject jsonObj = JSON.parseObject(json);
+            LlmParamResult result = new LlmParamResult();
+
+            // 提取 extractedParams
+            JSONObject extractedParamsObj = jsonObj.getJSONObject("extractedParams");
+            if (extractedParamsObj != null) {
+                result.extractedParams = new HashMap<>(extractedParamsObj);
+            }
+
+            // 提取 missingParams
+            if (jsonObj.containsKey("missingParams")) {
+                result.missingParams = jsonObj.getJSONArray("missingParams").toJavaList(String.class);
+            }
+
+            // 提取 nextQuestion
+            result.nextQuestion = jsonObj.getString("nextQuestion");
+            if ("null".equalsIgnoreCase(result.nextQuestion)) {
+                result.nextQuestion = null;
+            }
+
+            return result;
+
+        } catch (Exception e) {
+            logger.warn("UnifiedIntentRecognitionHook#parseLlmParamResult - reason=parse failed, error={}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * LLM 参数提取结果
+     */
+    private static class LlmParamResult {
+        Map<String, Object> extractedParams;
+        List<String> missingParams;
+        String nextQuestion;
+    }
+
+    /**
+     * 处理 nextQuestion：返回追问给用户
+     */
+    private CompletableFuture<Map<String, Object>> handleNextQuestion(
+            ActionDefinition action,
+            ActionMatch match,
+            LlmParamResult result) {
+
+        AssistantMessage assistantMessage = new AssistantMessage(result.nextQuestion);
+
+        // 构造参数收集状态
+        Map<String, Object> paramCollectionState = new HashMap<>();
+        paramCollectionState.put("active", true);
+        paramCollectionState.put("actionId", action.getActionId());
+        paramCollectionState.put("actionName", action.getActionName());
+        paramCollectionState.put("nextQuestion", result.nextQuestion);
+        paramCollectionState.put("awaitingInput", true);
+        if (result.missingParams != null) {
+            paramCollectionState.put("missingParams", result.missingParams);
+        }
+        if (result.extractedParams != null) {
+            paramCollectionState.put("collectedParams", result.extractedParams);
+        }
+
+        Map<String, Object> intentState = Map.of(
+                "hit", true,
+                "mode", "param_collection_llm",
+                "action_id", action.getActionId(),
+                "action_name", action.getActionName(),
+                "confidence", match.getConfidence() != null ? match.getConfidence() : 0.0
+        );
+
+        logger.info("UnifiedIntentRecognitionHook#handleNextQuestion - reason=returning nextQuestion, actionId={}, question={}",
+                action.getActionId(), result.nextQuestion);
+
+        return CompletableFuture.completedFuture(Map.of(
+                "messages", List.of(assistantMessage),
+                "jump_to", JumpTo.end,
+                "unified_intent", intentState,
+                "param_collection", paramCollectionState
+        ));
     }
 
     /**

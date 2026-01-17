@@ -91,6 +91,11 @@ public class PlanningExtensionProperties {
      */
     private IntentConfig intent = new IntentConfig();
 
+    /**
+     * 评估集成配置
+     */
+    private EvaluationConfig evaluation = new EvaluationConfig();
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -195,6 +200,14 @@ public class PlanningExtensionProperties {
         this.intent = intent;
     }
 
+    public EvaluationConfig getEvaluation() {
+        return evaluation;
+    }
+
+    public void setEvaluation(EvaluationConfig evaluation) {
+        this.evaluation = evaluation;
+    }
+
     /**
      * 内存存储配置
      */
@@ -245,6 +258,11 @@ public class PlanningExtensionProperties {
          */
         private int maxMatches = 5;
 
+        /**
+         * 是否启用参数收集流程
+         */
+        private boolean paramCollectionEnabled = false;
+
         public double getThreshold() {
             return threshold;
         }
@@ -267,6 +285,14 @@ public class PlanningExtensionProperties {
 
         public void setMaxMatches(int maxMatches) {
             this.maxMatches = maxMatches;
+        }
+
+        public boolean isParamCollectionEnabled() {
+            return paramCollectionEnabled;
+        }
+
+        public void setParamCollectionEnabled(boolean paramCollectionEnabled) {
+            this.paramCollectionEnabled = paramCollectionEnabled;
         }
     }
 
@@ -477,6 +503,90 @@ public class PlanningExtensionProperties {
 
         public void setFailureTemplate(String failureTemplate) {
             this.failureTemplate = failureTemplate;
+        }
+    }
+
+    /**
+     * 评估集成配置
+     */
+    public static class EvaluationConfig {
+        /**
+         * 是否启用评估集成
+         */
+        private boolean enabled = true;
+
+        /**
+         * 是否启用参数收集流程
+         */
+        private boolean paramCollectionEnabled = false;
+
+        /**
+         * 是否启用 LLM 二次验证
+         * 启用后，会在关键词+向量匹配后，使用 LLM 对候选结果进行精确判断
+         */
+        private boolean llmVerificationEnabled = false;
+
+        /**
+         * LLM 验证的最大候选数量
+         */
+        private int llmVerificationMaxCandidates = 5;
+
+        /**
+         * 参数收集会话超时时间（分钟）
+         */
+        private int sessionTimeoutMinutes = 60;
+
+        /**
+         * 最小匹配置信度（低于此值不触发参数收集）
+         */
+        private double minMatchConfidence = 0.5;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public boolean isParamCollectionEnabled() {
+            return paramCollectionEnabled;
+        }
+
+        public void setParamCollectionEnabled(boolean paramCollectionEnabled) {
+            this.paramCollectionEnabled = paramCollectionEnabled;
+        }
+
+        public boolean isLlmVerificationEnabled() {
+            return llmVerificationEnabled;
+        }
+
+        public void setLlmVerificationEnabled(boolean llmVerificationEnabled) {
+            this.llmVerificationEnabled = llmVerificationEnabled;
+        }
+
+        public int getLlmVerificationMaxCandidates() {
+            return llmVerificationMaxCandidates;
+        }
+
+        public void setLlmVerificationMaxCandidates(int llmVerificationMaxCandidates) {
+            this.llmVerificationMaxCandidates = llmVerificationMaxCandidates;
+        }
+
+        public int getSessionTimeoutMinutes() {
+            return sessionTimeoutMinutes;
+        }
+
+        public void setSessionTimeoutMinutes(int sessionTimeoutMinutes) {
+            this.sessionTimeoutMinutes = sessionTimeoutMinutes;
+        }
+
+        public double getMinMatchConfidence() {
+            return minMatchConfidence;
+        }
+
+        public void setMinMatchConfidence(double minMatchConfidence) {
+            this.minMatchConfidence = minMatchConfidence;
         }
     }
 }

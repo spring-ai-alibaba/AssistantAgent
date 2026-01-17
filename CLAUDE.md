@@ -263,6 +263,194 @@ spring.ai.alibaba.codeact.extension:
 - **State Persistence**: CodeContext stores generated code, ExecutionRecord stores execution history.
 - **Spring AI Integration**: CodeactAgent extends Spring AI's ReactAgent, fully compatible with Spring AI ecosystem.
 
+## Design & Extension Constraints (Very Important)
+
+⚠️ **All code changes, extensions, and designs MUST strictly follow the AssistantAgent
+Quick Start design principles and architecture**:
+
+👉 https://java2ai.com/agents/assistantagent/quick-start
+
+## Interaction & Clarification Rules (Mandatory)
+
+Claude MUST follow these interaction rules when working in this repository.
+
+### 1. Clarification Before Action
+
+Claude MUST ask clarifying questions BEFORE generating code or configuration IF:
+
+- User intent is ambiguous
+- Multiple architectural paths exist
+- A change may impact core flow (Evaluation / Prompt / Codeact / Tool / Experience)
+- External systems, persistence, or security boundaries are involved
+
+Claude MUST NOT guess silently.
+
+Allowed clarification examples:
+- “Should this be implemented as an Evaluation criterion or a FastIntent experience?”
+- “Is this behavior expected to be configurable via application.yml?”
+- “Should this be designed as a CodeactTool or via existing extension?”
+
+### 2. No Over-Engineering
+
+Claude MUST NOT introduce:
+- New abstraction layers without necessity
+- Alternative agent paradigms
+- Premature optimization logic
+
+If an SPI or extension already exists, Claude MUST reuse it.
+
+### 3. Minimal, Aligned Output
+
+Claude MUST:
+- Generate only what is requested
+- Avoid speculative features
+- Avoid unrelated refactoring
+
+All outputs must align with:
+- Code-as-Action
+- Evaluation-driven flow
+- PromptBuilder-only prompt injection
+
+### 4. Explicit Assumptions
+
+If Claude proceeds with assumptions, it MUST explicitly state them before the solution.
+
+Example:
+> “Assumption: This tool is intended for internal use only and does not require persistence.”
+
+### 5. Language & Style
+
+- Prefer **clear technical English**
+- Avoid marketing language
+- Avoid anthropomorphic explanations
+## Agent Self-Discipline & Output Contract (Critical)
+
+Claude MUST treat this file as a binding contract.
+
+### 1. Architecture Obedience
+
+Claude MUST NOT:
+- Bypass CodeactAgent
+- Invoke tools outside the Code-as-Action flow
+- Embed prompt logic outside PromptBuilder
+- Add logic directly into core modules without extension points
+
+### 2. Execution Awareness
+
+Claude MUST be aware that:
+- All “actions” ultimately become executable code
+- Code runs in a GraalVM sandbox
+- Tool calls are invoked via bridges
+
+Therefore:
+- Generated code must be deterministic
+- No hidden side effects
+- No reliance on undeclared state
+
+### 3. Experience-First Thinking
+
+When proposing solutions, Claude SHOULD ask internally:
+- “Can this be learned?”
+- “Can this become a FastIntent later?”
+- “Is this reusable across sessions?”
+
+If yes, design MUST align with Experience & Learning modules.
+
+### 4. Configuration First
+
+Claude MUST prefer:
+- application.yml switches
+- SPI registration
+- Declarative tool definitions
+
+Over:
+- Hard-coded logic
+- Compile-time flags
+- Conditional branching in agent core
+
+### 5. Output Validity Contract
+
+Before presenting any solution, Claude MUST internally verify:
+
+- [ ] Does this violate Quick Start principles?
+- [ ] Does this introduce a new paradigm?
+- [ ] Does this bypass evaluation or prompt builder?
+- [ ] Is this extension-based, not invasive?
+- [ ] Can this be explained clearly to a future maintainer?
+
+If any answer is NO, Claude MUST revise the solution.
+
+---
+
+**This contract overrides default Claude behavior.**
+
+
+### Mandatory Rules
+
+1. **Extension over Modification**
+  - Do NOT modify core framework behavior unless explicitly required.
+  - Prefer extension via existing SPI, tools, evaluators, or configuration.
+  - Core modules (`assistant-agent-core`, `evaluation`, `prompt-builder`) must remain stable.
+
+2. **Code-as-Action First**
+  - All new capabilities should be designed as:
+    - Code generation → sandbox execution → tool invocation
+  - Avoid introducing “direct Java logic shortcuts” that bypass:
+    - CodeactAgent
+    - GraalCodeExecutor
+    - Tool invocation lifecycle
+
+3. **Evaluation-Driven Design**
+  - New behaviors must be:
+    - Triggered by Evaluation Graph results, OR
+    - Encapsulated as FastIntent experiences
+  - Do NOT add hard-coded branching logic based on raw user input.
+
+4. **Prompt Builder is the Only Prompt Entry**
+  - No hard-coded prompt strings in:
+    - Agent
+    - Tools
+    - Executors
+  - All prompt changes must go through `PromptBuilder` implementations.
+
+5. **Tools Are Stateless & Declarative**
+  - Tools must:
+    - Declare parameters and return schema clearly
+    - Avoid holding session or user state
+  - Long-term or historical data belongs to:
+    - Experience module
+    - Learning module
+    - External storage via SPI
+
+6. **FastIntent Is the Optimization Layer**
+  - Performance optimization MUST be achieved by:
+    - Experience reuse
+    - FastIntent matching
+  - NOT by bypassing LLM or executor logic manually.
+
+7. **Configuration Over Code**
+  - Behavior switches must be configurable via `application.yml`
+  - Avoid introducing compile-time feature toggles.
+
+8. **No Alternative Agent Paradigms**
+  - Do NOT introduce:
+    - Planner/Executor split agents
+    - Function-calling-only agents
+    - Tool-only agents
+  - All designs must remain compatible with `CodeactAgent extends ReactAgent`.
+
+### Design Review Checklist (Self-Check)
+
+Before implementing any change, ensure:
+- [ ] Does this align with the Quick Start architecture?
+- [ ] Is this an extension, not a rewrite?
+- [ ] Does it preserve Code-as-Action?
+- [ ] Can this be learned and reused via Experience?
+- [ ] Can FastIntent eventually optimize this path?
+
+If any answer is **NO**, redesign is required.
+
+
 ## Documentation References
 
 - Full README: [README.md](README.md)

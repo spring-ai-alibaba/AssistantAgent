@@ -50,7 +50,8 @@ import org.springframework.core.env.Environment;
 @ComponentScan(basePackages = {
     "com.alibaba.assistant.agent.start",
         "com.alibaba.assistant.agent.autoconfigure",
-    "com.alibaba.assistant.agent.extension"
+    "com.alibaba.assistant.agent.extension",
+    "com.alibaba.assistant.agent.planning"
 })
 public class AssistantAgentApplication {
 
