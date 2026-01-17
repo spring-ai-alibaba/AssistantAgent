@@ -98,6 +98,18 @@
             </dependency>
 
             <dependency>
+                <groupId>com.alibaba.agent.assistant</groupId>
+                <artifactId>assistant-agent-data-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.alibaba.agent.assistant</groupId>
+                <artifactId>assistant-agent-data-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>com.alibaba.cloud.ai</groupId>
                 <artifactId>spring-ai-alibaba-extensions-bom</artifactId>
                 <version>${spring-ai-alibaba-extensions.version}</version>
