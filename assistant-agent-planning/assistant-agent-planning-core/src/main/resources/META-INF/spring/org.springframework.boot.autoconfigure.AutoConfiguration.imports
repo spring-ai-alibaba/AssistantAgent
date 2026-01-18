@@ -1,1 +1,2 @@
 com.alibaba.assistant.agent.planning.config.PlanningExtensionAutoConfiguration
+com.alibaba.assistant.agent.planning.config.ParamCollectionSessionAutoConfiguration

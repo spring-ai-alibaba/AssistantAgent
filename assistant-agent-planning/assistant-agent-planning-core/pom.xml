@@ -111,6 +111,13 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Spring Data Redis for distributed session (optional) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Spring AI Alibaba DashScope for embedding (optional) -->
         <dependency>
             <groupId>com.alibaba.cloud.ai</groupId>

@@ -96,6 +96,11 @@ public class PlanningExtensionProperties {
      */
     private EvaluationConfig evaluation = new EvaluationConfig();
 
+    /**
+     * 参数收集配置
+     */
+    private ParamCollectionConfig paramCollection = new ParamCollectionConfig();
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -206,6 +211,14 @@ public class PlanningExtensionProperties {
 
     public void setEvaluation(EvaluationConfig evaluation) {
         this.evaluation = evaluation;
+    }
+
+    public ParamCollectionConfig getParamCollection() {
+        return paramCollection;
+    }
+
+    public void setParamCollection(ParamCollectionConfig paramCollection) {
+        this.paramCollection = paramCollection;
     }
 
     /**
@@ -587,6 +600,68 @@ public class PlanningExtensionProperties {
 
         public void setMinMatchConfidence(double minMatchConfidence) {
             this.minMatchConfidence = minMatchConfidence;
+        }
+    }
+
+    /**
+     * 参数收集配置
+     */
+    public static class ParamCollectionConfig {
+        /**
+         * 是否启用参数收集
+         */
+        private boolean enabled = true;
+
+        /**
+         * 会话配置
+         */
+        private SessionConfig session = new SessionConfig();
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public SessionConfig getSession() {
+            return session;
+        }
+
+        public void setSession(SessionConfig session) {
+            this.session = session;
+        }
+
+        /**
+         * 会话存储配置
+         */
+        public static class SessionConfig {
+            /**
+             * 存储类型：redis, memory
+             */
+            private String storeType = "redis";
+
+            /**
+             * 会话过期时间（分钟）
+             */
+            private Integer ttlMinutes = 30;
+
+            public String getStoreType() {
+                return storeType;
+            }
+
+            public void setStoreType(String storeType) {
+                this.storeType = storeType;
+            }
+
+            public Integer getTtlMinutes() {
+                return ttlMinutes;
+            }
+
+            public void setTtlMinutes(Integer ttlMinutes) {
+                this.ttlMinutes = ttlMinutes;
+            }
         }
     }
 }

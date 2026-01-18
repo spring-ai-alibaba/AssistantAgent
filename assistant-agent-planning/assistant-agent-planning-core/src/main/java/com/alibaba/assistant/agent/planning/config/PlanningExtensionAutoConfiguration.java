@@ -28,6 +28,7 @@ import com.alibaba.assistant.agent.planning.tools.*;
 import com.alibaba.assistant.agent.planning.vector.ActionVectorizationService;
 import com.alibaba.assistant.agent.planning.web.controller.ActionController;
 import com.alibaba.assistant.agent.planning.session.InMemorySessionProvider;
+import com.alibaba.assistant.agent.planning.session.ParamCollectionSessionStore;
 import com.alibaba.assistant.agent.planning.web.controller.PlanController;
 import com.alibaba.assistant.agent.planning.internal.SemanticActionProvider;
 import com.alibaba.assistant.agent.planning.intent.KeywordMatcher;
@@ -390,15 +391,17 @@ public class PlanningExtensionAutoConfiguration {
                 KeywordMatcher keywordMatcher,
                 @Autowired(required = false) com.alibaba.assistant.agent.extension.experience.spi.ExperienceProvider experienceProvider,
                 @Autowired(required = false) org.springframework.ai.chat.model.ChatModel chatModel,
+                @Autowired(required = false) ParamCollectionSessionStore sessionStore,
                 PlanningExtensionProperties properties) {
             logger.info("UnifiedIntentHookConfiguration#unifiedIntentRecognitionHook - reason=creating unified intent hook, " +
-                            "experienceProviderPresent={}, chatModelPresent={}, directExecuteThreshold={}, hintThreshold={}",
+                            "experienceProviderPresent={}, chatModelPresent={}, sessionStorePresent={}, directExecuteThreshold={}, hintThreshold={}",
                     experienceProvider != null,
                     chatModel != null,
+                    sessionStore != null,
                     properties.getIntent().getDirectExecuteThreshold(),
                     properties.getIntent().getHintThreshold());
             return new com.alibaba.assistant.agent.planning.intent.UnifiedIntentRecognitionHook(
-                    actionProvider, planGenerator, planExecutor, keywordMatcher, experienceProvider, chatModel, properties);
+                    actionProvider, planGenerator, planExecutor, keywordMatcher, experienceProvider, chatModel, sessionStore, properties);
         }
     }
 

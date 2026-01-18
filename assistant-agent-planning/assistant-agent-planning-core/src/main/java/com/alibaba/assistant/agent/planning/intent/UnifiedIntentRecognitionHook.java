@@ -23,6 +23,8 @@ import com.alibaba.assistant.agent.extension.experience.model.ExperienceType;
 import com.alibaba.assistant.agent.extension.experience.spi.ExperienceProvider;
 import com.alibaba.assistant.agent.planning.config.PlanningExtensionProperties;
 import com.alibaba.assistant.agent.planning.model.*;
+import com.alibaba.assistant.agent.planning.session.ParamCollectionSession;
+import com.alibaba.assistant.agent.planning.session.ParamCollectionSessionStore;
 import com.alibaba.assistant.agent.planning.spi.ActionProvider;
 import com.alibaba.assistant.agent.planning.spi.PlanExecutor;
 import com.alibaba.assistant.agent.planning.spi.PlanGenerator;
@@ -85,6 +87,7 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
     private final KeywordMatcher keywordMatcher;
     private final ExperienceProvider experienceProvider;  // 可选，Experience 模块启用时注入
     private final ChatModel chatModel;  // 用于 LLM 参数验证
+    private final ParamCollectionSessionStore sessionStore;  // 参数收集会话存储（支持分布式）
     private final PlanningExtensionProperties properties;
 
     private final double directExecuteThreshold;
@@ -96,6 +99,7 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
                                         KeywordMatcher keywordMatcher,
                                         ExperienceProvider experienceProvider,
                                         ChatModel chatModel,
+                                        ParamCollectionSessionStore sessionStore,
                                         PlanningExtensionProperties properties) {
         this.actionProvider = actionProvider;
         this.planGenerator = planGenerator;
@@ -103,6 +107,7 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
         this.keywordMatcher = keywordMatcher;
         this.experienceProvider = experienceProvider;
         this.chatModel = chatModel;
+        this.sessionStore = sessionStore;
         this.properties = properties;
 
         // 从配置读取阈值
@@ -167,14 +172,19 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
                 return CompletableFuture.completedFuture(Map.of());
             }
 
-            // 🔥 检查是否在参数收集会话中（多轮对话）
-            Optional<Map<String, Object>> paramCollectionOpt = state.value("param_collection");
-            if (paramCollectionOpt.isPresent()) {
-                Map<String, Object> paramCollection = paramCollectionOpt.get();
-                if (Boolean.TRUE.equals(paramCollection.get("active")) &&
-                    Boolean.TRUE.equals(paramCollection.get("awaitingInput"))) {
-                    logger.info("UnifiedIntentRecognitionHook#beforeAgent - reason=continuing param collection session, userInput={}", userInput);
-                    return handleParamCollectionContinuation(paramCollection, userInput, state, config);
+            // 获取会话ID（用于分布式会话存储）
+            String sessionId = extractSessionId(state, config);
+
+            // 🔥 检查是否在参数收集会话中（多轮对话）- 从分布式存储读取
+            if (sessionStore != null && sessionId != null) {
+                Optional<ParamCollectionSession> sessionOpt = sessionStore.get(sessionId);
+                if (sessionOpt.isPresent()) {
+                    ParamCollectionSession session = sessionOpt.get();
+                    if (session.isActive() && session.isAwaitingInput()) {
+                        logger.info("UnifiedIntentRecognitionHook#beforeAgent - reason=continuing param collection session (from store), sessionId={}, userInput={}",
+                                sessionId, userInput);
+                        return handleParamCollectionContinuation(session, userInput, state, config);
+                    }
                 }
             }
 
@@ -213,12 +223,12 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
                 // 无 Experience：使用 LLM 进行参数提取和验证
                 logger.info("UnifiedIntentRecognitionHook#beforeAgent - reason=high confidence, using LLM for param extraction, actionId={}, confidence={}",
                         bestMatch.getAction().getActionId(), confidence);
-                return handleLlmParamExtraction(bestMatch, userInput, context);
+                return handleLlmParamExtraction(bestMatch, userInput, context, state, config);
             } else if (confidence >= hintThreshold) {
                 // 中等置信度（>=0.7）：也使用 LLM 进行参数提取和验证
                 logger.info("UnifiedIntentRecognitionHook#beforeAgent - reason=medium confidence, using LLM for param extraction, actionId={}, confidence={}",
                         bestMatch.getAction().getActionId(), confidence);
-                return handleLlmParamExtraction(bestMatch, userInput, context);
+                return handleLlmParamExtraction(bestMatch, userInput, context, state, config);
             } else {
                 // 低置信度（<0.7）：放行到正常 ReAct 流程
                 logger.debug("UnifiedIntentRecognitionHook#beforeAgent - reason=confidence < 0.7, defer to normal flow, confidence={}", confidence);
@@ -538,21 +548,21 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
      * 处理参数收集会话的后续轮次
      *
      * <p>当用户已经在参数收集会话中时，将用户输入作为参数值处理。
+     * <p>使用分布式会话存储保持状态一致性。
      */
-    @SuppressWarnings("unchecked")
     private CompletableFuture<Map<String, Object>> handleParamCollectionContinuation(
-            Map<String, Object> paramCollection,
+            ParamCollectionSession session,
             String userInput,
             OverAllState state,
             RunnableConfig config) {
 
-        String actionId = (String) paramCollection.get("actionId");
-        String actionName = (String) paramCollection.get("actionName");
-        Map<String, Object> collectedParams = paramCollection.get("collectedParams") != null ?
-                new HashMap<>((Map<String, Object>) paramCollection.get("collectedParams")) : new HashMap<>();
+        String actionId = session.getActionId();
+        String actionName = session.getActionName();
+        Map<String, Object> collectedParams = session.getCollectedParams() != null ?
+                new HashMap<>(session.getCollectedParams()) : new HashMap<>();
 
-        logger.info("UnifiedIntentRecognitionHook#handleParamCollectionContinuation - reason=processing param input, actionId={}, userInput={}",
-                actionId, userInput);
+        logger.info("UnifiedIntentRecognitionHook#handleParamCollectionContinuation - reason=processing param input, sessionId={}, actionId={}, userInput={}",
+                session.getSessionId(), actionId, userInput);
 
         // 获取动作定义
         ActionDefinition action = null;
@@ -570,10 +580,9 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
 
         if (action == null) {
             logger.warn("UnifiedIntentRecognitionHook#handleParamCollectionContinuation - reason=action not found, actionId={}", actionId);
-            // 清除参数收集状态，让正常流程处理
-            return CompletableFuture.completedFuture(Map.of(
-                    "param_collection", Map.of("active", false)
-            ));
+            // 关闭会话
+            closeSession(session);
+            return CompletableFuture.completedFuture(Map.of());
         }
 
         // 使用 LLM 继续参数提取
@@ -590,6 +599,7 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
                     // 合并新提取的参数
                     if (result.extractedParams != null) {
                         collectedParams.putAll(result.extractedParams);
+                        session.mergeCollectedParams(result.extractedParams);
                     }
 
                     // 检查是否还有 nextQuestion
@@ -597,23 +607,15 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
                         logger.info("UnifiedIntentRecognitionHook#handleParamCollectionContinuation - reason=still has missing params, nextQuestion={}",
                                 result.nextQuestion);
 
-                        AssistantMessage assistantMessage = new AssistantMessage(result.nextQuestion);
+                        // 更新会话状态并保存到分布式存储
+                        session.setNextQuestionAndAwait(result.nextQuestion, result.missingParams);
+                        saveSession(session);
 
-                        Map<String, Object> newParamCollection = new HashMap<>();
-                        newParamCollection.put("active", true);
-                        newParamCollection.put("actionId", actionId);
-                        newParamCollection.put("actionName", actionName);
-                        newParamCollection.put("nextQuestion", result.nextQuestion);
-                        newParamCollection.put("awaitingInput", true);
-                        newParamCollection.put("collectedParams", collectedParams);
-                        if (result.missingParams != null) {
-                            newParamCollection.put("missingParams", result.missingParams);
-                        }
+                        AssistantMessage assistantMessage = new AssistantMessage(result.nextQuestion);
 
                         return CompletableFuture.completedFuture(Map.of(
                                 "messages", List.of(assistantMessage),
-                                "jump_to", JumpTo.end,
-                                "param_collection", newParamCollection
+                                "jump_to", JumpTo.end
                         ));
                     }
 
@@ -621,25 +623,18 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
                     logger.info("UnifiedIntentRecognitionHook#handleParamCollectionContinuation - reason=params complete, executing action, actionId={}, params={}",
                             actionId, collectedParams);
 
+                    // 关闭会话
+                    closeSession(session);
+
                     // 创建 ActionMatch 并执行
                     ActionMatch match = new ActionMatch();
                     match.setAction(action);
                     match.setConfidence(1.0);
                     match.setExtractedParameters(collectedParams);
 
-                    // 清除参数收集状态
-                    Map<String, Object> clearedParamCollection = Map.of("active", false);
-
                     // 执行动作
                     Map<String, Object> context = buildMatchContext(state, config);
-                    CompletableFuture<Map<String, Object>> executionResult = handlePlanningDirectExecution(match, userInput, context);
-
-                    // 合并清除状态
-                    return executionResult.thenApply(result1 -> {
-                        Map<String, Object> merged = new HashMap<>(result1);
-                        merged.put("param_collection", clearedParamCollection);
-                        return merged;
-                    });
+                    return handlePlanningDirectExecution(match, userInput, context);
                 }
             } catch (Exception e) {
                 logger.error("UnifiedIntentRecognitionHook#handleParamCollectionContinuation - reason=LLM call failed", e);
@@ -647,12 +642,13 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
         }
 
         // LLM 不可用或失败，使用简单策略：将用户输入作为第一个缺失参数的值
-        List<String> missingParams = paramCollection.get("missingParams") != null ?
-                (List<String>) paramCollection.get("missingParams") : List.of();
+        List<String> missingParams = session.getMissingParams() != null ?
+                session.getMissingParams() : List.of();
 
         if (!missingParams.isEmpty()) {
             String firstMissing = missingParams.get(0);
             collectedParams.put(firstMissing, userInput);
+            session.addCollectedParam(firstMissing, userInput);
             logger.info("UnifiedIntentRecognitionHook#handleParamCollectionContinuation - reason=assigned input to param (fallback), param={}, value={}",
                     firstMissing, userInput);
         }
@@ -665,21 +661,15 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
             ActionParameter nextParam = stillMissing.get(0);
             String question = generateParameterQuestion(nextParam, action);
 
-            AssistantMessage assistantMessage = new AssistantMessage(question);
+            // 更新会话状态并保存
+            session.setNextQuestionAndAwait(question, stillMissing.stream().map(ActionParameter::getName).toList());
+            saveSession(session);
 
-            Map<String, Object> newParamCollection = new HashMap<>();
-            newParamCollection.put("active", true);
-            newParamCollection.put("actionId", actionId);
-            newParamCollection.put("actionName", actionName);
-            newParamCollection.put("nextQuestion", question);
-            newParamCollection.put("awaitingInput", true);
-            newParamCollection.put("collectedParams", collectedParams);
-            newParamCollection.put("missingParams", stillMissing.stream().map(ActionParameter::getName).toList());
+            AssistantMessage assistantMessage = new AssistantMessage(question);
 
             return CompletableFuture.completedFuture(Map.of(
                     "messages", List.of(assistantMessage),
-                    "jump_to", JumpTo.end,
-                    "param_collection", newParamCollection
+                    "jump_to", JumpTo.end
             ));
         }
 
@@ -687,21 +677,16 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
         logger.info("UnifiedIntentRecognitionHook#handleParamCollectionContinuation - reason=params complete (fallback), executing action, actionId={}",
                 actionId);
 
+        // 关闭会话
+        closeSession(session);
+
         ActionMatch match = new ActionMatch();
         match.setAction(action);
         match.setConfidence(1.0);
         match.setExtractedParameters(collectedParams);
 
-        Map<String, Object> clearedParamCollection = Map.of("active", false);
         Map<String, Object> context = buildMatchContext(state, config);
-
-        CompletableFuture<Map<String, Object>> executionResult = handlePlanningDirectExecution(match, userInput, context);
-
-        return executionResult.thenApply(result -> {
-            Map<String, Object> merged = new HashMap<>(result);
-            merged.put("param_collection", clearedParamCollection);
-            return merged;
-        });
+        return handlePlanningDirectExecution(match, userInput, context);
     }
 
     /**
@@ -722,7 +707,9 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
     private CompletableFuture<Map<String, Object>> handleLlmParamExtraction(
             ActionMatch match,
             String userInput,
-            Map<String, Object> context) {
+            Map<String, Object> context,
+            OverAllState state,
+            RunnableConfig config) {
 
         ActionDefinition action = match.getAction();
 
@@ -769,7 +756,7 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
             if (StringUtils.hasText(result.nextQuestion)) {
                 logger.info("UnifiedIntentRecognitionHook#handleLlmParamExtraction - reason=has nextQuestion, returning to user, question={}",
                         result.nextQuestion);
-                return handleNextQuestion(action, match, result);
+                return handleNextQuestion(action, match, result, state, config);
             }
 
             // 参数完整，更新 match 中的参数并执行
@@ -878,27 +865,34 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
     }
 
     /**
-     * 处理 nextQuestion：返回追问给用户
+     * 处理 nextQuestion：返回追问给用户，并保存会话到分布式存储
      */
     private CompletableFuture<Map<String, Object>> handleNextQuestion(
             ActionDefinition action,
             ActionMatch match,
-            LlmParamResult result) {
+            LlmParamResult result,
+            OverAllState state,
+            RunnableConfig config) {
 
         AssistantMessage assistantMessage = new AssistantMessage(result.nextQuestion);
 
-        // 构造参数收集状态
-        Map<String, Object> paramCollectionState = new HashMap<>();
-        paramCollectionState.put("active", true);
-        paramCollectionState.put("actionId", action.getActionId());
-        paramCollectionState.put("actionName", action.getActionName());
-        paramCollectionState.put("nextQuestion", result.nextQuestion);
-        paramCollectionState.put("awaitingInput", true);
-        if (result.missingParams != null) {
-            paramCollectionState.put("missingParams", result.missingParams);
-        }
-        if (result.extractedParams != null) {
-            paramCollectionState.put("collectedParams", result.extractedParams);
+        // 获取会话ID并创建/保存会话到分布式存储
+        String sessionId = extractSessionId(state, config);
+        if (sessionStore != null && sessionId != null) {
+            ParamCollectionSession session = new ParamCollectionSession(sessionId);
+            session.activate(action.getActionId(), action.getActionName(),
+                    match.getConfidence() != null ? match.getConfidence() : 0.0);
+            session.setNextQuestionAndAwait(result.nextQuestion, result.missingParams);
+            if (result.extractedParams != null) {
+                session.setCollectedParams(new HashMap<>(result.extractedParams));
+            }
+            // 从 state 获取 userId
+            if (state != null) {
+                state.value("user_id", String.class).ifPresent(session::setUserId);
+            }
+            saveSession(session);
+            logger.info("UnifiedIntentRecognitionHook#handleNextQuestion - reason=session saved to store, sessionId={}, actionId={}",
+                    sessionId, action.getActionId());
         }
 
         Map<String, Object> intentState = Map.of(
@@ -915,8 +909,7 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
         return CompletableFuture.completedFuture(Map.of(
                 "messages", List.of(assistantMessage),
                 "jump_to", JumpTo.end,
-                "unified_intent", intentState,
-                "param_collection", paramCollectionState
+                "unified_intent", intentState
         ));
     }
 
@@ -1022,6 +1015,41 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
                     return userMsg.getText();
                 }
             }
+        }
+
+        return null;
+    }
+
+    /**
+     * 从状态中提取会话ID
+     *
+     * <p>尝试从以下位置获取会话ID：
+     * <ol>
+     *     <li>state.session_id</li>
+     *     <li>config.metadata.sessionId</li>
+     *     <li>config.threadId</li>
+     * </ol>
+     */
+    private String extractSessionId(OverAllState state, RunnableConfig config) {
+        // 1. 从 state 获取
+        if (state != null) {
+            Optional<String> sessionId = state.value("session_id", String.class);
+            if (sessionId.isPresent() && StringUtils.hasText(sessionId.get())) {
+                return sessionId.get();
+            }
+        }
+
+        // 2. 从 config.metadata 获取
+        if (config != null && config.metadata().isPresent()) {
+            Object sessionIdObj = config.metadata().get().get("sessionId");
+            if (sessionIdObj instanceof String && StringUtils.hasText((String) sessionIdObj)) {
+                return (String) sessionIdObj;
+            }
+        }
+
+        // 3. 从 config.threadId 获取
+        if (config != null && config.threadId().isPresent()) {
+            return config.threadId().get();
         }
 
         return null;
@@ -1135,5 +1163,41 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
      */
     public void removeAction(String actionId) {
         keywordMatcher.removeAction(actionId);
+    }
+
+    // ========== 会话存储辅助方法 ==========
+
+    /**
+     * 保存会话到分布式存储
+     */
+    private void saveSession(ParamCollectionSession session) {
+        if (sessionStore == null || session == null) {
+            return;
+        }
+        try {
+            sessionStore.save(session);
+            logger.debug("UnifiedIntentRecognitionHook#saveSession - reason=session saved, sessionId={}",
+                    session.getSessionId());
+        } catch (Exception e) {
+            logger.error("UnifiedIntentRecognitionHook#saveSession - reason=failed to save session, sessionId={}",
+                    session.getSessionId(), e);
+        }
+    }
+
+    /**
+     * 关闭会话
+     */
+    private void closeSession(ParamCollectionSession session) {
+        if (sessionStore == null || session == null || session.getSessionId() == null) {
+            return;
+        }
+        try {
+            sessionStore.close(session.getSessionId());
+            logger.debug("UnifiedIntentRecognitionHook#closeSession - reason=session closed, sessionId={}",
+                    session.getSessionId());
+        } catch (Exception e) {
+            logger.error("UnifiedIntentRecognitionHook#closeSession - reason=failed to close session, sessionId={}",
+                    session.getSessionId(), e);
+        }
     }
 }

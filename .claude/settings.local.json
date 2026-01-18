@@ -25,7 +25,18 @@
       "Skill(superpowers:systematic-debugging)",
       "WebFetch(domain:java2ai.com)",
       "Bash(cat:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Skill(superpowers:brainstorming)",
+      "Bash(git commit:*)",
+      "Skill(superpowers:using-git-worktrees)",
+      "Bash(git worktree:*)",
+      "Skill(superpowers:writing-plans)",
+      "Bash(git add:*)",
+      "Skill(superpowers:subagent-driven-development)",
+      "Bash(git show:*)",
+      "Bash(tree:*)",
+      "Bash(dir:*)",
+      "Skill(superpowers:finishing-a-development-branch)"
     ]
   }
 }
