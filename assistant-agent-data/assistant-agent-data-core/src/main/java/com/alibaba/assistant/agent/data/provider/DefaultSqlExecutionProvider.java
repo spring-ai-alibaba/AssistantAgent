@@ -27,9 +27,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import jakarta.annotation.PreDestroy;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -49,7 +51,7 @@ public class DefaultSqlExecutionProvider implements SqlExecutionProvider {
     private final Map<Long, HikariDataSource> dataSourceCache = new ConcurrentHashMap<>();
 
     public DefaultSqlExecutionProvider(DatasourceProvider datasourceProvider) {
-        this.datasourceProvider = datasourceProvider;
+        this.datasourceProvider = Objects.requireNonNull(datasourceProvider, "DatasourceProvider cannot be null");
         this.securityValidator = new SqlSecurityValidator();
     }
 
@@ -61,6 +63,10 @@ public class DefaultSqlExecutionProvider implements SqlExecutionProvider {
     @Override
     public QueryResult execute(String systemId, String sql, int maxRows) {
         logger.info("DefaultSqlExecutionProvider#execute - systemId={}, maxRows={}", systemId, maxRows);
+
+        if (maxRows <= 0) {
+            throw new IllegalArgumentException("maxRows must be positive, got: " + maxRows);
+        }
 
         // Validate read-only
         securityValidator.validateReadOnly(sql);
@@ -97,5 +103,12 @@ public class DefaultSqlExecutionProvider implements SqlExecutionProvider {
             logger.info("DefaultSqlExecutionProvider - created datasource pool for id={}", id);
             return new HikariDataSource(config);
         });
+    }
+
+    @PreDestroy
+    public void destroy() {
+        logger.info("DefaultSqlExecutionProvider#destroy - closing {} connection pool(s)", dataSourceCache.size());
+        dataSourceCache.values().forEach(HikariDataSource::close);
+        dataSourceCache.clear();
     }
 }
