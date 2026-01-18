@@ -30,10 +30,10 @@ public class SqlSecurityValidator {
 
     private static final List<String> FORBIDDEN_KEYWORDS = Arrays.asList(
         "INSERT", "UPDATE", "DELETE", "DROP", "TRUNCATE",
-        "ALTER", "CREATE", "GRANT", "REVOKE"
+        "ALTER", "CREATE", "GRANT", "REVOKE", "EXEC", "EXECUTE", "MERGE", "CALL"
     );
 
-    private static final Pattern COMMENT_PATTERN = Pattern.compile("--.*|/\\*.*?\\*/", Pattern.DOTALL);
+    private static final Pattern COMMENT_PATTERN = Pattern.compile("--[^\\r\\n]*|/\\*.*?\\*/", Pattern.DOTALL);
 
     /**
      * Validates that the SQL statement is read-only (SELECT only).
@@ -56,9 +56,10 @@ public class SqlSecurityValidator {
             throw new SecurityException("Only SELECT statements are allowed");
         }
 
-        // Check for forbidden keywords
+        // Check for forbidden keywords using word boundary matching
         for (String keyword : FORBIDDEN_KEYWORDS) {
-            if (normalized.contains(keyword)) {
+            Pattern pattern = Pattern.compile("\\b" + keyword + "\\b", Pattern.CASE_INSENSITIVE);
+            if (pattern.matcher(normalized).find()) {
                 throw new SecurityException("SQL contains forbidden keyword: " + keyword);
             }
         }

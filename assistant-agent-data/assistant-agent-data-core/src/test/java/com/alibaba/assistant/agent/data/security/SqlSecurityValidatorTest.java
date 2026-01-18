@@ -68,4 +68,28 @@ class SqlSecurityValidatorTest {
         assertThrows(IllegalArgumentException.class,
             () -> validator.validateReadOnly(""));
     }
+
+    @Test
+    void shouldAllowSelectWithKeywordInColumnName() {
+        assertDoesNotThrow(() ->
+            validator.validateReadOnly("SELECT insert_date, update_time FROM orders"));
+    }
+
+    @Test
+    void shouldAllowSelectWithKeywordInComment() {
+        assertDoesNotThrow(() ->
+            validator.validateReadOnly("SELECT * FROM users /* INSERT comment */"));
+    }
+
+    @Test
+    void shouldHandleMixedCaseSelect() {
+        assertDoesNotThrow(() ->
+            validator.validateReadOnly("SeLeCt * FrOm users"));
+    }
+
+    @Test
+    void shouldRejectExecStatement() {
+        assertThrows(SecurityException.class, () ->
+            validator.validateReadOnly("EXEC sp_executesql 'SELECT 1'"));
+    }
 }
