@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025 the original author or authors.
+ * Copyright 2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,34 +15,13 @@
  */
 package com.alibaba.assistant.agent.data.spi;
 
-import com.alibaba.assistant.agent.data.model.ColumnInfo;
-import com.alibaba.assistant.agent.data.model.SchemaInfo;
-import com.alibaba.assistant.agent.data.model.TableInfo;
+import com.alibaba.assistant.agent.data.model.*;
 
 import java.util.List;
 
 /**
- * SPI for database schema metadata.
- * <p>
- * Provides methods to retrieve database schema information including
- * tables, columns, and their metadata. This is essential for NL2SQL
- * capabilities, query validation, and dynamic UI generation.
- * <p>
- * Implementations should leverage JDBC metadata APIs or database-specific
- * introspection queries to extract schema information.
- * <p>
- * Example implementation:
- * <pre>
- * {@code
- * @Component
- * public class DefaultSchemaProvider implements SchemaProvider {
- *     @Override
- *     public SchemaInfo getSchema(String systemId) {
- *         // Use JDBC DatabaseMetaData to extract schema
- *     }
- * }
- * }
- * </pre>
+ * Service Provider Interface for database schema operations.
+ * Provides methods to query database metadata and structure.
  *
  * @author Assistant Agent Team
  * @since 1.0.0
@@ -50,62 +29,44 @@ import java.util.List;
 public interface SchemaProvider {
 
     /**
-     * Retrieves the complete schema information for a system.
-     * <p>
-     * Returns a SchemaInfo object containing all tables and their columns
-     * for the specified system. This provides a comprehensive view of the
-     * database structure.
+     * Get list of databases for a system.
      *
-     * @param systemId the system identifier (agent ID)
-     * @return the schema information including all tables and columns, never null
+     * @param systemId system identifier
+     * @return list of databases
+     * @throws Exception if query fails
      */
-    SchemaInfo getSchema(String systemId);
+    List<DatabaseInfoBO> getDatabaseList(String systemId) throws Exception;
 
     /**
-     * Retrieves all tables for a system.
-     * <p>
-     * Returns a list of TableInfo objects without detailed column information.
-     * This is useful for listing available tables without the overhead of
-     * fetching complete schema metadata.
+     * Get list of schemas for a database.
      *
-     * @param systemId the system identifier (agent ID)
-     * @return a list of table information objects, never null but may be empty
+     * @param systemId system identifier
+     * @param databaseName database name
+     * @return list of schemas
+     * @throws Exception if query fails
      */
-    List<TableInfo> getTables(String systemId);
+    List<SchemaInfoBO> getSchemaList(String systemId, String databaseName) throws Exception;
 
     /**
-     * Retrieves detailed table information including columns.
-     * <p>
-     * Returns a TableInfo object with complete column metadata for the specified
-     * table. This includes column names, types, constraints, and comments.
-     * <p>
-     * Implementations should handle table name case sensitivity according to
-     * the target database's conventions.
+     * Get list of tables for a schema.
      *
-     * @param systemId the system identifier (agent ID)
-     * @param tableName the name of the table to retrieve
-     * @return the table information including all columns, or null if table not found
+     * @param systemId system identifier
+     * @param databaseName database name (optional for some databases)
+     * @param schemaName schema name (optional for some databases)
+     * @return list of tables with basic metadata
+     * @throws Exception if query fails
      */
-    TableInfo getTable(String systemId, String tableName);
+    List<TableInfoBO> getTableList(String systemId, String databaseName, String schemaName) throws Exception;
 
     /**
-     * Retrieves columns for a specific table.
-     * <p>
-     * Returns a list of ColumnInfo objects describing each column in the table.
-     * This includes column name, data type, nullability, default values,
-     * and any comments or descriptions.
-     * <p>
-     * Column metadata is essential for:
-     * <ul>
-     *     <li>NL2SQL query generation</li>
-     *     <li>Parameter validation</li>
-     *     <li>Dynamic form generation</li>
-     *     <li>Query result interpretation</li>
-     * </ul>
+     * Get complete table structure including columns, keys, constraints.
      *
-     * @param systemId the system identifier (agent ID)
-     * @param tableName the name of the table
-     * @return a list of column information objects, never null but may be empty if table not found
+     * @param systemId system identifier
+     * @param databaseName database name (optional for some databases)
+     * @param schemaName schema name (optional for some databases)
+     * @param tableName table name
+     * @return complete table structure
+     * @throws Exception if query fails
      */
-    List<ColumnInfo> getColumns(String systemId, String tableName);
+    TableInfoBO getTableStructure(String systemId, String databaseName, String schemaName, String tableName) throws Exception;
 }
