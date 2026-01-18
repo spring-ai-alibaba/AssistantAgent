@@ -17,6 +17,9 @@ package com.alibaba.assistant.agent.data.provider;
 
 import com.alibaba.assistant.agent.data.model.DatasourceDefinition;
 import com.alibaba.assistant.agent.data.spi.DatasourceProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.stereotype.Component;
 
 import java.sql.Connection;
@@ -25,6 +28,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -37,7 +41,10 @@ import java.util.concurrent.atomic.AtomicLong;
  * @since 1.0.0
  */
 @Component
+@ConditionalOnMissingBean(DatasourceProvider.class)
 public class InMemoryDatasourceProvider implements DatasourceProvider {
+
+    private static final Logger logger = LoggerFactory.getLogger(InMemoryDatasourceProvider.class);
 
     private final Map<Long, DatasourceDefinition> datasources = new ConcurrentHashMap<>();
     private final Map<String, Long> systemIdIndex = new ConcurrentHashMap<>();
@@ -67,6 +74,8 @@ public class InMemoryDatasourceProvider implements DatasourceProvider {
                 datasource.getPassword())) {
             return conn.isValid(5);
         } catch (SQLException e) {
+            logger.debug("InMemoryDatasourceProvider#testConnection - failed for datasource id={}: {}",
+                datasource.getId(), e.getMessage());
             return false;
         }
     }
@@ -75,6 +84,9 @@ public class InMemoryDatasourceProvider implements DatasourceProvider {
      * Register a datasource for testing/demo purposes.
      */
     public Long register(String systemId, DatasourceDefinition datasource) {
+        Objects.requireNonNull(systemId, "systemId cannot be null");
+        Objects.requireNonNull(datasource, "datasource cannot be null");
+
         if (datasource.getId() == null) {
             datasource.setId(idGenerator.getAndIncrement());
         }
