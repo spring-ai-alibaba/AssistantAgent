@@ -1,0 +1,24 @@
+# ============================================================================
+# Persistent Datasource Provider - Profile Configuration
+# ============================================================================
+# This profile enables the PersistentDatasourceProvider feature for production use.
+# Activate with: --spring.profiles.active=persistent-datasource
+# ============================================================================
+
+spring:
+  assistant-agent:
+    data:
+      persistent-datasource:
+        enabled: true
+        cache:
+          enabled: true
+          ttl-minutes: 5
+          cleanup-interval-seconds: 60
+        connection:
+          url: jdbc:mysql://127.0.0.1:3306/saa_data_agent?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+          username: root
+          password: StrongRootPwd
+          pool:
+            maximum-pool-size: 10
+            minimum-idle: 2
+            connection-timeout: 30000

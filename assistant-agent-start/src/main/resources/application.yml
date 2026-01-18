@@ -165,3 +165,26 @@ logging:
   level:
     com.alibaba.assistant.agent: DEBUG
 
+# ============================================================================
+# Persistent Datasource Provider Configuration
+# ============================================================================
+# Disabled by default - enable to use DataAgent database for metadata
+# Activate with: --spring.profiles.active=persistent-datasource
+spring:
+  assistant-agent:
+    data:
+      persistent-datasource:
+        enabled: false  # Disabled by default, enable to use DataAgent database
+        cache:
+          enabled: true
+          ttl-minutes: 5
+          cleanup-interval-seconds: 60
+        connection:
+          url: jdbc:mysql://127.0.0.1:3306/saa_data_agent?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+          username: root
+          password: StrongRootPwd
+          pool:
+            maximum-pool-size: 10
+            minimum-idle: 2
+            connection-timeout: 30000
+
