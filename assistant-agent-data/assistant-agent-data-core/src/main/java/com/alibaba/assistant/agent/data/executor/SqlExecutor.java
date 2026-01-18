@@ -63,7 +63,7 @@ public class SqlExecutor {
         long startTime = System.currentTimeMillis();
 
         try (Statement statement = connection.createStatement()) {
-            statement.setMaxRows(maxRows);
+            // Don't use setMaxRows - we'll manually limit to detect truncation
             statement.setQueryTimeout(DEFAULT_TIMEOUT_SECONDS);
 
             try (ResultSet rs = statement.executeQuery(sql)) {
