@@ -15,8 +15,6 @@
  */
 package com.alibaba.assistant.agent.data.model;
 
-import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -28,9 +26,7 @@ import java.util.Objects;
  * @author Assistant Agent Team
  * @since 1.0.0
  */
-public class TableInfoBO implements Serializable {
-
-    private static final long serialVersionUID = 1L;
+public class TableInfoBO {
 
     /**
      * The schema (database) this table belongs to.
@@ -72,8 +68,6 @@ public class TableInfoBO implements Serializable {
      * Default constructor.
      */
     public TableInfoBO() {
-        this.primaryKeys = new ArrayList<>();
-        this.columns = new ArrayList<>();
     }
 
     /**
@@ -202,15 +196,6 @@ public class TableInfoBO implements Serializable {
         this.columns = columns;
     }
 
-    /**
-     * Adds a column to this table.
-     *
-     * @param column the column to add
-     */
-    public void addColumn(ColumnInfoBO column) {
-        this.columns.add(column);
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -333,17 +318,6 @@ public class TableInfoBO implements Serializable {
          */
         public Builder columns(List<ColumnInfoBO> columns) {
             instance.columns = columns;
-            return this;
-        }
-
-        /**
-         * Adds a column to the table.
-         *
-         * @param column the column to add
-         * @return this builder instance
-         */
-        public Builder addColumn(ColumnInfoBO column) {
-            instance.columns.add(column);
             return this;
         }
 

@@ -15,7 +15,6 @@
  */
 package com.alibaba.assistant.agent.data.model;
 
-import java.io.Serializable;
 import java.util.Objects;
 
 /**
@@ -26,9 +25,7 @@ import java.util.Objects;
  * @author Assistant Agent Team
  * @since 1.0.0
  */
-public class ForeignKeyInfoBO implements Serializable {
-
-    private static final long serialVersionUID = 1L;
+public class ForeignKeyInfoBO {
 
     /**
      * The name of the foreign key constraint.
