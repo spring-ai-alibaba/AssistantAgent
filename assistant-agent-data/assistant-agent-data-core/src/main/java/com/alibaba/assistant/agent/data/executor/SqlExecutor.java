@@ -49,6 +49,17 @@ public class SqlExecutor {
      * @throws SQLException if query execution fails
      */
     public static QueryResult executeQuery(Connection connection, String sql, int maxRows) throws SQLException {
+        // Input validation
+        if (connection == null) {
+            throw new IllegalArgumentException("Connection cannot be null");
+        }
+        if (sql == null || sql.trim().isEmpty()) {
+            throw new IllegalArgumentException("SQL cannot be null or empty");
+        }
+        if (maxRows < 0) {
+            throw new IllegalArgumentException("maxRows must be non-negative, got: " + maxRows);
+        }
+
         long startTime = System.currentTimeMillis();
 
         try (Statement statement = connection.createStatement()) {
