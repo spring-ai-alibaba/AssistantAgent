@@ -44,8 +44,8 @@ class SchemaQueryIntegrationTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        // Setup H2 test database
-        String dbName = "testdb" + (dbCounter++);
+        // Setup H2 test database with unique name for each test
+        String dbName = "testdb_schema_" + System.currentTimeMillis() + "_" + (dbCounter++);
         String jdbcUrl = "jdbc:h2:mem:" + dbName + ";DB_CLOSE_DELAY=-1";
 
         Connection conn = DriverManager.getConnection(jdbcUrl, "sa", "");
