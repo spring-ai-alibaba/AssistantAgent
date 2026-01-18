@@ -1,0 +1,23 @@
+spring:
+  assistant-agent:
+    data:
+      persistent-datasource:
+        enabled: true
+        cache:
+          enabled: true
+          ttl-minutes: 5
+          cleanup-interval-seconds: 60
+        connection:
+          url: jdbc:mysql://127.0.0.1:3306/saa_data_agent?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+          username: root
+          password: StrongRootPwd
+          pool:
+            maximum-pool-size: 5
+            minimum-idle: 1
+            connection-timeout: 30000
+
+# Disable other auto-configurations that might interfere with integration tests
+logging:
+  level:
+    com.alibaba.assistant.agent.data: DEBUG
+    org.springframework.jdbc: DEBUG
