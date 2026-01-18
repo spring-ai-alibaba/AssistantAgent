@@ -37,12 +37,17 @@ class DefaultSchemaProviderTest {
 
     private DatasourceProvider datasourceProvider;
     private DefaultSchemaProvider schemaProvider;
+    private static final Object lock = new Object();
     private static int dbCounter = 0;
 
     @BeforeEach
     void setUp() throws Exception {
-        // Setup H2 test database
-        String dbName = "testdb" + (dbCounter++);
+        // Setup H2 test database - use synchronized counter to avoid collisions
+        int dbId;
+        synchronized (lock) {
+            dbId = dbCounter++;
+        }
+        String dbName = "testdbschema" + dbId;
         String jdbcUrl = "jdbc:h2:mem:" + dbName + ";DB_CLOSE_DELAY=-1";
 
         Connection conn = DriverManager.getConnection(jdbcUrl, "sa", "");
