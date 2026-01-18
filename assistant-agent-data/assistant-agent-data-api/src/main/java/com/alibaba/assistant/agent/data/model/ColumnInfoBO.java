@@ -241,7 +241,13 @@ public class ColumnInfoBO {
      * Provides a fluent API for setting column properties.
      */
     public static class Builder {
-        private final ColumnInfoBO instance = new ColumnInfoBO();
+        private String name;
+        private String tableName;
+        private String description;
+        private String type;
+        private boolean primary;
+        private boolean notnull;
+        private String samples;
 
         /**
          * Sets the column name.
@@ -250,7 +256,7 @@ public class ColumnInfoBO {
          * @return this builder instance
          */
         public Builder name(String name) {
-            instance.name = name;
+            this.name = name;
             return this;
         }
 
@@ -261,7 +267,7 @@ public class ColumnInfoBO {
          * @return this builder instance
          */
         public Builder tableName(String tableName) {
-            instance.tableName = tableName;
+            this.tableName = tableName;
             return this;
         }
 
@@ -272,7 +278,7 @@ public class ColumnInfoBO {
          * @return this builder instance
          */
         public Builder description(String description) {
-            instance.description = description;
+            this.description = description;
             return this;
         }
 
@@ -283,7 +289,7 @@ public class ColumnInfoBO {
          * @return this builder instance
          */
         public Builder type(String type) {
-            instance.type = type;
+            this.type = type;
             return this;
         }
 
@@ -294,7 +300,7 @@ public class ColumnInfoBO {
          * @return this builder instance
          */
         public Builder primary(boolean primary) {
-            instance.primary = primary;
+            this.primary = primary;
             return this;
         }
 
@@ -305,7 +311,7 @@ public class ColumnInfoBO {
          * @return this builder instance
          */
         public Builder notnull(boolean notnull) {
-            instance.notnull = notnull;
+            this.notnull = notnull;
             return this;
         }
 
@@ -316,7 +322,7 @@ public class ColumnInfoBO {
          * @return this builder instance
          */
         public Builder samples(String samples) {
-            instance.samples = samples;
+            this.samples = samples;
             return this;
         }
 
@@ -326,6 +332,14 @@ public class ColumnInfoBO {
          * @return the constructed ColumnInfoBO
          */
         public ColumnInfoBO build() {
+            ColumnInfoBO instance = new ColumnInfoBO();
+            instance.name = this.name;
+            instance.tableName = this.tableName;
+            instance.description = this.description;
+            instance.type = this.type;
+            instance.primary = this.primary;
+            instance.notnull = this.notnull;
+            instance.samples = this.samples;
             return instance;
         }
     }

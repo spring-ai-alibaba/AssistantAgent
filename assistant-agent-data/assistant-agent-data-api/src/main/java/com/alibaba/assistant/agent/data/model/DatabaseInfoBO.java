@@ -90,7 +90,7 @@ public class DatabaseInfoBO {
      * Provides a fluent API for setting database properties.
      */
     public static class Builder {
-        private final DatabaseInfoBO instance = new DatabaseInfoBO();
+        private String name;
 
         /**
          * Sets the database name.
@@ -99,7 +99,7 @@ public class DatabaseInfoBO {
          * @return this builder instance
          */
         public Builder name(String name) {
-            instance.name = name;
+            this.name = name;
             return this;
         }
 
@@ -109,6 +109,8 @@ public class DatabaseInfoBO {
          * @return the constructed DatabaseInfoBO
          */
         public DatabaseInfoBO build() {
+            DatabaseInfoBO instance = new DatabaseInfoBO();
+            instance.name = this.name;
             return instance;
         }
     }

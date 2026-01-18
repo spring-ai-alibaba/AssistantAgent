@@ -190,7 +190,11 @@ public class ForeignKeyInfoBO {
      * Provides a fluent API for setting foreign key properties.
      */
     public static class Builder {
-        private final ForeignKeyInfoBO instance = new ForeignKeyInfoBO();
+        private String constraintName;
+        private String tableName;
+        private String columnName;
+        private String referencedTableName;
+        private String referencedColumnName;
 
         /**
          * Sets the foreign key constraint name.
@@ -199,7 +203,7 @@ public class ForeignKeyInfoBO {
          * @return this builder instance
          */
         public Builder constraintName(String constraintName) {
-            instance.constraintName = constraintName;
+            this.constraintName = constraintName;
             return this;
         }
 
@@ -210,7 +214,7 @@ public class ForeignKeyInfoBO {
          * @return this builder instance
          */
         public Builder tableName(String tableName) {
-            instance.tableName = tableName;
+            this.tableName = tableName;
             return this;
         }
 
@@ -221,7 +225,7 @@ public class ForeignKeyInfoBO {
          * @return this builder instance
          */
         public Builder columnName(String columnName) {
-            instance.columnName = columnName;
+            this.columnName = columnName;
             return this;
         }
 
@@ -232,7 +236,7 @@ public class ForeignKeyInfoBO {
          * @return this builder instance
          */
         public Builder referencedTableName(String referencedTableName) {
-            instance.referencedTableName = referencedTableName;
+            this.referencedTableName = referencedTableName;
             return this;
         }
 
@@ -243,7 +247,7 @@ public class ForeignKeyInfoBO {
          * @return this builder instance
          */
         public Builder referencedColumnName(String referencedColumnName) {
-            instance.referencedColumnName = referencedColumnName;
+            this.referencedColumnName = referencedColumnName;
             return this;
         }
 
@@ -253,6 +257,12 @@ public class ForeignKeyInfoBO {
          * @return the constructed ForeignKeyInfoBO
          */
         public ForeignKeyInfoBO build() {
+            ForeignKeyInfoBO instance = new ForeignKeyInfoBO();
+            instance.constraintName = this.constraintName;
+            instance.tableName = this.tableName;
+            instance.columnName = this.columnName;
+            instance.referencedTableName = this.referencedTableName;
+            instance.referencedColumnName = this.referencedColumnName;
             return instance;
         }
     }

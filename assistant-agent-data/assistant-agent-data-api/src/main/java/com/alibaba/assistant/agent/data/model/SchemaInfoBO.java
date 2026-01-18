@@ -115,7 +115,8 @@ public class SchemaInfoBO {
      * Provides a fluent API for setting schema properties.
      */
     public static class Builder {
-        private final SchemaInfoBO instance = new SchemaInfoBO();
+        private String name;
+        private String catalog;
 
         /**
          * Sets the schema name.
@@ -124,7 +125,7 @@ public class SchemaInfoBO {
          * @return this builder instance
          */
         public Builder name(String name) {
-            instance.name = name;
+            this.name = name;
             return this;
         }
 
@@ -135,7 +136,7 @@ public class SchemaInfoBO {
          * @return this builder instance
          */
         public Builder catalog(String catalog) {
-            instance.catalog = catalog;
+            this.catalog = catalog;
             return this;
         }
 
@@ -145,6 +146,9 @@ public class SchemaInfoBO {
          * @return the constructed SchemaInfoBO
          */
         public SchemaInfoBO build() {
+            SchemaInfoBO instance = new SchemaInfoBO();
+            instance.name = this.name;
+            instance.catalog = this.catalog;
             return instance;
         }
     }

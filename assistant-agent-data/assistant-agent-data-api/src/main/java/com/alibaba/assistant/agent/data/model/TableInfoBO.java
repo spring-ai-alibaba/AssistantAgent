@@ -242,7 +242,13 @@ public class TableInfoBO {
      * Provides a fluent API for setting table properties.
      */
     public static class Builder {
-        private final TableInfoBO instance = new TableInfoBO();
+        private String schema;
+        private String name;
+        private String description;
+        private String type;
+        private String foreignKey;
+        private List<String> primaryKeys;
+        private List<ColumnInfoBO> columns;
 
         /**
          * Sets the schema name.
@@ -251,7 +257,7 @@ public class TableInfoBO {
          * @return this builder instance
          */
         public Builder schema(String schema) {
-            instance.schema = schema;
+            this.schema = schema;
             return this;
         }
 
@@ -262,7 +268,7 @@ public class TableInfoBO {
          * @return this builder instance
          */
         public Builder name(String name) {
-            instance.name = name;
+            this.name = name;
             return this;
         }
 
@@ -273,7 +279,7 @@ public class TableInfoBO {
          * @return this builder instance
          */
         public Builder description(String description) {
-            instance.description = description;
+            this.description = description;
             return this;
         }
 
@@ -284,7 +290,7 @@ public class TableInfoBO {
          * @return this builder instance
          */
         public Builder type(String type) {
-            instance.type = type;
+            this.type = type;
             return this;
         }
 
@@ -295,7 +301,7 @@ public class TableInfoBO {
          * @return this builder instance
          */
         public Builder foreignKey(String foreignKey) {
-            instance.foreignKey = foreignKey;
+            this.foreignKey = foreignKey;
             return this;
         }
 
@@ -306,7 +312,7 @@ public class TableInfoBO {
          * @return this builder instance
          */
         public Builder primaryKeys(List<String> primaryKeys) {
-            instance.primaryKeys = primaryKeys;
+            this.primaryKeys = primaryKeys;
             return this;
         }
 
@@ -317,7 +323,7 @@ public class TableInfoBO {
          * @return this builder instance
          */
         public Builder columns(List<ColumnInfoBO> columns) {
-            instance.columns = columns;
+            this.columns = columns;
             return this;
         }
 
@@ -327,6 +333,14 @@ public class TableInfoBO {
          * @return the constructed TableInfoBO
          */
         public TableInfoBO build() {
+            TableInfoBO instance = new TableInfoBO();
+            instance.schema = this.schema;
+            instance.name = this.name;
+            instance.description = this.description;
+            instance.type = this.type;
+            instance.foreignKey = this.foreignKey;
+            instance.primaryKeys = this.primaryKeys;
+            instance.columns = this.columns;
             return instance;
         }
     }
