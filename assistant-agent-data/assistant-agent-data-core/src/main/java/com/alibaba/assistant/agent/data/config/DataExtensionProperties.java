@@ -28,6 +28,7 @@ public class DataExtensionProperties {
 
     private boolean enabled = false;
     private SqlConfig sql = new SqlConfig();
+    private SchemaConfig schema = new SchemaConfig();
     private ToolsConfig tools = new ToolsConfig();
 
     public boolean isEnabled() {
@@ -44,6 +45,14 @@ public class DataExtensionProperties {
 
     public void setSql(SqlConfig sql) {
         this.sql = sql;
+    }
+
+    public SchemaConfig getSchema() {
+        return schema;
+    }
+
+    public void setSchema(SchemaConfig schema) {
+        this.schema = schema;
     }
 
     public ToolsConfig getTools() {
@@ -88,10 +97,26 @@ public class DataExtensionProperties {
     }
 
     /**
+     * Schema configuration.
+     */
+    public static class SchemaConfig {
+        private boolean enabled = true;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+    }
+
+    /**
      * Tools configuration.
      */
     public static class ToolsConfig {
         private boolean executeSqlEnabled = true;
+        private boolean querySchemaEnabled = true;
 
         public boolean isExecuteSqlEnabled() {
             return executeSqlEnabled;
@@ -99,6 +124,14 @@ public class DataExtensionProperties {
 
         public void setExecuteSqlEnabled(boolean executeSqlEnabled) {
             this.executeSqlEnabled = executeSqlEnabled;
+        }
+
+        public boolean isQuerySchemaEnabled() {
+            return querySchemaEnabled;
+        }
+
+        public void setQuerySchemaEnabled(boolean querySchemaEnabled) {
+            this.querySchemaEnabled = querySchemaEnabled;
         }
     }
 }

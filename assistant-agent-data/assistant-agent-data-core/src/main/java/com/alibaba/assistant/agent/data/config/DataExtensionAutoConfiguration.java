@@ -15,11 +15,20 @@
  */
 package com.alibaba.assistant.agent.data.config;
 
+import com.alibaba.assistant.agent.data.provider.DefaultSchemaProvider;
+import com.alibaba.assistant.agent.data.provider.DefaultSqlExecutionProvider;
+import com.alibaba.assistant.agent.data.spi.DatasourceProvider;
+import com.alibaba.assistant.agent.data.spi.SchemaProvider;
+import com.alibaba.assistant.agent.data.spi.SqlExecutionProvider;
+import com.alibaba.assistant.agent.data.tool.ExecuteSqlCodeactTool;
+import com.alibaba.assistant.agent.data.tool.QuerySchemaCodeactTool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 
 /**
@@ -38,5 +47,34 @@ public class DataExtensionAutoConfiguration {
 
     public DataExtensionAutoConfiguration() {
         logger.info("DataExtensionAutoConfiguration - initializing data extension");
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public SqlExecutionProvider sqlExecutionProvider(DatasourceProvider datasourceProvider) {
+        logger.info("DataExtensionAutoConfiguration - creating DefaultSqlExecutionProvider");
+        return new DefaultSqlExecutionProvider(datasourceProvider);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "spring.ai.alibaba.codeact.extension.data.schema", name = "enabled", havingValue = "true", matchIfMissing = true)
+    public SchemaProvider schemaProvider(DatasourceProvider datasourceProvider) {
+        logger.info("DataExtensionAutoConfiguration - creating DefaultSchemaProvider");
+        return new DefaultSchemaProvider(datasourceProvider);
+    }
+
+    @Bean
+    @ConditionalOnProperty(prefix = "spring.ai.alibaba.codeact.extension.data.tools", name = "execute-sql-enabled", havingValue = "true", matchIfMissing = true)
+    public ExecuteSqlCodeactTool executeSqlCodeactTool(SqlExecutionProvider sqlExecutionProvider) {
+        logger.info("DataExtensionAutoConfiguration - creating ExecuteSqlCodeactTool");
+        return new ExecuteSqlCodeactTool(sqlExecutionProvider);
+    }
+
+    @Bean
+    @ConditionalOnProperty(prefix = "spring.ai.alibaba.codeact.extension.data.tools", name = "query-schema-enabled", havingValue = "true", matchIfMissing = true)
+    public QuerySchemaCodeactTool querySchemaCodeactTool(SchemaProvider schemaProvider) {
+        logger.info("DataExtensionAutoConfiguration - creating QuerySchemaCodeactTool");
+        return new QuerySchemaCodeactTool(schemaProvider);
     }
 }
