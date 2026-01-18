@@ -15,6 +15,7 @@
         <module>assistant-agent-prompt-builder</module>
         <module>assistant-agent-evaluation</module>
         <module>assistant-agent-planning</module>
+        <module>assistant-agent-data</module>
         <module>assistant-agent-start</module>
     </modules>
 
@@ -93,6 +94,18 @@
             <dependency>
                 <groupId>com.alibaba.agent.assistant</groupId>
                 <artifactId>assistant-agent-planning-integration</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.alibaba.agent.assistant</groupId>
+                <artifactId>assistant-agent-data-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.alibaba.agent.assistant</groupId>
+                <artifactId>assistant-agent-data-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
