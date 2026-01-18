@@ -1,0 +1,70 @@
+/*
+ * Copyright 2024-2025 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.alibaba.assistant.agent.data.config;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+
+/**
+ * Tests for PersistentDatasourceProperties.
+ *
+ * @author Assistant Agent Team
+ * @since 1.0.0
+ */
+class PersistentDatasourcePropertiesTest {
+
+    @Test
+    void shouldHaveDefaultValues() {
+        PersistentDatasourceProperties properties = new PersistentDatasourceProperties();
+
+        assertTrue(properties.isEnabled());
+        assertNotNull(properties.getCache());
+        assertTrue(properties.getCache().isEnabled());
+        assertEquals(5, properties.getCache().getTtlMinutes());
+        assertEquals(60, properties.getCache().getCleanupIntervalSeconds());
+        assertNotNull(properties.getConnection());
+        assertNotNull(properties.getConnection().getPool());
+        assertEquals(10, properties.getConnection().getPool().getMaximumPoolSize());
+        assertEquals(2, properties.getConnection().getPool().getMinimumIdle());
+        assertEquals(30000, properties.getConnection().getPool().getConnectionTimeout());
+    }
+
+    @Test
+    void shouldSetConnectionProperties() {
+        PersistentDatasourceProperties properties = new PersistentDatasourceProperties();
+
+        properties.getConnection().setUrl("jdbc:mysql://localhost:3306/test");
+        properties.getConnection().setUsername("testuser");
+        properties.getConnection().setPassword("testpass");
+
+        assertEquals("jdbc:mysql://localhost:3306/test", properties.getConnection().getUrl());
+        assertEquals("testuser", properties.getConnection().getUsername());
+        assertEquals("testpass", properties.getConnection().getPassword());
+    }
+
+    @Test
+    void shouldSetCacheProperties() {
+        PersistentDatasourceProperties properties = new PersistentDatasourceProperties();
+
+        properties.getCache().setEnabled(false);
+        properties.getCache().setTtlMinutes(10);
+        properties.getCache().setCleanupIntervalSeconds(120);
+
+        assertFalse(properties.getCache().isEnabled());
+        assertEquals(10, properties.getCache().getTtlMinutes());
+        assertEquals(120, properties.getCache().getCleanupIntervalSeconds());
+    }
+}
