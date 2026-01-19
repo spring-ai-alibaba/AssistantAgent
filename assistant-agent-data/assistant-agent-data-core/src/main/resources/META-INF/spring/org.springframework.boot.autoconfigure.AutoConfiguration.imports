@@ -1,1 +1,2 @@
 com.alibaba.assistant.agent.data.config.DataExtensionAutoConfiguration
+com.alibaba.assistant.agent.data.config.Nl2SqlAutoConfiguration
