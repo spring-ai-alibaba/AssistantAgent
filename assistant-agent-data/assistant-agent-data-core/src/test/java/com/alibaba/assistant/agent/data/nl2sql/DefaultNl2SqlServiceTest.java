@@ -2,6 +2,7 @@ package com.alibaba.assistant.agent.data.nl2sql;
 
 import com.alibaba.assistant.agent.data.model.ColumnInfoBO;
 import com.alibaba.assistant.agent.data.model.DatasourceDefinition;
+import com.alibaba.assistant.agent.data.model.QueryResult;
 import com.alibaba.assistant.agent.data.model.TableInfoBO;
 import com.alibaba.assistant.agent.data.model.nl2sql.Nl2SqlException;
 import com.alibaba.assistant.agent.data.spi.DatasourceProvider;
@@ -16,7 +17,9 @@ import org.springframework.ai.chat.model.ChatModel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -162,5 +165,50 @@ class DefaultNl2SqlServiceTest {
         assertNotNull(sql);
         assertEquals("SELECT * FROM table1", sql);
         verify(chatModel, times(2)).call(anyString()); // Two LLM calls
+    }
+
+    @Test
+    void shouldGenerateAndExecuteForParameterCollection() throws Exception {
+        // Mock schema
+        List<TableInfoBO> tables = createMockTables(3);
+        when(schemaProvider.getTableList(eq("test-system"), isNull(), isNull()))
+                .thenReturn(tables);
+
+        // Mock datasource
+        DatasourceDefinition datasource = DatasourceDefinition.builder()
+                .type("mysql")
+                .build();
+        when(datasourceProvider.getBySystemId(eq("test-system")))
+                .thenReturn(Optional.of(datasource));
+
+        // Mock LLM response
+        when(chatModel.call(anyString()))
+                .thenReturn("```sql\nSELECT dept_name, dept_id FROM departments\n```");
+
+        // Mock query execution
+        QueryResult queryResult = new QueryResult();
+        Map<String, Object> row1 = new HashMap<>();
+        row1.put("dept_name", "Engineering");
+        row1.put("dept_id", "1");
+        Map<String, Object> row2 = new HashMap<>();
+        row2.put("dept_name", "Sales");
+        row2.put("dept_id", "2");
+        queryResult.setRows(Arrays.asList(row1, row2));
+
+        when(sqlExecutionProvider.execute(eq("test-system"), anyString(), anyInt()))
+                .thenReturn(queryResult);
+
+        List<com.alibaba.assistant.agent.data.model.nl2sql.OptionItem> options = nl2SqlService.generateAndExecute(
+                "test-system",
+                "获取所有部门",
+                "dept_name",
+                "dept_id"
+        );
+
+        assertEquals(2, options.size());
+        assertEquals("Engineering", options.get(0).getLabel());
+        assertEquals("1", options.get(0).getValue());
+        assertEquals("Sales", options.get(1).getLabel());
+        assertEquals("2", options.get(1).getValue());
     }
 }

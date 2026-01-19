@@ -18,6 +18,7 @@ package com.alibaba.assistant.agent.data.nl2sql;
 
 import com.alibaba.assistant.agent.data.model.ColumnInfoBO;
 import com.alibaba.assistant.agent.data.model.DatasourceDefinition;
+import com.alibaba.assistant.agent.data.model.QueryResult;
 import com.alibaba.assistant.agent.data.model.TableInfoBO;
 import com.alibaba.assistant.agent.data.model.nl2sql.ColumnDTO;
 import com.alibaba.assistant.agent.data.model.nl2sql.Nl2SqlException;
@@ -126,8 +127,41 @@ public class DefaultNl2SqlService implements Nl2SqlService {
     @Override
     public List<OptionItem> generateAndExecute(String systemId, String query,
                                                String labelColumn, String valueColumn) throws Nl2SqlException {
-        // TODO: Implement
-        throw new UnsupportedOperationException("Not implemented yet");
+        log.info("DefaultNl2SqlService#generateAndExecute - systemId={}, query={}, labelColumn={}, valueColumn={}",
+                systemId, query, labelColumn, valueColumn);
+
+        try {
+            // Build evidence to guide SQL generation
+            String evidence = String.format("Return columns: %s (for display label), %s (for value)",
+                    labelColumn, valueColumn);
+
+            // Generate SQL
+            String sql = generateSql(systemId, query, evidence);
+            log.debug("DefaultNl2SqlService#generateAndExecute - Generated SQL: {}", sql);
+
+            // Execute SQL
+            QueryResult result = sqlExecutionProvider.execute(systemId, sql, 1000);
+            log.info("DefaultNl2SqlService#generateAndExecute - Query executed, rows={}", result.getRows().size());
+
+            // Map to OptionItem
+            return result.getRows().stream()
+                    .map(row -> {
+                        Object label = row.get(labelColumn);
+                        Object value = row.get(valueColumn);
+                        return new OptionItem(
+                                label != null ? label.toString() : "",
+                                value != null ? value.toString() : ""
+                        );
+                    })
+                    .collect(Collectors.toList());
+
+        } catch (Nl2SqlException e) {
+            log.error("DefaultNl2SqlService#generateAndExecute - NL2SQL error: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("DefaultNl2SqlService#generateAndExecute - Execution error", e);
+            throw new SqlGenerationException(e.getMessage(), e);
+        }
     }
 
     private void validateInput(String systemId, String query) {
