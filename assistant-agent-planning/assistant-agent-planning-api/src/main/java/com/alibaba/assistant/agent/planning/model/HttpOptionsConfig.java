@@ -146,16 +146,16 @@ public class HttpOptionsConfig implements Serializable {
         private String token;
 
         /**
-         * API key name for API_KEY authentication.
+         * Header name for API_KEY authentication.
          * <p>
          * Example: "X-API-Key"
          */
-        private String keyName;
+        private String headerName;
 
         /**
          * API key value for API_KEY authentication.
          */
-        private String keyValue;
+        private String apiKey;
 
         public String getType() {
             return type;
@@ -189,20 +189,20 @@ public class HttpOptionsConfig implements Serializable {
             this.token = token;
         }
 
-        public String getKeyName() {
-            return keyName;
+        public String getHeaderName() {
+            return headerName;
         }
 
-        public void setKeyName(String keyName) {
-            this.keyName = keyName;
+        public void setHeaderName(String headerName) {
+            this.headerName = headerName;
         }
 
-        public String getKeyValue() {
-            return keyValue;
+        public String getApiKey() {
+            return apiKey;
         }
 
-        public void setKeyValue(String keyValue) {
-            this.keyValue = keyValue;
+        public void setApiKey(String apiKey) {
+            this.apiKey = apiKey;
         }
 
         @Override
@@ -214,18 +214,18 @@ public class HttpOptionsConfig implements Serializable {
             AuthConfig that = (AuthConfig) o;
             return Objects.equals(type, that.type) && Objects.equals(username, that.username)
                     && Objects.equals(password, that.password) && Objects.equals(token, that.token)
-                    && Objects.equals(keyName, that.keyName) && Objects.equals(keyValue, that.keyValue);
+                    && Objects.equals(headerName, that.headerName) && Objects.equals(apiKey, that.apiKey);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(type, username, password, token, keyName, keyValue);
+            return Objects.hash(type, username, password, token, headerName, apiKey);
         }
 
         @Override
         public String toString() {
             return "AuthConfig{" + "type='" + type + '\'' + ", username='" + username + '\'' + ", password='***'"
-                    + ", token='***'" + ", keyName='" + keyName + '\'' + ", keyValue='***'" + '}';
+                    + ", token='***'" + ", headerName='" + headerName + '\'' + ", apiKey='***'" + '}';
         }
 
     }
