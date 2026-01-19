@@ -17,12 +17,14 @@
 package com.alibaba.assistant.agent.data.nl2sql;
 
 import com.alibaba.assistant.agent.data.model.ColumnInfoBO;
+import com.alibaba.assistant.agent.data.model.DatasourceDefinition;
 import com.alibaba.assistant.agent.data.model.TableInfoBO;
 import com.alibaba.assistant.agent.data.model.nl2sql.ColumnDTO;
 import com.alibaba.assistant.agent.data.model.nl2sql.Nl2SqlException;
 import com.alibaba.assistant.agent.data.model.nl2sql.OptionItem;
 import com.alibaba.assistant.agent.data.model.nl2sql.SchemaDTO;
 import com.alibaba.assistant.agent.data.model.nl2sql.SchemaNotFoundException;
+import com.alibaba.assistant.agent.data.model.nl2sql.SqlGenerationDTO;
 import com.alibaba.assistant.agent.data.model.nl2sql.SqlGenerationException;
 import com.alibaba.assistant.agent.data.model.nl2sql.TableDTO;
 import com.alibaba.assistant.agent.data.spi.DatasourceProvider;
@@ -35,6 +37,7 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -71,11 +74,40 @@ public class DefaultNl2SqlService implements Nl2SqlService {
         validateInput(systemId, query);
 
         try {
-            // 2. Get schema
+            // 2. Get dialect
+            String dialect = getDatabaseDialect(systemId);
+
+            // 3. Get schema
             SchemaDTO schema = getSchema(systemId);
 
-            // TODO: Implement SQL generation
-            throw new UnsupportedOperationException("Not fully implemented yet");
+            // 4. Smart filtering (skip for now, will implement in next task)
+            if (schema.getTableCount() >= 10) {
+                log.debug("DefaultNl2SqlService#generateSql - Schema has {} tables, filtering required",
+                        schema.getTableCount());
+                // TODO: Implement filtering in next task
+            }
+
+            // 5. Build prompt
+            SqlGenerationDTO dto = SqlGenerationDTO.builder()
+                    .query(query)
+                    .evidence(evidence)
+                    .schemaDTO(schema)
+                    .dialect(dialect)
+                    .executionDescription("Generate SQL based on natural language")
+                    .build();
+
+            String prompt = Nl2SqlPromptBuilder.buildSqlGenerationPrompt(dto);
+            log.debug("DefaultNl2SqlService#generateSql - Prompt built, length={}", prompt.length());
+
+            // 6. Call LLM
+            String response = chatModel.call(prompt);
+            log.debug("DefaultNl2SqlService#generateSql - LLM response received, length={}", response.length());
+
+            // 7. Extract SQL
+            String sql = extractSql(response);
+            log.info("DefaultNl2SqlService#generateSql - SQL generated successfully, length={}", sql.length());
+
+            return sql;
 
         } catch (Nl2SqlException e) {
             log.error("DefaultNl2SqlService#generateSql - NL2SQL error: {}", e.getMessage());
@@ -157,5 +189,47 @@ public class DefaultNl2SqlService implements Nl2SqlService {
         column.setDescription(columnInfo.getDescription());
         column.setType(columnInfo.getType());
         return column;
+    }
+
+    private String getDatabaseDialect(String systemId) {
+        try {
+            // Get datasource to determine dialect
+            Optional<DatasourceDefinition> datasource = datasourceProvider.getBySystemId(systemId);
+            if (datasource.isPresent()) {
+                String type = datasource.get().getType();
+                return type != null ? type.toLowerCase() : "mysql";
+            }
+            return "mysql"; // default
+        } catch (Exception e) {
+            log.warn("DefaultNl2SqlService#getDatabaseDialect - Failed to get dialect, using default: mysql");
+            return "mysql";
+        }
+    }
+
+    private String extractSql(String response) {
+        if (response == null || response.isEmpty()) {
+            throw new SqlGenerationException("Empty response from LLM", null);
+        }
+
+        // Remove markdown code blocks
+        String sql = response.trim();
+
+        // Extract from ```sql ... ``` block
+        if (sql.contains("```sql")) {
+            int start = sql.indexOf("```sql") + 6;
+            int end = sql.indexOf("```", start);
+            if (end > start) {
+                sql = sql.substring(start, end).trim();
+            }
+        } else if (sql.startsWith("```")) {
+            // Extract from ``` ... ``` block
+            int start = sql.indexOf("```") + 3;
+            int end = sql.indexOf("```", start);
+            if (end > start) {
+                sql = sql.substring(start, end).trim();
+            }
+        }
+
+        return sql;
     }
 }
