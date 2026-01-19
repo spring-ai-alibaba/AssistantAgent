@@ -133,4 +133,34 @@ class DefaultNl2SqlServiceTest {
         column.setType("VARCHAR");
         return column;
     }
+
+    @Test
+    void shouldFilterSchemaForLargeDatabase() throws Exception {
+        // Mock schema with 15 tables (triggers filtering)
+        List<TableInfoBO> tables = createMockTables(15);
+        when(schemaProvider.getTableList(eq("test-system"), isNull(), isNull()))
+                .thenReturn(tables);
+
+        // Mock datasource
+        DatasourceDefinition datasource = DatasourceDefinition.builder()
+                .type("mysql")
+                .build();
+        when(datasourceProvider.getBySystemId(eq("test-system")))
+                .thenReturn(Optional.of(datasource));
+
+        // Mock LLM responses
+        // First call: schema filter
+        when(chatModel.call(contains("RELEVANT TABLES")))
+                .thenReturn("[\"table1\", \"table2\"]");
+
+        // Second call: SQL generation
+        when(chatModel.call(contains("SELECT")))
+                .thenReturn("```sql\nSELECT * FROM table1\n```");
+
+        String sql = nl2SqlService.generateSql("test-system", "查询table1数据", null);
+
+        assertNotNull(sql);
+        assertEquals("SELECT * FROM table1", sql);
+        verify(chatModel, times(2)).call(anyString()); // Two LLM calls
+    }
 }

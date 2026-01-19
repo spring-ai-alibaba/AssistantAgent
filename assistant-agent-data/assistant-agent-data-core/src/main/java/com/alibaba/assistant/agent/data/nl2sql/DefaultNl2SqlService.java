@@ -36,8 +36,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -80,11 +84,12 @@ public class DefaultNl2SqlService implements Nl2SqlService {
             // 3. Get schema
             SchemaDTO schema = getSchema(systemId);
 
-            // 4. Smart filtering (skip for now, will implement in next task)
+            // 4. Smart filtering
             if (schema.getTableCount() >= 10) {
-                log.debug("DefaultNl2SqlService#generateSql - Schema has {} tables, filtering required",
+                log.debug("DefaultNl2SqlService#generateSql - Schema has {} tables, applying filter",
                         schema.getTableCount());
-                // TODO: Implement filtering in next task
+                schema = filterTables(schema, query);
+                log.debug("DefaultNl2SqlService#generateSql - Filtered to {} tables", schema.getTableCount());
             }
 
             // 5. Build prompt
@@ -231,5 +236,72 @@ public class DefaultNl2SqlService implements Nl2SqlService {
         }
 
         return sql;
+    }
+
+    private SchemaDTO filterTables(SchemaDTO schema, String query) {
+        try {
+            // Get all table names
+            List<String> allTableNames = schema.getTable().stream()
+                    .map(TableDTO::getName)
+                    .collect(Collectors.toList());
+
+            // Build filter prompt
+            String filterPrompt = Nl2SqlPromptBuilder.buildSchemaFilterPrompt(query, allTableNames);
+            log.debug("DefaultNl2SqlService#filterTables - Calling LLM for table filtering");
+
+            // Call LLM
+            String response = chatModel.call(filterPrompt);
+            log.debug("DefaultNl2SqlService#filterTables - Filter response: {}", response);
+
+            // Parse table names
+            Set<String> selectedTables = parseTableNames(response);
+            log.info("DefaultNl2SqlService#filterTables - Selected {} tables: {}",
+                    selectedTables.size(), selectedTables);
+
+            // Filter schema
+            schema.getTable().removeIf(t -> !selectedTables.contains(t.getName().toLowerCase()));
+            schema.setTableCount(schema.getTable().size());
+
+            return schema;
+
+        } catch (Exception e) {
+            log.warn("DefaultNl2SqlService#filterTables - Filtering failed, using full schema: {}",
+                    e.getMessage());
+            return schema; // Fallback to full schema
+        }
+    }
+
+    private Set<String> parseTableNames(String response) {
+        try {
+            // Extract JSON array from response
+            String json = response.trim();
+
+            // Remove markdown code blocks if present
+            if (json.contains("```")) {
+                int start = json.indexOf("[");
+                int end = json.lastIndexOf("]") + 1;
+                if (start >= 0 && end > start) {
+                    json = json.substring(start, end);
+                }
+            }
+
+            // Parse JSON array: ["table1", "table2"]
+            json = json.trim();
+            if (json.startsWith("[") && json.endsWith("]")) {
+                json = json.substring(1, json.length() - 1);
+                String[] tables = json.split(",");
+
+                return Arrays.stream(tables)
+                        .map(s -> s.trim().replaceAll("\"", "").toLowerCase())
+                        .filter(s -> !s.isEmpty())
+                        .collect(Collectors.toSet());
+            }
+
+            throw new IllegalArgumentException("Invalid JSON array format");
+
+        } catch (Exception e) {
+            log.error("DefaultNl2SqlService#parseTableNames - Failed to parse: {}", response, e);
+            return Collections.emptySet();
+        }
     }
 }
