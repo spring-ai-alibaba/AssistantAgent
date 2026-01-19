@@ -86,7 +86,7 @@ public class HttpOptionsConfig implements Serializable {
      * <p>
      * Default: 5000 (5 seconds)
      */
-    private int timeout = 5000;
+    private Integer timeout = 5000;
 
     /**
      * JSONPath expression to extract label field from response.
@@ -262,11 +262,11 @@ public class HttpOptionsConfig implements Serializable {
         this.body = body;
     }
 
-    public int getTimeout() {
+    public Integer getTimeout() {
         return timeout;
     }
 
-    public void setTimeout(int timeout) {
+    public void setTimeout(Integer timeout) {
         this.timeout = timeout;
     }
 
@@ -301,7 +301,7 @@ public class HttpOptionsConfig implements Serializable {
         if (o == null || getClass() != o.getClass())
             return false;
         HttpOptionsConfig that = (HttpOptionsConfig) o;
-        return timeout == that.timeout && Objects.equals(url, that.url) && Objects.equals(method, that.method)
+        return Objects.equals(timeout, that.timeout) && Objects.equals(url, that.url) && Objects.equals(method, that.method)
                 && Objects.equals(headers, that.headers) && Objects.equals(body, that.body)
                 && Objects.equals(labelPath, that.labelPath) && Objects.equals(valuePath, that.valuePath)
                 && Objects.equals(authentication, that.authentication);
