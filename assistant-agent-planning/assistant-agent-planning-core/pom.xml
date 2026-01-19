@@ -27,6 +27,13 @@
             <version>${project.parent.version}</version>
         </dependency>
 
+        <!-- Data API - OptionItem model -->
+        <dependency>
+            <groupId>com.alibaba.agent.assistant</groupId>
+            <artifactId>assistant-agent-data-api</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+
         <!-- Assistant Agent Common - CodeactTool 接口 -->
         <dependency>
             <groupId>com.alibaba.agent.assistant</groupId>
