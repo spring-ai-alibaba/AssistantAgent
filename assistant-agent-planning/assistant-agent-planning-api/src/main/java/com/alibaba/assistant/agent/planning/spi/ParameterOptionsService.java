@@ -37,7 +37,7 @@ public interface ParameterOptionsService {
      * @return List of option items
      * @throws OptionsSourceException if fetching fails
      */
-    List<OptionItem> fetchOptions(OptionsSourceConfig config);
+    List<OptionItem> fetchOptions(OptionsSourceConfig config) throws OptionsSourceException;
 
     /**
      * Check if this service supports a specific source type.
