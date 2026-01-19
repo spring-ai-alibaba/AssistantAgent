@@ -24,6 +24,8 @@ package com.alibaba.assistant.agent.data.model.nl2sql;
  */
 public class Nl2SqlException extends RuntimeException {
 
+    private static final long serialVersionUID = 1L;
+
     /**
      * Constructs a new Nl2SqlException with the specified detail message.
      *

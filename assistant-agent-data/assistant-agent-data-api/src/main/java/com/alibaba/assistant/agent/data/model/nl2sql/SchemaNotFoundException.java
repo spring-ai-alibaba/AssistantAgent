@@ -24,6 +24,8 @@ package com.alibaba.assistant.agent.data.model.nl2sql;
  */
 public class SchemaNotFoundException extends Nl2SqlException {
 
+    private static final long serialVersionUID = 1L;
+
     /**
      * Constructs a new SchemaNotFoundException for the specified system ID.
      *
@@ -31,6 +33,16 @@ public class SchemaNotFoundException extends Nl2SqlException {
      */
     public SchemaNotFoundException(String systemId) {
         super("Schema not found for systemId: " + systemId);
+    }
+
+    /**
+     * Constructs a new SchemaNotFoundException for the specified system ID with a cause.
+     *
+     * @param systemId the system ID for which schema was not found
+     * @param cause the underlying cause of the failure
+     */
+    public SchemaNotFoundException(String systemId, Throwable cause) {
+        super("Schema not found for systemId: " + systemId, cause);
     }
 
 }

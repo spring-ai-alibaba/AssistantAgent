@@ -24,6 +24,8 @@ package com.alibaba.assistant.agent.data.model.nl2sql;
  */
 public class SqlGenerationException extends Nl2SqlException {
 
+    private static final long serialVersionUID = 1L;
+
     /**
      * Constructs a new SqlGenerationException with the specified detail message and cause.
      *
@@ -32,6 +34,15 @@ public class SqlGenerationException extends Nl2SqlException {
      */
     public SqlGenerationException(String message, Throwable cause) {
         super("SQL generation failed: " + message, cause);
+    }
+
+    /**
+     * Constructs a new SqlGenerationException with the specified detail message.
+     *
+     * @param message the detail message describing why SQL generation failed
+     */
+    public SqlGenerationException(String message) {
+        super("SQL generation failed: " + message);
     }
 
 }
