@@ -10,7 +10,11 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.ai.chat.model.ChatModel;
 
+import java.util.Collections;
+
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 class DefaultNl2SqlServiceTest {
 
@@ -65,5 +69,17 @@ class DefaultNl2SqlServiceTest {
         assertThrows(IllegalArgumentException.class, () ->
                 nl2SqlService.generateSql("test-system", "", null)
         );
+    }
+
+    @Test
+    void shouldThrowExceptionWhenSchemaNotFound() throws Exception {
+        when(schemaProvider.getTableList(eq("invalid-system"), isNull(), isNull()))
+                .thenReturn(Collections.emptyList());
+
+        Nl2SqlException exception = assertThrows(Nl2SqlException.class, () ->
+                nl2SqlService.generateSql("invalid-system", "query", null)
+        );
+
+        assertTrue(exception.getMessage().contains("Schema not found"));
     }
 }
