@@ -42,8 +42,12 @@ public class OptionsCache {
      * Creates a new OptionsCache with the specified TTL.
      *
      * @param ttlMillis time-to-live in milliseconds for cached entries
+     * @throws IllegalArgumentException if ttlMillis is not positive
      */
     public OptionsCache(long ttlMillis) {
+        if (ttlMillis <= 0) {
+            throw new IllegalArgumentException("TTL must be positive: " + ttlMillis);
+        }
         this.ttlMillis = ttlMillis;
     }
 
@@ -58,12 +62,15 @@ public class OptionsCache {
      * @return the cached option list, or null if not found or expired
      */
     public List<OptionItem> get(String key) {
+        if (key == null) {
+            return null;
+        }
         CacheEntry entry = cache.get(key);
         if (entry == null) {
             return null;
         }
         if (entry.isExpired()) {
-            cache.remove(key);
+            cache.remove(key, entry);
             logger.debug("OptionsCache#get - Cache entry expired: key={}", key);
             return null;
         }
@@ -76,8 +83,12 @@ public class OptionsCache {
      *
      * @param key     the cache key
      * @param options the option list to cache
+     * @throws IllegalArgumentException if key or options is null
      */
     public void put(String key, List<OptionItem> options) {
+        if (key == null || options == null) {
+            throw new IllegalArgumentException("Key and options must not be null");
+        }
         long expirationTime = System.currentTimeMillis() + ttlMillis;
         cache.put(key, new CacheEntry(options, expirationTime));
         logger.debug("OptionsCache#put - Cached: key={}, size={}", key, options.size());

@@ -25,6 +25,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 
 class OptionsCacheTest {
@@ -112,6 +114,31 @@ class OptionsCacheTest {
 
         assertTrue(completed, "All threads should complete within timeout");
         assertTrue(exceptions.isEmpty(), "No exceptions should occur: " + exceptions);
+    }
+
+    @Test
+    void shouldReturnNullForNullKey() {
+        OptionsCache cache = new OptionsCache(1000);
+
+        List<OptionItem> result = cache.get(null);
+
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void shouldRejectNullOptions() {
+        OptionsCache cache = new OptionsCache(1000);
+
+        assertThatThrownBy(() -> cache.put("key", null))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Key and options must not be null");
+    }
+
+    @Test
+    void shouldRejectNegativeTtl() {
+        assertThatThrownBy(() -> new OptionsCache(-1000))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("TTL must be positive");
     }
 
     private List<OptionItem> createTestOptions(int count) {
