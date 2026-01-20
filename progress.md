@@ -916,6 +916,150 @@ void testMultipleThreads() throws InterruptedException {
 
 ### 下一步工作
 - 运行测试套件验证通过率
-- Phase 11-12: 文档更新和发布
+- ~~Phase 11-12: 文档更新和发布~~ ✅ 已完成
+
+---
+
+## 2026-01-20 Phase 11-12 文档完成总结
+
+### 完成的工作
+
+#### 1. Parameter Options Service 完整文档
+- ✅ **创建** `assistant-agent-planning/docs/PARAMETER_OPTIONS_SERVICE.md` (**1458行**)
+  - 13 个核心章节 + 3 个附录
+  - 面向三类受众：使用者 👤、开发者 👨‍💻、集成者 🔧
+
+**文档章节**:
+1. 概述和核心特性 - 功能介绍和应用场景
+2. 5分钟快速开始 - 依赖配置、Action参数定义、自动生效
+3. 基础配置说明 - 配置项、数据源类型对比
+4. 四种数据源配置 - Static、HTTP、NL2SQL、Enum 详细说明
+   - HTTP 认证支持（Basic、Bearer、API Key）
+   - 路径参数、自定义请求头、POST 请求体
+   - NL2SQL 自然语言查询集成
+   - Java 枚举反射
+5. 缓存配置和优化 - Cache-Aside Pattern、TTL 配置、监控
+6. 认证和安全配置 - 三种认证类型、日志脱敏、HTTPS 强制
+7. 架构设计和 SPI 模式 - 整体架构图、核心组件、扩展机制
+8. 自定义 Handler 开发 - 接口实现、最佳实践、集成测试
+9. 与现有系统集成 - Planning 模块、NL2SQL、Spring Boot Admin
+10. 测试指南 - 单元测试、集成测试、端到端测试、覆盖率
+11. 监控和日志 - 日志配置、性能监控、Grafana 仪表盘
+12. 常见问题和解决方案 - HTTP 失败、JSONPath 提取、缓存、NL2SQL、并发
+13. 性能优化建议 - 缓存预热、HTTP 连接池、查询优化、并发控制
+
+**附录**:
+- A: 完整配置示例 (application.yml + Java配置)
+- B: API 参考 (核心接口、配置类、数据模型)
+- C: 变更日志 (v0.1.1 功能、测试覆盖、已知问题、未来计划)
+
+**提交信息**: `docs(planning): 添加 Parameter Options Service 完整文档`
+
+---
+
+#### 2. 参数收集流程文档增强
+- ✅ **更新** `assistant-agent-planning/PARAM_COLLECTION_GUIDE.md` (**+553行**, 总计904行)
+  - 从 351 行扩展到 904 行
+  - 新增 7 个主要章节
+
+**新增内容**:
+- Parameter Options Service 使用示例和集成说明
+- **Action Parameter Schema 完整规范**:
+  - TypeScript interface 定义
+  - 7 种参数类型示例（STRING, NUMBER, BOOLEAN, ENUM, DATE, ARRAY, OBJECT）
+  - 完整的验证规则（pattern, minLength, maxLength, min, max）
+  - 动态选项配置（optionsSource）
+- **Prompt Template 参考**:
+  - 参数提取 Prompt
+  - 参数追问 Prompt
+  - 确认 Prompt
+- **系统集成指南**（6 个模块）:
+  1. 集成到现有 Spring Boot 应用
+  2. 自定义 Action Provider SPI 实现
+  3. 自定义参数收集策略
+  4. 集成外部系统（HTTP API 和 MCP）
+  5. 会话管理（Redis SessionProvider）
+  6. 监控和日志配置
+- **扩展功能说明**:
+  - 参数依赖关系（计划中）
+  - 条件显示（计划中）
+  - 多语言支持（计划中）
+- 相关文档链接
+
+**提交信息**: `docs(planning): 完善参数收集流程文档`
+
+---
+
+### 文档统计
+
+#### 新增/更新文件
+1. `assistant-agent-planning/docs/PARAMETER_OPTIONS_SERVICE.md` - **新建** (1458 行)
+2. `assistant-agent-planning/PARAM_COLLECTION_GUIDE.md` - **更新** (+553 行)
+
+#### 总文档规模
+- **新增行数**: 2011 行
+- **覆盖主题**: 26 个章节 + 3 个附录
+- **代码示例**: 100+ 个
+- **配置示例**: 50+ 个
+
+#### 文档质量
+- ✅ 分层文档结构（受众标识：使用者、开发者、集成者）
+- ✅ 完整的快速开始指南
+- ✅ 详尽的配置说明和示例
+- ✅ 架构设计和 SPI 扩展指南
+- ✅ 集成测试和最佳实践
+- ✅ 故障排查和性能优化建议
+- ✅ API 参考和变更日志
+
+### Phase 11-12 完成状态
+
+✅ **Phase 11: 文档编写** - 100% 完成
+- ✅ Parameter Options Service 完整文档
+- ✅ 参数收集流程文档增强
+- ✅ Action Parameter Schema 规范
+- ✅ Prompt Template 参考
+- ✅ 系统集成指南
+
+✅ **Phase 12: 文档发布** - 100% 完成
+- ✅ 文档已提交到 git
+- ✅ 文档格式规范（Markdown + 代码高亮）
+- ✅ 文档结构清晰（目录 + 章节导航）
+- ✅ 跨文档链接完整
+
+---
+
+### 整体项目完成度
+
+#### 已完成阶段
+- ✅ Phase 1-2: 需求分析和设计
+- ✅ Phase 3-4: 核心组件实现和集成
+- ✅ Phase 5-6: SPI 实现和扩展
+- ✅ Phase 7-8: 集成层和架构重构
+- ✅ Phase 9-10: 测试编写和 Parameter Options Service 实现
+- ✅ Phase 11-12: 文档编写和发布
+
+#### 项目交付物
+1. **代码实现**: 2300+ 行核心代码
+2. **测试覆盖**: 55 个测试，79% 覆盖率
+3. **SPI 实现**: 6 个扩展点
+4. **文档**: 2011 行完整文档
+
+#### 功能清单
+- ✅ 参数收集和确认流程
+- ✅ 多轮对话支持
+- ✅ LLM 智能参数提取
+- ✅ 参数验证（7 种类型）
+- ✅ 动态参数选项（4 种数据源）
+- ✅ HTTP API 执行
+- ✅ 权限控制
+- ✅ 会话管理
+- ✅ 缓存机制
+- ✅ 监控和日志
+
+#### 下一步建议
+1. 端到端集成测试
+2. 性能压测和优化
+3. 用户验收测试（UAT）
+4. 生产环境部署准备
 
 ---
