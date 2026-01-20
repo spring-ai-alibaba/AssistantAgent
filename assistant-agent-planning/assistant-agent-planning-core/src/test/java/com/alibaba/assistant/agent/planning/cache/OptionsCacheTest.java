@@ -15,7 +15,7 @@
  */
 package com.alibaba.assistant.agent.planning.cache;
 
-import com.alibaba.assistant.agent.data.model.OptionItem;
+import com.alibaba.assistant.agent.data.model.nl2sql.OptionItem;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

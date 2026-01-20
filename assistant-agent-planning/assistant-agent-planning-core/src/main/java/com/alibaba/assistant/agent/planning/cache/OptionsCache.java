@@ -15,7 +15,7 @@
  */
 package com.alibaba.assistant.agent.planning.cache;
 
-import com.alibaba.assistant.agent.data.model.OptionItem;
+import com.alibaba.assistant.agent.data.model.nl2sql.OptionItem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
