@@ -36,6 +36,10 @@ import java.util.List;
 
 /**
  * Handler for HTTP API-based option sources.
+ * <p>
+ * <b>Important:</b> The RestTemplate provided to this handler must be pre-configured
+ * with appropriate connection and read timeouts. Individual timeout values from
+ * {@link HttpOptionsConfig} are not currently enforced at the request level.
  *
  * @author Assistant Agent Team
  * @since 1.0.0
@@ -87,6 +91,15 @@ class HttpOptionsHandler implements OptionsSourceHandler {
     }
 
     private List<OptionItem> extractOptions(String jsonBody, String labelPath, String valuePath) {
+        // Validate parameters
+        if (labelPath == null || valuePath == null) {
+            throw new OptionsSourceException("labelPath and valuePath must not be null");
+        }
+        if (jsonBody == null || jsonBody.isEmpty()) {
+            logger.warn("HttpOptionsHandler#extractOptions - Empty response body");
+            return Collections.emptyList();
+        }
+
         try {
             List<String> labels = JsonPath.read(jsonBody, labelPath);
             List<String> values = JsonPath.read(jsonBody, valuePath);
