@@ -27,7 +27,7 @@ import java.util.List;
  * @author Assistant Agent Team
  * @since 1.0.0
  */
-interface OptionsSourceHandler {
+public interface OptionsSourceHandler {
 
     /**
      * Handle option fetching for specific source type.

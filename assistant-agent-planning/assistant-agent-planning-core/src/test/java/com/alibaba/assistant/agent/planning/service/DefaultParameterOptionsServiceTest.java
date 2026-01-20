@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package com.alibaba.assistant.agent.planning.internal;
+package com.alibaba.assistant.agent.planning.service;
 
 import com.alibaba.assistant.agent.data.model.nl2sql.OptionItem;
 import com.alibaba.assistant.agent.planning.cache.OptionsCache;
 import com.alibaba.assistant.agent.planning.exception.OptionsSourceException;
+import com.alibaba.assistant.agent.planning.internal.OptionsSourceHandler;
 import com.alibaba.assistant.agent.planning.model.OptionsSourceConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
