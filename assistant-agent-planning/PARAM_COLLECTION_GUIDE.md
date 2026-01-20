@@ -341,10 +341,563 @@ spring:
 'synonyms': '["加个单位", "建个单位", "录入单位", "增加单位"]'
 ```
 
-## 下一步
+### 4. 使用 Parameter Options Service
 
-1. 编写单元测试
-2. 添加性能监控
-3. 实现会话持久化（Redis）
-4. 优化 LLM prompt 模板
-5. 添加多语言支持
+从 v0.1.1 开始，支持动态参数选项：
+
+```json
+{
+  "name": "unitId",
+  "label": "产品单位",
+  "type": "STRING",
+  "required": true,
+  "description": "选择产品计量单位",
+  "optionsSource": {
+    "type": "HTTP",
+    "systemId": "erp-system",
+    "config": {
+      "url": "https://api.example.com/units",
+      "method": "GET",
+      "labelPath": "$.data[*].name",
+      "valuePath": "$.data[*].id"
+    }
+  }
+}
+```
+
+详见: [Parameter Options Service 文档](docs/PARAMETER_OPTIONS_SERVICE.md)
+
+---
+
+## Action Parameter Schema 规范
+
+### 完整 Schema 定义
+
+```typescript
+interface ActionParameter {
+  // 基础属性
+  name: string;              // 参数名称（必填）
+  label?: string;            // 显示标签
+  type: ParameterType;       // 参数类型（必填）
+  required: boolean;         // 是否必填（默认 false）
+  description?: string;      // 参数说明
+
+  // 默认值和占位符
+  defaultValue?: any;        // 默认值
+  placeholder?: string;      // 输入提示
+
+  // 验证规则
+  pattern?: string;          // 正则表达式
+  minLength?: number;        // 最小长度
+  maxLength?: number;        // 最大长度
+  min?: number;              // 最小值（数字类型）
+  max?: number;              // 最大值（数字类型）
+
+  // 枚举类型专用
+  enumValues?: string[];     // 枚举值列表
+
+  // 动态选项（v0.1.1+）
+  optionsSource?: {
+    type: 'STATIC' | 'HTTP' | 'NL2SQL' | 'ENUM';
+    systemId?: string;
+    config: object;
+  };
+
+  // 参数依赖（未来版本）
+  dependsOn?: string[];      // 依赖的其他参数
+  visibleWhen?: string;      // 显示条件表达式
+}
+
+enum ParameterType {
+  STRING = 'STRING',
+  NUMBER = 'NUMBER',
+  BOOLEAN = 'BOOLEAN',
+  ENUM = 'ENUM',
+  DATE = 'DATE',
+  ARRAY = 'ARRAY',
+  OBJECT = 'OBJECT'
+}
+```
+
+### 各类型参数示例
+
+#### STRING 类型
+
+```json
+{
+  "name": "productName",
+  "label": "产品名称",
+  "type": "STRING",
+  "required": true,
+  "description": "产品的完整名称",
+  "minLength": 2,
+  "maxLength": 50,
+  "placeholder": "请输入产品名称"
+}
+```
+
+#### NUMBER 类型
+
+```json
+{
+  "name": "price",
+  "label": "价格",
+  "type": "NUMBER",
+  "required": true,
+  "description": "产品售价（元）",
+  "min": 0,
+  "max": 999999.99,
+  "placeholder": "0.00"
+}
+```
+
+#### BOOLEAN 类型
+
+```json
+{
+  "name": "isPublic",
+  "label": "是否公开",
+  "type": "BOOLEAN",
+  "required": false,
+  "description": "是否对外公开显示",
+  "defaultValue": true
+}
+```
+
+#### ENUM 类型
+
+```json
+{
+  "name": "status",
+  "label": "状态",
+  "type": "ENUM",
+  "required": true,
+  "enumValues": ["DRAFT", "PUBLISHED", "ARCHIVED"],
+  "description": "文档状态",
+  "defaultValue": "DRAFT"
+}
+```
+
+#### DATE 类型
+
+```json
+{
+  "name": "publishDate",
+  "label": "发布日期",
+  "type": "DATE",
+  "required": false,
+  "description": "计划发布日期",
+  "placeholder": "YYYY-MM-DD"
+}
+```
+
+#### ARRAY 类型
+
+```json
+{
+  "name": "tags",
+  "label": "标签",
+  "type": "ARRAY",
+  "required": false,
+  "description": "产品标签列表",
+  "defaultValue": []
+}
+```
+
+---
+
+## Prompt Template 参考
+
+### 参数提取 Prompt
+
+系统使用以下 prompt 从用户输入中提取参数：
+
+```
+你是一个参数提取助手。用户想要执行以下操作：
+
+**操作名称**: {actionName}
+**操作描述**: {actionDescription}
+
+**需要的参数**:
+{parameters}
+
+**用户输入**: {userInput}
+
+请从用户输入中提取参数值，以 JSON 格式返回。如果某个参数无法提取，设置为 null。
+
+示例输出:
+{
+  "name": "个",
+  "status": null
+}
+```
+
+### 参数追问 Prompt
+
+当参数缺失时，系统使用以下 prompt 生成追问：
+
+```
+用户正在执行操作：{actionName}
+
+已收集的参数:
+{collectedParams}
+
+缺失的必填参数:
+- {paramLabel} ({paramName}): {paramDescription}
+
+请生成一个自然、友好的追问，询问用户提供缺失的参数值。
+追问应该:
+1. 简洁明了
+2. 说明参数的用途
+3. 如果有枚举值，提供选项
+4. 如果有示例值，给出示例
+
+示例追问:
+"请问产品单位的名称是什么？例如：个、台、箱、件等"
+```
+
+### 确认 Prompt
+
+参数收集完成后，系统使用以下 prompt 请求确认：
+
+```
+参数已收集完成，请确认以下信息：
+
+**操作**: {actionName}
+{parameters}
+
+是否确认执行？(回复"确认"或"取消")
+```
+
+---
+
+## 系统集成指南
+
+### 1. 集成到现有 Spring Boot 应用
+
+#### 1.1 添加依赖
+
+```xml
+<dependency>
+    <groupId>com.alibaba.agent.assistant</groupId>
+    <artifactId>assistant-agent-planning-core</artifactId>
+    <version>0.1.1</version>
+</dependency>
+```
+
+#### 1.2 启用自动配置
+
+```yaml
+spring:
+  ai:
+    alibaba:
+      codeact:
+        extension:
+          planning:
+            enabled: true
+            matching:
+              param-collection-enabled: true
+```
+
+#### 1.3 注入服务
+
+```java
+@Service
+public class MyBusinessService {
+
+    @Autowired
+    private ParameterCollectionOrchestrator orchestrator;
+
+    @Autowired
+    private ActionMatcher actionMatcher;
+
+    public void handleUserInput(String userInput, String userId) {
+        // 1. 匹配 Action
+        List<ActionDefinition> matches = actionMatcher.match(userInput);
+
+        if (matches.isEmpty()) {
+            // 未匹配到 Action
+            return;
+        }
+
+        ActionDefinition action = matches.get(0);
+
+        // 2. 启动参数收集流程
+        orchestrator.startCollection(userId, action, userInput);
+    }
+}
+```
+
+### 2. 自定义 Action Provider
+
+实现 `ActionProvider` SPI 以提供自定义的 Action 定义：
+
+```java
+@Component
+public class CustomActionProvider implements ActionProvider {
+
+    @Override
+    public List<ActionDefinition> getAllActions() {
+        // 从数据库、配置文件或其他来源加载 Action
+        return loadActionsFromDatabase();
+    }
+
+    @Override
+    public ActionDefinition getActionById(String actionId) {
+        return findActionByIdFromDatabase(actionId);
+    }
+
+    @Override
+    public String getName() {
+        return "CustomActionProvider";
+    }
+
+    private List<ActionDefinition> loadActionsFromDatabase() {
+        // 实现数据库查询逻辑
+        return List.of();
+    }
+}
+```
+
+### 3. 自定义参数收集策略
+
+实现 `ParameterCollectionStrategy` 接口以自定义参数收集行为：
+
+```java
+@Component
+public class CustomCollectionStrategy implements ParameterCollectionStrategy {
+
+    @Override
+    public boolean shouldAskForParameter(
+            ActionParameter parameter,
+            Map<String, Object> collectedParams) {
+        // 自定义逻辑：决定是否需要追问该参数
+        if (parameter.getDefaultValue() != null) {
+            // 有默认值，不追问
+            return false;
+        }
+        return parameter.isRequired();
+    }
+
+    @Override
+    public String generateQuestion(
+            ActionParameter parameter,
+            Map<String, Object> collectedParams) {
+        // 自定义追问内容生成
+        return "请提供 " + parameter.getLabel() + "：" +
+               parameter.getDescription();
+    }
+}
+```
+
+### 4. 集成外部系统
+
+#### 4.1 HTTP API 调用
+
+```java
+@Component
+public class ApiExecutor {
+
+    @Autowired
+    private RestTemplate restTemplate;
+
+    public ExecutionResult executeAction(
+            ActionDefinition action,
+            Map<String, Object> parameters) {
+
+        HttpBinding httpBinding = action.getInterfaceBinding().getHttp();
+
+        // 构建请求
+        HttpHeaders headers = new HttpHeaders();
+        httpBinding.getHeaders().forEach(headers::add);
+
+        HttpEntity<Map<String, Object>> request =
+            new HttpEntity<>(parameters, headers);
+
+        // 发送请求
+        ResponseEntity<String> response = restTemplate.exchange(
+            httpBinding.getUrl(),
+            HttpMethod.valueOf(httpBinding.getMethod()),
+            request,
+            String.class
+        );
+
+        // 返回结果
+        return ExecutionResult.builder()
+            .success(response.getStatusCode().is2xxSuccessful())
+            .responseBody(response.getBody())
+            .build();
+    }
+}
+```
+
+#### 4.2 MCP 集成
+
+```yaml
+spring:
+  ai:
+    alibaba:
+      codeact:
+        extension:
+          dynamic:
+            mcp:
+              servers:
+                - name: erp-system
+                  command: npx
+                  args: ["-y", "@modelcontextprotocol/server-everything"]
+                  env:
+                    API_KEY: ${ERP_API_KEY}
+```
+
+### 5. 会话管理
+
+#### 5.1 实现 SessionProvider
+
+```java
+@Component
+public class RedisSessionProvider implements SessionProvider {
+
+    @Autowired
+    private RedisTemplate<String, ParamCollectionSession> redisTemplate;
+
+    @Override
+    public void saveSession(String sessionId, ParamCollectionSession session) {
+        redisTemplate.opsForValue().set(
+            "session:" + sessionId,
+            session,
+            Duration.ofHours(1)
+        );
+    }
+
+    @Override
+    public ParamCollectionSession getSession(String sessionId) {
+        return redisTemplate.opsForValue().get("session:" + sessionId);
+    }
+
+    @Override
+    public void deleteSession(String sessionId) {
+        redisTemplate.delete("session:" + sessionId);
+    }
+}
+```
+
+### 6. 监控和日志
+
+#### 6.1 添加 Metrics
+
+```java
+@Component
+public class CollectionMetrics {
+
+    private final MeterRegistry registry;
+    private final Counter successCounter;
+    private final Counter failureCounter;
+    private final Timer collectionTimer;
+
+    public CollectionMetrics(MeterRegistry registry) {
+        this.registry = registry;
+        this.successCounter = Counter.builder("param_collection_success")
+            .description("Successful parameter collections")
+            .register(registry);
+        this.failureCounter = Counter.builder("param_collection_failure")
+            .description("Failed parameter collections")
+            .register(registry);
+        this.collectionTimer = Timer.builder("param_collection_duration")
+            .description("Parameter collection duration")
+            .register(registry);
+    }
+
+    public void recordSuccess() {
+        successCounter.increment();
+    }
+
+    public void recordFailure() {
+        failureCounter.increment();
+    }
+
+    public void recordDuration(long milliseconds) {
+        collectionTimer.record(Duration.ofMillis(milliseconds));
+    }
+}
+```
+
+#### 6.2 配置日志
+
+```yaml
+logging:
+  level:
+    com.alibaba.assistant.agent.planning: INFO
+    com.alibaba.assistant.agent.planning.matching: DEBUG
+    com.alibaba.assistant.agent.planning.param: DEBUG
+```
+
+---
+
+## 扩展功能
+
+### 参数依赖关系（计划中）
+
+未来版本将支持参数间的依赖关系：
+
+```json
+{
+  "name": "city",
+  "label": "城市",
+  "type": "STRING",
+  "required": true,
+  "dependsOn": ["province"],
+  "optionsSource": {
+    "type": "HTTP",
+    "config": {
+      "url": "https://api.example.com/cities?province={province}"
+    }
+  }
+}
+```
+
+### 条件显示（计划中）
+
+基于其他参数值决定是否显示某个参数：
+
+```json
+{
+  "name": "invoiceTitle",
+  "label": "发票抬头",
+  "type": "STRING",
+  "required": true,
+  "visibleWhen": "needInvoice === true"
+}
+```
+
+### 多语言支持（计划中）
+
+支持参数标签和描述的国际化：
+
+```json
+{
+  "name": "productName",
+  "label": {
+    "zh-CN": "产品名称",
+    "en-US": "Product Name"
+  },
+  "description": {
+    "zh-CN": "产品的完整名称",
+    "en-US": "Full name of the product"
+  }
+}
+```
+
+---
+
+## 相关文档
+
+- [Parameter Options Service 文档](docs/PARAMETER_OPTIONS_SERVICE.md)
+- [Action Definition Schema](../docs/ACTION_DEFINITION_SCHEMA.md)
+- [API 参考文档](../docs/API_REFERENCE.md)
+- [Spring AI Alibaba 文档](https://github.com/alibaba/spring-ai-alibaba)
+
+---
+
+**文档版本**: 1.1.0
+**最后更新**: 2026-01-20
+**作者**: Assistant Agent Team
