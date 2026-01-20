@@ -214,4 +214,35 @@ class DefaultParameterOptionsServiceTest {
         // Then
         verify(cache).put(anyString(), eq(expectedOptions));
     }
+
+    @Test
+    void shouldThrowExceptionWhenHandlerListIsNull() {
+        // When & Then
+        assertThatThrownBy(() -> new DefaultParameterOptionsService(null, cache))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("handlerList");
+    }
+
+    @Test
+    void shouldThrowExceptionWhenCacheIsNull() {
+        // When & Then
+        assertThatThrownBy(() -> new DefaultParameterOptionsService(List.of(nl2sqlHandler), null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("cache");
+    }
+
+    @Test
+    void shouldHandleDuplicateHandlersGracefully() {
+        // Given
+        OptionsSourceHandler duplicateNl2sqlHandler = mock(OptionsSourceHandler.class);
+        when(duplicateNl2sqlHandler.supportedType()).thenReturn(OptionsSourceConfig.SourceType.NL2SQL);
+
+        List<OptionsSourceHandler> handlers = List.of(nl2sqlHandler, duplicateNl2sqlHandler);
+
+        // When - Should log warning and keep first handler
+        DefaultParameterOptionsService service = new DefaultParameterOptionsService(handlers, cache);
+
+        // Then - Verify only one handler is registered (the first one)
+        assertThat(service.supports(OptionsSourceConfig.SourceType.NL2SQL)).isTrue();
+    }
 }

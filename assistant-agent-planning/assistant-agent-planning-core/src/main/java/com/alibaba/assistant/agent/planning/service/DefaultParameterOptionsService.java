@@ -54,10 +54,30 @@ public class DefaultParameterOptionsService implements ParameterOptionsService {
      *
      * @param handlerList list of all available option source handlers
      * @param cache cache instance for storing option results
+     * @throws IllegalArgumentException if handlerList or cache is null
      */
     public DefaultParameterOptionsService(List<OptionsSourceHandler> handlerList, OptionsCache cache) {
-        this.handlers = handlerList.stream()
-                .collect(Collectors.toMap(OptionsSourceHandler::supportedType, handler -> handler));
+        if (handlerList == null) {
+            throw new IllegalArgumentException("handlerList must not be null");
+        }
+        if (cache == null) {
+            throw new IllegalArgumentException("cache must not be null");
+        }
+
+        this.handlers = Collections.unmodifiableMap(
+                handlerList.stream()
+                        .collect(Collectors.toMap(
+                                OptionsSourceHandler::supportedType,
+                                handler -> handler,
+                                (existing, replacement) -> {
+                                    logger.warn("DefaultParameterOptionsService - Duplicate handler for type {}: keeping {}, ignoring {}",
+                                            existing.supportedType(),
+                                            existing.getClass().getSimpleName(),
+                                            replacement.getClass().getSimpleName());
+                                    return existing;
+                                }
+                        ))
+        );
         this.cache = cache;
         logger.info("DefaultParameterOptionsService initialized with {} handlers", handlers.size());
     }
@@ -110,17 +130,17 @@ public class DefaultParameterOptionsService implements ParameterOptionsService {
 
     /**
      * Builds cache key from configuration.
-     * Format: "{type}:{systemId}:{configHashCode}"
+     * Format: "{type}:{systemId}:{configString}"
      *
      * @param config original configuration
      * @param type resolved source type (after defaulting)
      * @return cache key string
      */
     private String buildCacheKey(OptionsSourceConfig config, OptionsSourceConfig.SourceType type) {
-        return String.format("%s:%s:%s",
-                type,
-                config.getSystemId(),
-                config.getConfig() != null ? config.getConfig().hashCode() : "null");
+        String systemIdStr = config.getSystemId() != null ? config.getSystemId() : "null";
+        String configStr = config.getConfig() != null ? config.getConfig().toString() : "null";
+
+        return String.format("%s:%s:%s", type, systemIdStr, configStr);
     }
 
     @Override
