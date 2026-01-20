@@ -21,6 +21,7 @@ import com.alibaba.assistant.agent.planning.model.OptionsSourceConfig;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -38,7 +39,18 @@ class EnumOptionsHandler implements OptionsSourceHandler {
 
     @Override
     public List<OptionItem> handle(String systemId, Object specificConfig) {
+        // Issue 1: Add type validation check
+        if (!(specificConfig instanceof String)) {
+            throw new IllegalArgumentException(
+                    "Expected String (enum class name) but got: "
+                            + (specificConfig != null ? specificConfig.getClass().getName() : "null"));
+        }
         String enumClassName = (String) specificConfig;
+
+        // Issue 2: Add null/empty validation
+        if (enumClassName == null || enumClassName.trim().isEmpty()) {
+            throw new OptionsSourceException("Enum class name cannot be null or empty");
+        }
 
         try {
             Class<?> enumClass = Class.forName(enumClassName);
@@ -47,7 +59,11 @@ class EnumOptionsHandler implements OptionsSourceHandler {
                 throw new OptionsSourceException("Class is not an enum: " + enumClassName);
             }
 
+            // Issue 3: Add null safety check for getEnumConstants()
             Object[] constants = enumClass.getEnumConstants();
+            if (constants == null || constants.length == 0) {
+                return Collections.emptyList();
+            }
             return Arrays.stream(constants)
                     .map(c -> {
                         String name = c.toString();

@@ -24,6 +24,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 /**
  * Tests for EnumOptionsHandler.
@@ -84,6 +85,31 @@ class EnumOptionsHandlerTest {
         assertThat(handler.supportedType()).isEqualTo(OptionsSourceConfig.SourceType.ENUM);
     }
 
+    @Test
+    void shouldThrowExceptionForNonStringConfig() {
+        Integer invalidConfig = 123; // Not a String
+
+        assertThatThrownBy(() -> handler.handle("test-system", invalidConfig))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Expected String");
+    }
+
+    @Test
+    void shouldThrowExceptionForNullClassName() {
+        assertThat(catchThrowable(() -> handler.handle("test-system", null)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Expected String");
+    }
+
+    @Test
+    void shouldReturnEmptyListForEmptyEnum() {
+        String emptyEnumClassName = EmptyEnum.class.getName();
+
+        List<OptionItem> result = handler.handle("test-system", emptyEnumClassName);
+
+        assertThat(result).isEmpty();
+    }
+
     /**
      * Test enum for verification.
      */
@@ -91,5 +117,12 @@ class EnumOptionsHandlerTest {
         ACTIVE,
         INACTIVE,
         PENDING
+    }
+
+    /**
+     * Empty enum for edge case testing.
+     */
+    public enum EmptyEnum {
+        // No constants
     }
 }
