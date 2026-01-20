@@ -89,6 +89,12 @@
             <artifactId>jackson-databind</artifactId>
         </dependency>
 
+        <!-- JSONPath for HTTP response extraction -->
+        <dependency>
+            <groupId>com.jayway.jsonpath</groupId>
+            <artifactId>json-path</artifactId>
+        </dependency>
+
         <!-- Spring Web for RestTemplate (optional, for HTTP calls) -->
         <dependency>
             <groupId>org.springframework</groupId>
