@@ -20,6 +20,12 @@
     </properties>
 
     <dependencies>
+        <!-- Assistant Agent Data API for shared models -->
+        <dependency>
+            <groupId>com.alibaba.agent.assistant</groupId>
+            <artifactId>assistant-agent-data-api</artifactId>
+        </dependency>
+
         <!-- Lombok for reducing boilerplate -->
         <dependency>
             <groupId>org.projectlombok</groupId>

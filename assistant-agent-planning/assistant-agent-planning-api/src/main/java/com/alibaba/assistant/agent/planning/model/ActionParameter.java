@@ -139,6 +139,14 @@ public class ActionParameter {
     private List<ActionParameter> properties;
 
     /**
+     * 动态选项源配置
+     *
+     * <p>当该字段存在时，参数选项将在参数收集阶段动态获取。
+     * 如果 type 为 null，默认使用 NL2SQL 方式获取选项。
+     */
+    private OptionsSourceConfig optionsSource;
+
+    /**
      * 外键引用定义
      */
     @Data
