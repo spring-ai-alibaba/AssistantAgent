@@ -101,6 +101,11 @@ public class PlanningExtensionProperties {
      */
     private ParamCollectionConfig paramCollection = new ParamCollectionConfig();
 
+    /**
+     * 参数选项服务配置
+     */
+    private ParamOptions paramOptions = new ParamOptions();
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -219,6 +224,14 @@ public class PlanningExtensionProperties {
 
     public void setParamCollection(ParamCollectionConfig paramCollection) {
         this.paramCollection = paramCollection;
+    }
+
+    public ParamOptions getParamOptions() {
+        return paramOptions;
+    }
+
+    public void setParamOptions(ParamOptions paramOptions) {
+        this.paramOptions = paramOptions;
     }
 
     /**
@@ -662,6 +675,76 @@ public class PlanningExtensionProperties {
             public void setTtlMinutes(Integer ttlMinutes) {
                 this.ttlMinutes = ttlMinutes;
             }
+        }
+    }
+
+    /**
+     * 参数选项服务配置
+     */
+    public static class ParamOptions {
+        /**
+         * 是否启用参数选项服务
+         */
+        private boolean enabled = true;
+
+        /**
+         * 默认数据源类型（未指定时使用）
+         */
+        private String defaultSourceType = "NL2SQL";
+
+        /**
+         * 缓存过期时间（毫秒）
+         */
+        private long cacheTtl = 300000; // 5 minutes
+
+        /**
+         * 默认 HTTP 超时时间（毫秒）
+         */
+        private int httpTimeout = 5000;
+
+        /**
+         * HTTP 请求失败重试次数
+         */
+        private int httpRetryCount = 1;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public String getDefaultSourceType() {
+            return defaultSourceType;
+        }
+
+        public void setDefaultSourceType(String defaultSourceType) {
+            this.defaultSourceType = defaultSourceType;
+        }
+
+        public long getCacheTtl() {
+            return cacheTtl;
+        }
+
+        public void setCacheTtl(long cacheTtl) {
+            this.cacheTtl = cacheTtl;
+        }
+
+        public int getHttpTimeout() {
+            return httpTimeout;
+        }
+
+        public void setHttpTimeout(int httpTimeout) {
+            this.httpTimeout = httpTimeout;
+        }
+
+        public int getHttpRetryCount() {
+            return httpRetryCount;
+        }
+
+        public void setHttpRetryCount(int httpRetryCount) {
+            this.httpRetryCount = httpRetryCount;
         }
     }
 }
