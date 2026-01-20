@@ -32,13 +32,32 @@ import java.util.List;
 @Component
 class StaticOptionsHandler implements OptionsSourceHandler {
 
+    /**
+     * Handle option fetching for static source type.
+     * Returns the predefined list of options from the configuration.
+     *
+     * @param systemId Datasource identifier (not used for static options)
+     * @param specificConfig StaticOptionsConfig containing the option list
+     * @return List of option items, or empty list if options are null
+     * @throws IllegalArgumentException if specificConfig is not StaticOptionsConfig
+     */
     @Override
     public List<OptionItem> handle(String systemId, Object specificConfig) {
+        if (!(specificConfig instanceof StaticOptionsConfig)) {
+            throw new IllegalArgumentException(
+                "Expected StaticOptionsConfig but got: " +
+                (specificConfig != null ? specificConfig.getClass().getName() : "null"));
+        }
         StaticOptionsConfig config = (StaticOptionsConfig) specificConfig;
         List<OptionItem> options = config.getOptions();
         return options != null ? options : Collections.emptyList();
     }
 
+    /**
+     * Returns the source type this handler supports.
+     *
+     * @return STATIC source type
+     */
     @Override
     public OptionsSourceConfig.SourceType supportedType() {
         return OptionsSourceConfig.SourceType.STATIC;
