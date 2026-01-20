@@ -7,6 +7,35 @@
 spring:
   application:
     name: assistant-agent-full
+  # Persistent Datasource Provider Configuration (from line 173)
+  assistant-agent:
+    data:
+      persistent-datasource:
+        enabled: false  # Disabled by default, enable to use DataAgent database
+        cache:
+          enabled: true
+          ttl-minutes: 5
+          cleanup-interval-seconds: 60
+        connection:
+          url: jdbc:mysql://127.0.0.1:3306/saa_data_agent?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+          username: root
+          password: StrongRootPwd
+          pool:
+            maximum-pool-size: 10
+            minimum-idle: 2
+            connection-timeout: 30000
+      # NL2SQL Configuration
+      nl2sql:
+        enabled: false                          # Disabled by default, enable to use NL2SQL
+        schema-filter-threshold: 10             # Filter schema when >= 10 tables
+        llm:
+          model: qwen-max                       # LLM model for SQL generation
+          temperature: 0.1                      # Low temperature for deterministic output
+          max-tokens: 2000                      # Maximum response tokens
+        cache:
+          enabled: true                         # Enable result caching
+          ttl-minutes: 30                       # Cache time-to-live
+          max-size: 1000                        # Maximum cache entries
 
 server:
   port: 8080
@@ -164,38 +193,4 @@ spring.ai.alibaba.codeact.extension.planning:
 logging:
   level:
     com.alibaba.assistant.agent: DEBUG
-
-# ============================================================================
-# Persistent Datasource Provider Configuration
-# ============================================================================
-# Disabled by default - enable to use DataAgent database for metadata
-# Activate with: --spring.profiles.active=persistent-datasource
-spring:
-  assistant-agent:
-    data:
-      persistent-datasource:
-        enabled: false  # Disabled by default, enable to use DataAgent database
-        cache:
-          enabled: true
-          ttl-minutes: 5
-          cleanup-interval-seconds: 60
-        connection:
-          url: jdbc:mysql://127.0.0.1:3306/saa_data_agent?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
-          username: root
-          password: StrongRootPwd
-          pool:
-            maximum-pool-size: 10
-            minimum-idle: 2
-            connection-timeout: 30000
-      # NL2SQL Configuration
-      nl2sql:
-        enabled: false                          # Disabled by default, enable to use NL2SQL
-        schema-filter-threshold: 10             # Filter schema when >= 10 tables
-        llm:
-          model: qwen-max                       # LLM model for SQL generation
-          temperature: 0.1                      # Low temperature for deterministic output
-          max-tokens: 2000                      # Maximum response tokens
-        cache:
-          enabled: true                         # Enable result caching
-          ttl-minutes: 30                       # Cache TTL in minutes
 
