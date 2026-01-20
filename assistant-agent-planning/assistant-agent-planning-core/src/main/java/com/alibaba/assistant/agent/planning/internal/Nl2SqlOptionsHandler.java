@@ -21,6 +21,7 @@ import com.alibaba.assistant.agent.data.spi.Nl2SqlService;
 import com.alibaba.assistant.agent.planning.model.OptionsSourceConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
@@ -30,10 +31,15 @@ import java.util.List;
  * Handler for NL2SQL-based option sources.
  * Delegates to Nl2SqlService from data module.
  *
+ * <p>This handler is only registered when Nl2SqlService bean is available.
+ * This allows the parameter options service to function with other handlers
+ * when NL2SQL module is disabled.
+ *
  * @author Assistant Agent Team
  * @since 1.0.0
  */
 @Component
+@ConditionalOnBean(Nl2SqlService.class)
 class Nl2SqlOptionsHandler implements OptionsSourceHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(Nl2SqlOptionsHandler.class);
