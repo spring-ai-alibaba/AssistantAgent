@@ -22,6 +22,7 @@ import com.alibaba.assistant.agent.planning.model.OptionsSourceConfig;
 import com.jayway.jsonpath.JsonPath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -52,7 +53,9 @@ class HttpOptionsHandler implements OptionsSourceHandler {
     private final RestTemplate restTemplate;
     private final int defaultTimeout;
 
-    public HttpOptionsHandler(RestTemplate restTemplate, int defaultTimeout) {
+    public HttpOptionsHandler(
+            RestTemplate restTemplate,
+            @Value("${spring.ai.alibaba.codeact.extension.planning.param-options.http-timeout:5000}") int defaultTimeout) {
         this.restTemplate = restTemplate;
         this.defaultTimeout = defaultTimeout;
     }
