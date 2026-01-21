@@ -18,6 +18,8 @@ package com.alibaba.assistant.agent.planning.executor;
 import com.alibaba.assistant.agent.planning.model.ActionDefinition;
 import com.alibaba.assistant.agent.planning.model.ExecutionResult;
 import com.alibaba.assistant.agent.planning.model.StepDefinition;
+import com.alibaba.assistant.agent.planning.permission.interceptor.PermissionInterceptor;
+import com.alibaba.assistant.agent.planning.permission.spi.PermissionCheckResult;
 import com.alibaba.assistant.agent.planning.spi.ActionExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,11 +50,18 @@ public class ActionExecutorFactory {
     private static final Logger logger = LoggerFactory.getLogger(ActionExecutorFactory.class);
 
     private final Map<String, ActionExecutor> executorMap;
+    private final PermissionInterceptor permissionInterceptor;
 
-    @Autowired
-    public ActionExecutorFactory(List<ActionExecutor> executors) {
+    @Autowired(required = false)
+    public ActionExecutorFactory(List<ActionExecutor> executors, PermissionInterceptor permissionInterceptor) {
         this.executorMap = buildExecutorMap(executors);
+        this.permissionInterceptor = permissionInterceptor;
         logInitializedExecutors();
+        if (permissionInterceptor != null) {
+            logger.info("ActionExecutorFactory#init - permission interceptor enabled");
+        } else {
+            logger.info("ActionExecutorFactory#init - permission interceptor disabled");
+        }
     }
 
     /**
@@ -150,13 +159,70 @@ public class ActionExecutorFactory {
         logger.debug("ActionExecutorFactory#execute - executing actionId={}, type={}, executor={}",
                 action.getActionId(), type, executor.getClass().getSimpleName());
 
+        // Apply permission check and data permission injection if enabled
+        Map<String, Object> finalParams = params;
+        if (permissionInterceptor != null) {
+            // Extract context from params (platformUserId, systemId, etc.)
+            String platformUserId = extractFromParams(params, "platformUserId", "userId", "_userId");
+            String systemId = extractFromParams(params, "systemId", "_systemId");
+            Map<String, Object> context = extractContext(params);
+
+            // Check functional permission first
+            if (platformUserId != null && systemId != null) {
+                PermissionCheckResult checkResult = permissionInterceptor.checkPermission(
+                        action, platformUserId, systemId, context);
+
+                if (!checkResult.isAllowed()) {
+                    logger.warn("ActionExecutorFactory#execute - permission denied: userId={}, systemId={}, actionId={}, reason={}",
+                            platformUserId, systemId, action.getActionId(), checkResult.getMessage());
+                    return ExecutionResult.failure("权限不足: " + checkResult.getMessage());
+                }
+
+                // Inject data permissions into parameters
+                finalParams = permissionInterceptor.injectDataPermission(
+                        action, params, platformUserId, systemId, context);
+
+                logger.debug("ActionExecutorFactory#execute - permission check passed and data permission injected");
+            } else {
+                logger.debug("ActionExecutorFactory#execute - skipping permission check (missing userId or systemId)");
+            }
+        }
+
         try {
-            return executor.execute(action, params, timeoutSeconds);
+            return executor.execute(action, finalParams, timeoutSeconds);
         } catch (Exception e) {
             logger.error("ActionExecutorFactory#execute - execution failed, actionId={}",
                     action.getActionId(), e);
             return ExecutionResult.failure("执行失败: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Extract value from params by trying multiple keys.
+     */
+    private String extractFromParams(Map<String, Object> params, String... keys) {
+        if (params == null || keys == null) {
+            return null;
+        }
+        for (String key : keys) {
+            Object value = params.get(key);
+            if (value != null) {
+                return value.toString();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Extract context map from params.
+     */
+    private Map<String, Object> extractContext(Map<String, Object> params) {
+        Map<String, Object> context = new HashMap<>();
+        if (params != null) {
+            // Copy all params to context
+            context.putAll(params);
+        }
+        return context;
     }
 
     /**

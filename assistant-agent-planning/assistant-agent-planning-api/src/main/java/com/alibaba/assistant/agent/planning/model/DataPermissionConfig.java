@@ -20,6 +20,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * 数据权限配置
  *
@@ -96,4 +99,56 @@ public class DataPermissionConfig {
      */
     @Builder.Default
     private DataScope defaultScope = DataScope.SELF;
+
+    /**
+     * 权限过滤字段映射
+     *
+     * <p>定义了 StandardPermission 中的过滤字段如何映射到 Action 参数。
+     * Key: StandardPermission 中的过滤字段名
+     * Value: Action 参数中的字段名
+     *
+     * <p>示例：
+     * <pre>
+     * filterMapping:
+     *   departmentId: deptId    // StandardPermission.filters.departmentId -> Action.params.deptId
+     *   userId: creatorId       // StandardPermission.filters.userId -> Action.params.creatorId
+     * </pre>
+     */
+    @Builder.Default
+    private Map<String, String> filterMapping = new HashMap<>();
+
+    /**
+     * 是否强制校验权限
+     *
+     * <p>如果为 true，执行此 Action 时必须有相应权限。
+     * 如果为 false，没有权限时也可以执行，但不会注入过滤条件。
+     */
+    @Builder.Default
+    private boolean enforced = true;
+
+    /**
+     * 获取映射后的参数字段名
+     *
+     * @param permissionFilterField StandardPermission 中的过滤字段名
+     * @return Action 参数中的字段名，如果没有映射则返回原字段名
+     */
+    public String getMappedParamField(String permissionFilterField) {
+        if (filterMapping == null || filterMapping.isEmpty()) {
+            return permissionFilterField;
+        }
+        return filterMapping.getOrDefault(permissionFilterField, permissionFilterField);
+    }
+
+    /**
+     * 添加字段映射
+     *
+     * @param permissionField StandardPermission 中的过滤字段名
+     * @param paramField Action 参数中的字段名
+     */
+    public void addFilterMapping(String permissionField, String paramField) {
+        if (filterMapping == null) {
+            filterMapping = new HashMap<>();
+        }
+        filterMapping.put(permissionField, paramField);
+    }
 }

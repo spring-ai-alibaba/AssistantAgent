@@ -68,8 +68,8 @@ class ActionExecutorFactoryTest {
         when(internalExecutor.getPriority()).thenReturn(80);
         when(internalExecutor.supports("INTERNAL")).thenReturn(true);
 
-        // 创建工厂
-        factory = new ActionExecutorFactory(List.of(httpExecutor, mcpExecutor, internalExecutor));
+        // 创建工厂 (without permission interceptor for tests)
+        factory = new ActionExecutorFactory(List.of(httpExecutor, mcpExecutor, internalExecutor), null);
     }
 
     @Test
@@ -219,7 +219,7 @@ class ActionExecutorFactoryTest {
 
         // 创建工厂
         ActionExecutorFactory priorityFactory = new ActionExecutorFactory(
-                List.of(lowPriority, highPriority));
+                List.of(lowPriority, highPriority), null);
 
         // 应该选择高优先级的
         ActionExecutor executor = priorityFactory.getExecutor("HTTP");
