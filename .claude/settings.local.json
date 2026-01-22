@@ -36,7 +36,22 @@
       "Bash(git show:*)",
       "Bash(tree:*)",
       "Bash(dir:*)",
-      "Skill(superpowers:finishing-a-development-branch)"
+      "Skill(superpowers:finishing-a-development-branch)",
+      "Bash(git pull:*)",
+      "Bash(git merge:*)",
+      "Bash(git branch:*)",
+      "Bash(git check-ignore:*)",
+      "Skill(superpowers:requesting-code-review)",
+      "Bash(git ls-tree:*)",
+      "Bash(xargs cat:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git rm:*)",
+      "Bash(git merge-base:*)",
+      "Bash(git checkout:*)",
+      "Bash(jps:*)",
+      "Bash(tasklist:*)",
+      "Bash(xargs:*)",
+      "Skill(frontend-design)"
     ]
   }
 }

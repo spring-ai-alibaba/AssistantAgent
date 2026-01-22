@@ -49,6 +49,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -229,6 +230,14 @@ public class PlanningExtensionAutoConfiguration {
         return new GetActionDetailsCodeactTool(actionProvider);
     }
 
+    @Bean
+    @ConditionalOnProperty(prefix = "spring.ai.alibaba.codeact.extension.planning", name = "execute-system-action-enabled", havingValue = "true", matchIfMissing = true)
+    public ExecuteSystemActionCodeactTool executeSystemActionCodeactTool(ActionProvider actionProvider,
+                                                                          ApplicationContext applicationContext) {
+        logger.info("PlanningExtensionAutoConfiguration#executeSystemActionCodeactTool - reason=creating execute_system_action tool");
+        return new ExecuteSystemActionCodeactTool(actionProvider, applicationContext);
+    }
+
     /**
      * Planning CodeactTools 列表 Bean
      */
@@ -237,7 +246,8 @@ public class PlanningExtensionAutoConfiguration {
             PlanningExtensionProperties properties,
             ActionProvider actionProvider,
             PlanGenerator planGenerator,
-            PlanExecutor planExecutor) {
+            PlanExecutor planExecutor,
+            ApplicationContext applicationContext) {
 
         logger.info("PlanningExtensionAutoConfiguration#planningCodeactTools - reason=creating planning tools list");
 
@@ -257,6 +267,10 @@ public class PlanningExtensionAutoConfiguration {
 
         if (properties.isGetActionDetailsEnabled()) {
             tools.add(new GetActionDetailsCodeactTool(actionProvider));
+        }
+
+        if (properties.isExecuteSystemActionEnabled()) {
+            tools.add(new ExecuteSystemActionCodeactTool(actionProvider, applicationContext));
         }
 
         logger.info("PlanningExtensionAutoConfiguration#planningCodeactTools - reason=created planning tools, count={}",

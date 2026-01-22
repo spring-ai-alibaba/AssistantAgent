@@ -173,6 +173,16 @@ public class InternalExecutor implements ActionExecutor {
 
     /**
      * 准备方法参数
+     *
+     * <p>注意：当前实现假设整个 params Map 作为单个参数传递给方法。
+     * 这是因为在 action_registry SQL 中，methodParams 通常配置为：
+     * <pre>
+     * methodParams: [{name: "params", type: "java.util.Map"}]
+     * </pre>
+     *
+     * @param method 目标方法
+     * @param params 传入的参数 Map
+     * @return 方法参数数组
      */
     private Object[] prepareArguments(Method method, Map<String, Object> params) {
         Class<?>[] paramTypes = method.getParameterTypes();
@@ -182,7 +192,18 @@ public class InternalExecutor implements ActionExecutor {
             return args;
         }
 
-        // 按参数名顺序赋值
+        // 当前实现：如果方法只有一个 Map 类型参数，直接传入整个 params
+        if (paramTypes.length == 1 && Map.class.isAssignableFrom(paramTypes[0])) {
+            args[0] = params;
+            logger.debug("InternalExecutor#prepareArguments - passing entire params as Map argument");
+            return args;
+        }
+
+        // 如果方法有多个参数，按照参数名匹配（未实现，需要 methodParams 配置支持）
+        // TODO: 支持多参数方法时，需要根据 methodParams 中的参数名进行匹配
+        logger.warn("InternalExecutor#prepareArguments - multi-parameter methods not fully supported, using entry order");
+
+        // 按参数名顺序赋值（保留原有逻辑作为后备）
         int index = 0;
         for (Map.Entry<String, Object> entry : params.entrySet()) {
             if (index < args.length) {

@@ -147,7 +147,7 @@ public class ActionDefinition {
     /**
      * 系统 ID（null 表示租户级 Action，租户下所有系统可见）
      */
-    private Long systemId;
+    private String systemId;
 
     /**
      * 模块 ID（null 表示系统级 Action，系统下所有模块可见）

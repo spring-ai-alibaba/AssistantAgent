@@ -17,6 +17,7 @@ package com.alibaba.assistant.agent.start;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -52,6 +53,11 @@ import org.springframework.core.env.Environment;
         "com.alibaba.assistant.agent.autoconfigure",
     "com.alibaba.assistant.agent.extension",
     "com.alibaba.assistant.agent.planning"
+})
+@MapperScan({
+    "com.alibaba.assistant.agent.start.auth.mapper",
+    "com.alibaba.assistant.agent.start.persistence.*.mapper",
+    "com.alibaba.assistant.agent.planning.persistence.mapper"
 })
 public class AssistantAgentApplication {
 

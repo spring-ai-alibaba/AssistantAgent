@@ -269,7 +269,8 @@ public class CodeactAgentConfig {
             @Autowired(required = false) FastIntentReactHook fastIntentReactHook,
             @Autowired(required = false) ExperienceProvider experienceProvider,
             @Autowired(required = false) ExperienceExtensionProperties experienceExtensionProperties,
-            @Autowired(required = false) FastIntentService fastIntentService) {
+            @Autowired(required = false) FastIntentService fastIntentService,
+            @Autowired(required = false) @org.springframework.beans.factory.annotation.Qualifier("planningCodeactTools") List<CodeactTool> planningCodeactTools) {
 
 		logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=创建 CodeactAgent");
 		logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=配置 MemorySaver 以支持多轮对话上下文保持");
@@ -303,6 +304,12 @@ public class CodeactAgentConfig {
 		if (triggerCodeactTools != null && !triggerCodeactTools.isEmpty()) {
 			allCodeactTools.addAll(triggerCodeactTools);
 			logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=添加TriggerCodeactTools, count={}", triggerCodeactTools.size());
+		}
+
+		// 添加Planning工具
+		if (planningCodeactTools != null && !planningCodeactTools.isEmpty()) {
+			allCodeactTools.addAll(planningCodeactTools);
+			logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=添加PlanningCodeactTools, count={}", planningCodeactTools.size());
 		}
 
 		// 添加 MCP 动态工具（通过 MCP Client Boot Starter 注入的 ToolCallbackProvider）

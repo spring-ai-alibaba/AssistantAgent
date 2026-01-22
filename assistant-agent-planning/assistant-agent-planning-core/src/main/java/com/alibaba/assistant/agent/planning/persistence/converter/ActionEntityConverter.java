@@ -82,6 +82,7 @@ public class ActionEntityConverter {
                 .timeoutMinutes(entity.getTimeoutMinutes())
                 .enabled(entity.getEnabled())
                 .requiredPermissions(parseJsonList(entity.getRequiredPermissions()))
+                .systemId(entity.getSystemId())
                 .metadata(parseJsonMap(entity.getMetadata()))
                 .build();
     }

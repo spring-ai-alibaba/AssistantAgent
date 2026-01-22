@@ -15,10 +15,9 @@
  */
 package com.alibaba.assistant.agent.planning.internal.executor;
 
-import com.alibaba.assistant.agent.planning.model.ExecutionStep;
-import com.alibaba.assistant.agent.planning.model.StepDefinition;
-import com.alibaba.assistant.agent.planning.model.StepExecutionResult;
-import com.alibaba.assistant.agent.planning.model.StepType;
+import com.alibaba.assistant.agent.planning.executor.ActionExecutorFactory;
+import com.alibaba.assistant.agent.planning.model.*;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -32,6 +31,9 @@ import java.util.Map;
  * @since 1.0.0
  */
 public class ExecuteStepExecutor extends AbstractStepExecutor {
+
+    @Autowired(required = false)
+    private ActionExecutorFactory actionExecutorFactory;
 
     @Override
     public StepType getSupportedType() {
@@ -51,21 +53,32 @@ public class ExecuteStepExecutor extends AbstractStepExecutor {
             return StepExecutionResult.success(output);
         }
 
-        // 根据接口类型执行
-        StepDefinition.InterfaceBinding binding = definition.getInterfaceBinding();
-        String bindingType = binding.getType();
-
+        // 使用 ActionExecutorFactory 执行
         try {
-            Map<String, Object> result = executeAction(step, binding, context);
+            // 构建 ActionDefinition（从 StepDefinition 转换）
+            ActionDefinition action = buildActionDefinition(step, context);
+
+            // 准备参数（合并 step 的 inputValues 和 context）
+            Map<String, Object> params = prepareParams(step, context);
+
+            // 执行
+            ExecutionResult executionResult = actionExecutorFactory.execute(action, params, null);
 
             Map<String, Object> output = new HashMap<>();
             output.put("executed", true);
-            output.put("result", result);
+            output.put("success", executionResult.isSuccess());
+            output.put("result", executionResult.getResponseData());
 
-            logger.info("ExecuteStepExecutor#doExecute - reason=step executed successfully, stepId={}",
-                    step.getStepId());
+            if (!executionResult.isSuccess()) {
+                output.put("error", executionResult.getErrorMessage());
+            }
 
-            return StepExecutionResult.success(output);
+            logger.info("ExecuteStepExecutor#doExecute - reason=step executed, stepId={}, success={}",
+                    step.getStepId(), executionResult.isSuccess());
+
+            return executionResult.isSuccess()
+                    ? StepExecutionResult.success(output)
+                    : StepExecutionResult.failure(executionResult.getErrorMessage());
 
         } catch (Exception e) {
             logger.error("ExecuteStepExecutor#doExecute - reason=execution failed, stepId={}, error={}",
@@ -74,50 +87,79 @@ public class ExecuteStepExecutor extends AbstractStepExecutor {
         }
     }
 
-    private Map<String, Object> executeAction(ExecutionStep step, StepDefinition.InterfaceBinding binding,
-                                              StepExecutionContext context) {
-        String bindingType = binding.getType();
-        Map<String, Object> result = new HashMap<>();
+    /**
+     * 构建 ActionDefinition（从 StepDefinition 转换）
+     */
+    private ActionDefinition buildActionDefinition(ExecutionStep step, StepExecutionContext context) {
+        StepDefinition definition = step.getDefinition();
 
-        if ("HTTP".equalsIgnoreCase(bindingType) && binding.getHttp() != null) {
-            // HTTP 调用（简化实现）
-            StepDefinition.HttpConfig http = binding.getHttp();
-            logger.info("ExecuteStepExecutor#executeAction - reason=HTTP call, url={}, method={}",
-                    http.getUrl(), http.getMethod());
+        ActionDefinition action = new ActionDefinition();
+        action.setActionId(step.getStepId());
+        action.setActionName(definition.getName());
+        action.setInterfaceBinding(definition.getInterfaceBinding());
 
-            // TODO: 实际的 HTTP 调用实现
-            result.put("type", "HTTP");
-            result.put("url", http.getUrl());
-            result.put("method", http.getMethod());
-            result.put("success", true);
+        // 从 context 中获取 systemId（如果有）
+        Map<String, Object> variables = context.getVariables();
+        if (variables != null) {
+            Object systemId = variables.get("systemId");
+            if (systemId != null) {
+                action.setSystemId(systemId.toString());
+            }
         }
 
-        if ("INTERNAL".equalsIgnoreCase(bindingType) && binding.getInternal() != null) {
-            // 内部服务调用（简化实现）
-            StepDefinition.InternalConfig internal = binding.getInternal();
-            logger.info("ExecuteStepExecutor#executeAction - reason=internal call, bean={}, method={}",
-                    internal.getBeanName(), internal.getMethodName());
+        return action;
+    }
 
-            // TODO: 实际的内部服务调用实现
-            result.put("type", "INTERNAL");
-            result.put("bean", internal.getBeanName());
-            result.put("method", internal.getMethodName());
-            result.put("success", true);
+    /**
+     * 准备参数（合并 step 的 inputValues 和 context）
+     */
+    private Map<String, Object> prepareParams(ExecutionStep step, StepExecutionContext context) {
+        Map<String, Object> params = new HashMap<>();
+
+        // 添加 step 的输入值
+        if (step.getInputValues() != null) {
+            params.putAll(step.getInputValues());
         }
 
-        if ("MCP".equalsIgnoreCase(bindingType) && binding.getMcp() != null) {
-            // MCP 工具调用（简化实现）
-            StepDefinition.McpConfig mcp = binding.getMcp();
-            logger.info("ExecuteStepExecutor#executeAction - reason=MCP call, tool={}, server={}",
-                    mcp.getToolName(), mcp.getServerName());
+        // 添加 action_id（OaSystemActionService需要）
+        params.put("action_id", step.getStepId());
 
-            // TODO: 实际的 MCP 调用实现
-            result.put("type", "MCP");
-            result.put("tool", mcp.getToolName());
-            result.put("server", mcp.getServerName());
-            result.put("success", true);
+        // 添加 context（用于传递 userId, systemId 等）
+        Map<String, Object> contextMap = new HashMap<>();
+
+        // 获取 userId（优先从 variables，然后从 context）
+        String userId = context.getUserId();
+        Map<String, Object> variables = context.getVariables();
+        if (variables != null) {
+            // 尝试从 variables 中获取 userId 或 assistantUserId
+            Object varUserId = variables.get("userId");
+            if (varUserId == null) {
+                varUserId = variables.get("assistantUserId");
+            }
+            if (varUserId != null) {
+                userId = varUserId.toString();
+            }
         }
 
-        return result;
+        // 设置 userId 和 assistantUserId
+        if (userId != null) {
+            contextMap.put("userId", userId);
+            contextMap.put("assistantUserId", userId);
+        }
+
+        contextMap.put("sessionId", context.getSessionId());
+        contextMap.put("planId", context.getPlanId());
+
+        // 添加 variables 中的其他内容
+        if (variables != null) {
+            contextMap.putAll(variables);
+        }
+
+        params.put("context", contextMap);
+
+        logger.debug("ExecuteStepExecutor#prepareParams - stepId={}, userId={}, params={}",
+                step.getStepId(), userId, params.keySet());
+
+        return params;
     }
 }

@@ -191,4 +191,6 @@ public class ActionRegistryEntity {
      */
     @TableField("creator")
     private String creator;
+
+    private String systemId;
 }

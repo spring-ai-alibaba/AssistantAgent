@@ -1,0 +1,754 @@
+2026-01-20T10:49:49.789+08:00  WARN --- [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=14h15m25s873ms303µs700ns).
+2026-01-20T23:40:06.104+08:00  INFO --- [           main] c.a.a.a.start.AssistantAgentApplication  : Starting AssistantAgentApplication using Java 21.0.9 with PID 29064 (D:\devfive\AssistantAgent\assistant-agent-start\target\classes started by zhou_ in D:\devfive\AssistantAgent\assistant-agent-start)
+2026-01-20T23:40:06.106+08:00 DEBUG --- [           main] c.a.a.a.start.AssistantAgentApplication  : Running with Spring Boot v3.4.8, Spring v6.2.9
+2026-01-20T23:40:06.107+08:00  INFO --- [           main] c.a.a.a.start.AssistantAgentApplication  : No active profile set, falling back to 1 default profile: "default"
+2026-01-20T23:40:07.487+08:00  INFO --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Elasticsearch repositories in DEFAULT mode.
+2026-01-20T23:40:07.517+08:00  INFO --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 21 ms. Found 0 Elasticsearch repository interfaces.
+2026-01-20T23:40:07.523+08:00  INFO --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Reactive Elasticsearch repositories in DEFAULT mode.
+2026-01-20T23:40:07.529+08:00  INFO --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 5 ms. Found 0 Reactive Elasticsearch repository interfaces.
+2026-01-20T23:40:08.976+08:00  INFO --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-01-20T23:40:09.000+08:00  INFO --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-01-20T23:40:09.000+08:00  INFO --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.43]
+2026-01-20T23:40:09.109+08:00  INFO --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-01-20T23:40:09.109+08:00  INFO --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2947 ms
+2026-01-20T23:40:09.183+08:00  INFO --- [           main] e.l.c.LearningExtensionAutoConfiguration : LearningExtensionAutoConfiguration#constructor - reason=learning extension auto-configuration initialized
+2026-01-20T23:40:09.209+08:00  INFO --- [           main] a.e.s.c.SearchExtensionAutoConfiguration : SearchExtensionAutoConfiguration#init - reason=search extension framework is enabled
+2026-01-20T23:40:09.211+08:00  INFO --- [           main] c.a.a.a.s.s.MockBaiduWebSearchProvider   : MockBaiduWebSearchProvider#init - reason=使用简单模式初始化
+2026-01-20T23:40:09.213+08:00  INFO --- [           main] a.e.s.c.SearchExtensionAutoConfiguration : SearchExtensionAutoConfiguration#unifiedSearchCodeactTool - reason=创建统一搜索工具, providerCount=3
+2026-01-20T23:40:09.263+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#init - reason=planning extension is enabled
+2026-01-20T23:40:09.264+08:00  INFO --- [           main] Configuration$ElasticsearchConfiguration : ElasticsearchConfiguration#init - reason=ES configuration class loaded (elasticsearch.enabled=true)
+2026-01-20T23:40:09.265+08:00  INFO --- [           main] toConfiguration$MybatisPlusConfiguration : MybatisPlusConfiguration#init - reason=MySQL configuration class loaded (mysql.enabled=true, MyBatisPlus present)
+2026-01-20T23:40:09.598+08:00  INFO --- [           main] toConfiguration$MybatisPlusConfiguration : MybatisPlusConfiguration#actionEntityConverter - reason=creating entity converter
+2026-01-20T23:40:09.600+08:00  INFO --- [           main] toConfiguration$MybatisPlusConfiguration : MybatisPlusConfiguration#mybatisPlusActionRepository - reason=ActionRegistryMapper found, creating MySQL repository
+2026-01-20T23:40:10.255+08:00  INFO --- [           main] Configuration$ElasticsearchConfiguration : ElasticsearchConfiguration#actionVectorizationService - reason=creating ES vectorization service
+2026-01-20T23:40:10.470+08:00  INFO --- [           main] c.a.a.a.p.v.ActionVectorizationService   : ActionVectorizationService#init - reason=ES index initialized on startup
+2026-01-20T23:40:10.487+08:00  INFO --- [           main] Configuration$ElasticsearchConfiguration : ElasticsearchConfiguration#semanticActionProvider - reason=creating semantic action provider, semanticWeight=0.6, keywordWeight=0.4, matchThreshold=0.5
+2026-01-20T23:40:10.491+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#defaultPlanGenerator - reason=creating default plan generator
+2026-01-20T23:40:10.494+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#planActionCodeactTool - reason=creating plan_action tool
+2026-01-20T23:40:10.496+08:00 DEBUG --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#queryStepExecutor - reason=creating query step executor
+2026-01-20T23:40:10.498+08:00 DEBUG --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#inputStepExecutor - reason=creating input step executor
+2026-01-20T23:40:10.500+08:00 DEBUG --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#executeStepExecutor - reason=creating execute step executor
+2026-01-20T23:40:10.502+08:00 DEBUG --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#apiCallStepExecutor - reason=creating api call step executor
+2026-01-20T23:40:10.508+08:00 DEBUG --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#validationStepExecutor - reason=creating validation step executor
+2026-01-20T23:40:10.511+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#stepExecutorRegistry - reason=creating executor registry, executorCount=5
+2026-01-20T23:40:10.512+08:00  INFO --- [           main] c.a.a.a.p.internal.StepExecutorRegistry  : StepExecutorRegistry#register - reason=registered executor, type=QUERY, executorClass=QueryStepExecutor
+2026-01-20T23:40:10.513+08:00  INFO --- [           main] c.a.a.a.p.internal.StepExecutorRegistry  : StepExecutorRegistry#register - reason=registered executor, type=INPUT, executorClass=InputStepExecutor
+2026-01-20T23:40:10.513+08:00  INFO --- [           main] c.a.a.a.p.internal.StepExecutorRegistry  : StepExecutorRegistry#register - reason=registered executor, type=EXECUTE, executorClass=ExecuteStepExecutor
+2026-01-20T23:40:10.513+08:00  INFO --- [           main] c.a.a.a.p.internal.StepExecutorRegistry  : StepExecutorRegistry#register - reason=registered executor, type=API_CALL, executorClass=ApiCallStepExecutor
+2026-01-20T23:40:10.513+08:00  INFO --- [           main] c.a.a.a.p.internal.StepExecutorRegistry  : StepExecutorRegistry#register - reason=registered executor, type=VALIDATION, executorClass=ValidationStepExecutor
+2026-01-20T23:40:10.514+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#defaultPlanExecutor - reason=creating default plan executor
+2026-01-20T23:40:10.517+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#executeActionCodeactTool - reason=creating execute_action tool
+2026-01-20T23:40:10.518+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#listActionsCodeactTool - reason=creating list_actions tool
+2026-01-20T23:40:10.519+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#getActionDetailsCodeactTool - reason=creating get_action_details tool
+2026-01-20T23:40:10.600+08:00  INFO --- [           main] e.l.c.LearningExtensionAutoConfiguration : LearningExtensionAutoConfiguration#experienceLearningExtractor - reason=creating LLM-based experience learning extractor
+2026-01-20T23:40:10.600+08:00  INFO --- [           main] .a.a.a.e.l.e.ExperienceLearningExtractor : ExperienceLearningExtractor#constructor - reason=LLM-based extractor initialized
+2026-01-20T23:40:10.604+08:00  INFO --- [           main] e.l.c.LearningExtensionAutoConfiguration : LearningExtensionAutoConfiguration#inMemoryLearningRepository - reason=creating in-memory learning repository
+2026-01-20T23:40:10.606+08:00  INFO --- [           main] c.a.a.a.start.config.PersistenceConfig   : PersistenceConfig#init - reason=persistence configuration loaded
+2026-01-20T23:40:10.612+08:00  INFO --- [           main] c.a.a.a.start.config.PersistenceConfig   : PersistenceConfig#elasticsearchExperienceRepository - reason=creating Elasticsearch experience repository (PRIMARY), indexName=experiences
+2026-01-20T23:40:10.616+08:00  INFO --- [           main] e.l.c.LearningExtensionAutoConfiguration : LearningExtensionAutoConfiguration#experienceLearningRepository - reason=creating experience learning repository
+2026-01-20T23:40:10.628+08:00  INFO --- [           main] e.l.c.LearningExtensionAutoConfiguration : LearningExtensionAutoConfiguration#learningStrategy - reason=creating learning strategy, asyncEnabled=true
+2026-01-20T23:40:10.629+08:00  INFO --- [           main] e.l.c.LearningExtensionAutoConfiguration : LearningExtensionAutoConfiguration#asyncLearningHandler - reason=creating async learning handler, threadPoolSize=2, queueCapacity=100
+2026-01-20T23:40:10.630+08:00  INFO --- [           main] c.a.a.a.e.l.i.AsyncLearningHandler       : AsyncLearningHandler#constructor - reason=async learning handler initialized, threadPoolSize=2, queueCapacity=100
+2026-01-20T23:40:10.631+08:00  INFO --- [           main] e.l.c.LearningExtensionAutoConfiguration : LearningExtensionAutoConfiguration#learningExecutor - reason=creating learning executor, extractorCount=1, repositoryCount=2
+2026-01-20T23:40:10.634+08:00  INFO --- [           main] e.l.c.LearningExtensionAutoConfiguration : LearningExtensionAutoConfiguration#afterAgentLearningHook - reason=creating after agent learning hook, learningType=experience
+2026-01-20T23:40:10.640+08:00  INFO --- [           main] c.a.a.a.start.config.PersistenceConfig   : PersistenceConfig#elasticsearchExperienceProvider - reason=creating Elasticsearch experience provider (PRIMARY), indexName=experiences
+2026-01-20T23:40:10.646+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#<init> - reason=初始化默认评估套件配置, experienceProviderAvailable=true
+2026-01-20T23:40:10.649+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#evaluatorRegistry - reason=创建 EvaluatorRegistry Bean
+2026-01-20T23:40:10.650+08:00 DEBUG --- [           main] c.a.a.a.e.evaluator.EvaluatorRegistry    : Registered evaluator 'llm-based' of type LLMBasedEvaluator
+2026-01-20T23:40:10.652+08:00 DEBUG --- [           main] c.a.a.a.e.evaluator.EvaluatorRegistry    : Registered evaluator 'passthrough' of type RuleBasedEvaluator
+2026-01-20T23:40:10.654+08:00 DEBUG --- [           main] c.a.a.a.e.evaluator.EvaluatorRegistry    : Registered evaluator 'react_experience_evaluator' of type RuleBasedEvaluator
+2026-01-20T23:40:10.654+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#createDefaultEvaluatorRegistry - reason=注册 React 阶段经验检索评估器
+2026-01-20T23:40:10.655+08:00 DEBUG --- [           main] c.a.a.a.e.evaluator.EvaluatorRegistry    : Registered evaluator 'codeact_experience_evaluator' of type RuleBasedEvaluator
+2026-01-20T23:40:10.655+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#createDefaultEvaluatorRegistry - reason=注册 CodeAct 阶段经验检索评估器
+2026-01-20T23:40:10.655+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#evaluationService - reason=创建默认 EvaluationService, sharedRegistryEvaluators=[llm-based, passthrough, codeact_experience_evaluator, react_experience_evaluator]
+2026-01-20T23:40:10.657+08:00 DEBUG --- [           main] c.a.a.a.e.e.GraphBasedEvaluationExecutor : Created default ExecutorService for batch processing
+2026-01-20T23:40:10.658+08:00  INFO --- [           main] .c.ExperienceEvaluationCriterionProvider : ExperienceEvaluationCriterionProvider#<init> - reason=初始化经验评估 Criterion 提供者
+2026-01-20T23:40:10.660+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#structuredParamExtractor - reason=creating structured param extractor
+2026-01-20T23:40:10.668+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#parameterValidator - reason=creating parameter validator
+2026-01-20T23:40:10.672+08:00  INFO --- [           main] .a.a.a.p.c.ParamOptionsAutoConfiguration : ParamOptionsAutoConfiguration - Parameter options module initialized
+2026-01-20T23:40:10.673+08:00  INFO --- [           main] .a.a.a.p.c.ParamOptionsAutoConfiguration : ParamOptionsAutoConfiguration - Creating RestTemplate for HTTP handlers
+2026-01-20T23:40:10.676+08:00  INFO --- [           main] c.a.a.a.planning.executor.HttpExecutor   : HttpExecutor#init - initialized
+2026-01-20T23:40:10.677+08:00  INFO --- [           main] c.a.a.a.p.executor.InternalExecutor      : InternalExecutor#init - initialized
+2026-01-20T23:40:10.678+08:00  INFO --- [           main] c.a.a.a.p.e.ActionExecutorFactory        : ActionExecutorFactory#init - initialized executors: INTERNAL(InternalExecutor), HTTP(HttpExecutor), DATA_AGENT(DataAgentExecutor), MCP(McpExecutor)
+2026-01-20T23:40:10.679+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#sessionProvider - reason=creating in-memory session provider
+2026-01-20T23:40:10.680+08:00  INFO --- [           main] c.a.a.a.p.s.InMemorySessionProvider      : InMemorySessionProvider#init - initialized
+2026-01-20T23:40:10.682+08:00  INFO --- [           main] c.a.a.a.p.s.ParamCollectionService       : ParamCollectionService#init - sessionProvider=InMemory
+2026-01-20T23:40:10.683+08:00 DEBUG --- [           main] c.a.a.a.e.evaluator.EvaluatorRegistry    : Registered evaluator 'action_intent_evaluator' of type ActionIntentEvaluator
+2026-01-20T23:40:10.683+08:00  INFO --- [           main] p.i.PlanningIntegrationAutoConfiguration : PlanningIntegrationAutoConfiguration#actionIntentEvaluator - initialized and registered, paramCollection=true, llmVerification=true, maxCandidates=5
+2026-01-20T23:40:10.684+08:00  INFO --- [           main] .p.i.PlanningEvaluationCriterionProvider : PlanningEvaluationCriterionProvider#init - initialized, llmVerificationEnabled=true
+2026-01-20T23:40:10.684+08:00  INFO --- [           main] p.i.PlanningIntegrationAutoConfiguration : PlanningIntegrationAutoConfiguration#planningEvaluationCriterionProvider - registered planning evaluation criterion provider
+2026-01-20T23:40:10.685+08:00  INFO --- [           main] .c.ExperienceEvaluationCriterionProvider : ExperienceEvaluationCriterionProvider#getReactPhaseCriteria - reason=提供 React 阶段评估 Criteria
+2026-01-20T23:40:10.688+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#createReactPhaseSuite - reason=添加自定义 Criterion, provider=ExperienceEvaluationCriterionProvider, count=3
+2026-01-20T23:40:10.689+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#createReactPhaseSuite - reason=添加自定义 Criterion, provider=PlanningEvaluationCriterionProvider, count=2
+2026-01-20T23:40:10.691+08:00  INFO --- [           main] a.a.e.a.BatchAggregationStrategyRegistry : Registered batch aggregation strategy: ANY_TRUE
+2026-01-20T23:40:10.692+08:00  INFO --- [           main] a.a.e.a.BatchAggregationStrategyRegistry : Registered batch aggregation strategy: ALL_TRUE
+2026-01-20T23:40:10.739+08:00  INFO --- [           main] c.a.c.a.g.internal.node.ParallelNode     : Calculated core pool size: 32 (CPU cores: 16)
+2026-01-20T23:40:10.739+08:00  INFO --- [           main] c.a.c.a.g.internal.node.ParallelNode     : Calculated maximum pool size: 64 (CPU cores: 16)
+2026-01-20T23:40:10.739+08:00  INFO --- [           main] c.a.c.a.g.internal.node.ParallelNode     : Calculated queue capacity: 1000
+2026-01-20T23:40:10.740+08:00  INFO --- [           main] c.a.a.a.e.DefaultEvaluationService       : Registered evaluation suite: react-phase-suite
+2026-01-20T23:40:10.740+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#evaluationService - reason=注册 React Phase Suite, suiteId=react-phase-suite
+2026-01-20T23:40:10.741+08:00  INFO --- [           main] .c.ExperienceEvaluationCriterionProvider : ExperienceEvaluationCriterionProvider#getCodeActPhaseCriteria - reason=提供 CodeAct 阶段评估 Criteria
+2026-01-20T23:40:10.741+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#createCodeActPhaseSuite - reason=添加自定义 Criterion, provider=ExperienceEvaluationCriterionProvider, count=3
+2026-01-20T23:40:10.741+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#createCodeActPhaseSuite - reason=添加自定义 Criterion, provider=PlanningEvaluationCriterionProvider, count=2
+2026-01-20T23:40:10.741+08:00  INFO --- [           main] a.a.e.a.BatchAggregationStrategyRegistry : Registered batch aggregation strategy: ANY_TRUE
+2026-01-20T23:40:10.741+08:00  INFO --- [           main] a.a.e.a.BatchAggregationStrategyRegistry : Registered batch aggregation strategy: ALL_TRUE
+2026-01-20T23:40:10.742+08:00  INFO --- [           main] c.a.a.a.e.DefaultEvaluationService       : Registered evaluation suite: codeact-phase-suite
+2026-01-20T23:40:10.742+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#evaluationService - reason=注册 CodeAct Phase Suite, suiteId=codeact-phase-suite
+2026-01-20T23:40:10.744+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#codeactEvaluationContextFactory - reason=创建 EvaluationContextFactory
+2026-01-20T23:40:10.745+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#codeactEvaluationResultAttacher - reason=创建 EvaluationResultAttacher
+2026-01-20T23:40:10.749+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#reactPhaseEvaluationHooks - reason=创建 React Phase ModelInputEvaluationHook
+2026-01-20T23:40:10.751+08:00  INFO --- [           main] .a.a.e.e.p.EvaluationPromptInjectionHook : EvaluationPromptInjectionHook#<init> - reason=初始化, phase=REACT, providerCount=1
+2026-01-20T23:40:10.751+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#reactPhaseEvaluationHooks - reason=创建 React Phase EvaluationPromptInjectionHook, providersCount=2
+2026-01-20T23:40:10.752+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#codeactPhaseEvaluationHooks - reason=创建 CodeAct Phase ModelInputEvaluationHook
+2026-01-20T23:40:10.753+08:00  INFO --- [           main] .a.a.e.e.p.EvaluationPromptInjectionHook : EvaluationPromptInjectionHook#<init> - reason=初始化, phase=CODEACT, providerCount=1
+2026-01-20T23:40:10.753+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#codeactPhaseEvaluationHooks - reason=创建 CodeAct Phase EvaluationPromptInjectionHook, providersCount=2
+2026-01-20T23:40:10.754+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#keywordMatcher - reason=creating keyword matcher
+2026-01-20T23:40:10.756+08:00  INFO --- [           main] .ParamCollectionSessionAutoConfiguration : ParamCollectionSessionAutoConfiguration#inMemoryParamCollectionSessionStore - reason=creating in-memory session store (Redis not available), ttl=PT30M
+2026-01-20T23:40:10.756+08:00  WARN --- [           main] .ParamCollectionSessionAutoConfiguration : ParamCollectionSessionAutoConfiguration#inMemoryParamCollectionSessionStore - reason=WARNING: In-memory session store is not suitable for distributed environment!
+2026-01-20T23:40:10.758+08:00  INFO --- [           main] .p.s.InMemoryParamCollectionSessionStore : InMemoryParamCollectionSessionStore#<init> - reason=initialized, defaultTtl=PT30M
+2026-01-20T23:40:10.758+08:00  WARN --- [           main] .p.s.InMemoryParamCollectionSessionStore : InMemoryParamCollectionSessionStore#<init> - reason=WARNING: Using in-memory session store, not suitable for distributed environment!
+2026-01-20T23:40:10.760+08:00  INFO --- [           main] iguration$UnifiedIntentHookConfiguration : UnifiedIntentHookConfiguration#unifiedIntentRecognitionHook - reason=creating unified intent hook, experienceProviderPresent=true, chatModelPresent=true, sessionStorePresent=true, directExecuteThreshold=0.95, hintThreshold=0.5
+2026-01-20T23:40:10.869+08:00  INFO --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-01-20T23:40:11.102+08:00  INFO --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@1d51b6a8
+2026-01-20T23:40:11.113+08:00  INFO --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-01-20T23:40:11.222+08:00  INFO --- [           main] c.a.a.a.p.i.UnifiedIntentRecognitionHook : UnifiedIntentRecognitionHook#initKeywordMatcher - reason=initialized, actionCount=0, keywordIndexSize=0
+2026-01-20T23:40:11.227+08:00  INFO --- [           main] .a.e.r.c.ReplyExtensionAutoConfiguration : ReplyExtensionAutoConfiguration#init - reason=reply module enabled
+2026-01-20T23:40:11.229+08:00  INFO --- [           main] .a.e.r.c.ReplyExtensionAutoConfiguration : ReplyExtensionAutoConfiguration#replyCodeactToolFactory - reason=创建CodeactTool工厂, channels=1
+2026-01-20T23:40:11.230+08:00  INFO --- [           main] c.a.a.a.e.r.t.ReplyCodeactToolFactory    : ReplyCodeactToolFactory#init - reason=工厂初始化完成, channels=1
+2026-01-20T23:40:11.239+08:00  INFO --- [           main] .a.e.r.c.ReplyExtensionAutoConfiguration : ReplyExtensionAutoConfiguration#replyCodeactTools - reason=开始创建Reply工具
+2026-01-20T23:40:11.242+08:00  INFO --- [           main] c.a.a.a.e.r.t.ReplyCodeactToolFactory    : ReplyCodeactToolFactory#createTools - reason=创建工具成功, toolName=send_success_message, channelCode=IDE_TEXT
+2026-01-20T23:40:11.244+08:00  INFO --- [           main] c.a.a.a.e.r.t.ReplyCodeactToolFactory    : ReplyCodeactToolFactory#createTools - reason=创建工具成功, toolName=send_error_message, channelCode=IDE_TEXT
+2026-01-20T23:40:11.244+08:00  INFO --- [           main] c.a.a.a.e.r.t.ReplyCodeactToolFactory    : ReplyCodeactToolFactory#createTools - reason=创建工具成功, toolName=send_notification, channelCode=IDE_TEXT
+2026-01-20T23:40:11.244+08:00  INFO --- [           main] c.a.a.a.e.r.t.ReplyCodeactToolFactory    : ReplyCodeactToolFactory#createTools - reason=工具创建完成, totalCount=3
+2026-01-20T23:40:11.244+08:00  INFO --- [           main] .a.e.r.c.ReplyExtensionAutoConfiguration : ReplyExtensionAutoConfiguration#replyCodeactTools - reason=Reply工具创建完成, count=3
+2026-01-20T23:40:11.245+08:00  INFO --- [           main] .a.e.r.c.ReplyExtensionAutoConfiguration : ReplyExtensionAutoConfiguration#replyCodeactTools - reason=创建Reply工具, index=1, name=send_success_message, description=Send a success message to the IDE console
+2026-01-20T23:40:11.245+08:00  INFO --- [           main] .a.e.r.c.ReplyExtensionAutoConfiguration : ReplyExtensionAutoConfiguration#replyCodeactTools - reason=创建Reply工具, index=2, name=send_error_message, description=Send an error message to the IDE console
+2026-01-20T23:40:11.245+08:00  INFO --- [           main] .a.e.r.c.ReplyExtensionAutoConfiguration : ReplyExtensionAutoConfiguration#replyCodeactTools - reason=创建Reply工具, index=3, name=send_notification, description=Send a notification message
+2026-01-20T23:40:11.246+08:00  INFO --- [           main] a.e.s.c.SearchExtensionAutoConfiguration : SearchExtensionAutoConfiguration#searchCodeactToolFactory - reason=创建SearchCodeactTool工厂, providerCount=3
+2026-01-20T23:40:11.265+08:00  INFO --- [           main] c.a.a.a.e.t.c.TriggerAutoConfiguration   : TriggerAutoConfiguration#triggerCodeactToolFactory - reason=创建TriggerCodeactTool工厂
+2026-01-20T23:40:11.266+08:00  INFO --- [           main] c.a.a.a.e.t.c.TriggerAutoConfiguration   : TriggerAutoConfiguration#triggerCodeactTools - reason=开始创建Trigger工具
+2026-01-20T23:40:11.270+08:00  INFO --- [           main] c.a.a.a.e.t.t.TriggerCodeactToolFactory  : TriggerCodeactToolFactory#createTools - reason=创建SubscribeTriggerCodeactTool成功
+2026-01-20T23:40:11.271+08:00  INFO --- [           main] c.a.a.a.e.t.t.TriggerCodeactToolFactory  : TriggerCodeactToolFactory#createTools - reason=创建UnsubscribeTriggerCodeactTool成功
+2026-01-20T23:40:11.273+08:00  INFO --- [           main] c.a.a.a.e.t.t.TriggerCodeactToolFactory  : TriggerCodeactToolFactory#createTools - reason=创建ListTriggersCodeactTool成功
+2026-01-20T23:40:11.274+08:00  INFO --- [           main] c.a.a.a.e.t.t.TriggerCodeactToolFactory  : TriggerCodeactToolFactory#createTools - reason=创建GetTriggerDetailCodeactTool成功
+2026-01-20T23:40:11.274+08:00  INFO --- [           main] c.a.a.a.e.t.t.TriggerCodeactToolFactory  : TriggerCodeactToolFactory#createTools - reason=触发器工具创建完成, count=4
+2026-01-20T23:40:11.274+08:00  INFO --- [           main] c.a.a.a.e.t.c.TriggerAutoConfiguration   : TriggerAutoConfiguration#triggerCodeactTools - reason=Trigger工具创建完成, count=4
+2026-01-20T23:40:11.274+08:00  INFO --- [           main] c.a.a.a.e.t.c.TriggerAutoConfiguration   : TriggerAutoConfiguration#triggerCodeactTools - reason=创建Trigger工具, index=1, name=subscribe_trigger, description=创建并订阅一个新的触发器
+2026-01-20T23:40:11.274+08:00  INFO --- [           main] c.a.a.a.e.t.c.TriggerAutoConfiguration   : TriggerAutoConfiguration#triggerCodeactTools - reason=创建Trigger工具, index=2, name=unsubscribe_trigger, description=取消订阅并删除一个触发器
+2026-01-20T23:40:11.274+08:00  INFO --- [           main] c.a.a.a.e.t.c.TriggerAutoConfiguration   : TriggerAutoConfiguration#triggerCodeactTools - reason=创建Trigger工具, index=3, name=list_triggers, description=列出所有触发器
+2026-01-20T23:40:11.274+08:00  INFO --- [           main] c.a.a.a.e.t.c.TriggerAutoConfiguration   : TriggerAutoConfiguration#triggerCodeactTools - reason=创建Trigger工具, index=4, name=get_trigger_detail, description=获取指定触发器的详细信息
+2026-01-20T23:40:11.288+08:00  INFO --- [           main] e.c.ExperienceExtensionAutoConfiguration : ExperienceExtensionAutoConfiguration#fastIntentService - reason=creating FastIntentService, extraMatchers=0
+2026-01-20T23:40:11.292+08:00  INFO --- [           main] e.c.ExperienceExtensionAutoConfiguration : ExperienceExtensionAutoConfiguration#fastIntentReactHook - reason=creating fast intent react hook bean
+2026-01-20T23:40:11.296+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=创建 CodeactAgent
+2026-01-20T23:40:11.297+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=配置 MemorySaver 以支持多轮对话上下文保持
+2026-01-20T23:40:11.297+08:00  WARN --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=临时禁用 streaming 模式以排查循环问题
+2026-01-20T23:40:11.297+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=添加UnifiedSearchCodeactTool
+2026-01-20T23:40:11.299+08:00  INFO --- [           main] c.a.a.a.e.s.t.SearchCodeactToolFactory   : SearchCodeactToolFactory#createTools - reason=创建搜索工具成功, providerName=MockBaiduWebSearchProvider, toolName=search_web
+2026-01-20T23:40:11.302+08:00  INFO --- [           main] c.a.a.a.e.s.t.SearchCodeactToolFactory   : SearchCodeactToolFactory#createTools - reason=创建搜索工具成功, providerName=MockKnowledgeStoreSearchProvider, toolName=search_knowledge
+2026-01-20T23:40:11.303+08:00  INFO --- [           main] c.a.a.a.e.s.t.SearchCodeactToolFactory   : SearchCodeactToolFactory#createTools - reason=创建搜索工具成功, providerName=MockProjectContextSearchProvider, toolName=search_project
+2026-01-20T23:40:11.304+08:00  INFO --- [           main] c.a.a.a.e.s.t.SearchCodeactToolFactory   : SearchCodeactToolFactory#createTools - reason=搜索工具创建完成, totalCount=3
+2026-01-20T23:40:11.304+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=添加SearchCodeactTools, count=3
+2026-01-20T23:40:11.304+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=添加ReplyCodeactTools, count=3
+2026-01-20T23:40:11.304+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=添加TriggerCodeactTools, count=4
+2026-01-20T23:40:11.304+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#createMcpDynamicTools - reason=Creating MCP dynamic tools
+2026-01-20T23:40:11.306+08:00  INFO --- [           main] c.a.a.a.e.d.mcp.McpDynamicToolFactory    : McpDynamicToolFactory#createTools - reason=开始创建MCP动态工具
+2026-01-20T23:40:11.308+08:00  INFO --- [           main] c.a.a.a.e.d.mcp.McpDynamicToolFactory    : McpDynamicToolFactory#createTools - reason=无可用的MCP工具
+2026-01-20T23:40:11.308+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#createMcpDynamicTools - reason=MCP dynamic tools created, count=0
+2026-01-20T23:40:11.309+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=Added MCP dynamic tools, count=0
+2026-01-20T23:40:11.309+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#createHttpDynamicTools - reason=HTTP dynamic tools disabled by default
+2026-01-20T23:40:11.309+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=合并后CodeactTool总数, count=11
+2026-01-20T23:40:11.309+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=React阶段使用内置工具(write_code, execute_code, write_condition_code)
+2026-01-20T23:40:11.309+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=注入 React Phase 评估 Hooks, count=2
+2026-01-20T23:40:11.309+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=注入 CodeAct Phase 评估 Hooks, count=2
+2026-01-20T23:40:11.309+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=已准备注入AfterAgentLearningHook
+2026-01-20T23:40:11.309+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=已准备注入FastIntentReactHook
+2026-01-20T23:40:11.309+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=已准备注入UnifiedIntentRecognitionHook
+2026-01-20T23:40:11.312+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build 开始构建CodeactAgent
+2026-01-20T23:40:11.314+08:00  INFO --- [           main] .a.a.a.c.t.s.DefaultReturnSchemaRegistry : DefaultReturnSchemaRegistry#<init> - reason=创建新实例, hashCode=241403219
+2026-01-20T23:40:11.315+08:00 DEBUG --- [           main] c.a.a.a.c.t.DefaultCodeactToolRegistry   : DefaultCodeactToolRegistry#<init> - reason=创建注册表, returnSchemaRegistry=DefaultReturnSchemaRegistry
+2026-01-20T23:40:11.316+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=创建默认CodeactToolRegistry
+2026-01-20T23:40:11.316+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=开始注册CodeactTool, count=11
+2026-01-20T23:40:11.316+08:00  INFO --- [           main] c.a.a.a.c.t.DefaultCodeactToolRegistry   : DefaultCodeactToolRegistry#register - reason=工具注册成功, name=unified_search
+2026-01-20T23:40:11.316+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=CodeactTool注册成功, name=unified_search
+2026-01-20T23:40:11.316+08:00  INFO --- [           main] c.a.a.a.c.t.DefaultCodeactToolRegistry   : DefaultCodeactToolRegistry#register - reason=工具注册成功, name=search_web
+2026-01-20T23:40:11.316+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=CodeactTool注册成功, name=search_web
+2026-01-20T23:40:11.316+08:00  INFO --- [           main] c.a.a.a.c.t.DefaultCodeactToolRegistry   : DefaultCodeactToolRegistry#register - reason=工具注册成功, name=search_knowledge
+2026-01-20T23:40:11.316+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=CodeactTool注册成功, name=search_knowledge
+2026-01-20T23:40:11.316+08:00  INFO --- [           main] c.a.a.a.c.t.DefaultCodeactToolRegistry   : DefaultCodeactToolRegistry#register - reason=工具注册成功, name=search_project
+2026-01-20T23:40:11.316+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=CodeactTool注册成功, name=search_project
+2026-01-20T23:40:11.316+08:00  INFO --- [           main] c.a.a.a.c.t.DefaultCodeactToolRegistry   : DefaultCodeactToolRegistry#register - reason=工具注册成功, name=send_success_message
+2026-01-20T23:40:11.316+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=CodeactTool注册成功, name=send_success_message
+2026-01-20T23:40:11.316+08:00  INFO --- [           main] c.a.a.a.c.t.DefaultCodeactToolRegistry   : DefaultCodeactToolRegistry#register - reason=工具注册成功, name=send_error_message
+2026-01-20T23:40:11.316+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=CodeactTool注册成功, name=send_error_message
+2026-01-20T23:40:11.316+08:00  INFO --- [           main] c.a.a.a.c.t.DefaultCodeactToolRegistry   : DefaultCodeactToolRegistry#register - reason=工具注册成功, name=send_notification
+2026-01-20T23:40:11.316+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=CodeactTool注册成功, name=send_notification
+2026-01-20T23:40:11.316+08:00  INFO --- [           main] c.a.a.a.c.t.DefaultCodeactToolRegistry   : DefaultCodeactToolRegistry#register - reason=工具注册成功, name=subscribe_trigger
+2026-01-20T23:40:11.316+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=CodeactTool注册成功, name=subscribe_trigger
+2026-01-20T23:40:11.316+08:00  INFO --- [           main] c.a.a.a.c.t.DefaultCodeactToolRegistry   : DefaultCodeactToolRegistry#register - reason=工具注册成功, name=unsubscribe_trigger
+2026-01-20T23:40:11.316+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=CodeactTool注册成功, name=unsubscribe_trigger
+2026-01-20T23:40:11.316+08:00  INFO --- [           main] c.a.a.a.c.t.DefaultCodeactToolRegistry   : DefaultCodeactToolRegistry#register - reason=工具注册成功, name=list_triggers
+2026-01-20T23:40:11.316+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=CodeactTool注册成功, name=list_triggers
+2026-01-20T23:40:11.316+08:00  INFO --- [           main] c.a.a.a.c.t.DefaultCodeactToolRegistry   : DefaultCodeactToolRegistry#register - reason=工具注册成功, name=get_trigger_detail
+2026-01-20T23:40:11.317+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=CodeactTool注册成功, name=get_trigger_detail
+2026-01-20T23:40:11.317+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=CodeactTool注册完成, count=11
+2026-01-20T23:40:11.317+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build 创建默认CodeContext: language=PYTHON
+2026-01-20T23:40:11.319+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build 创建默认RuntimeEnvironmentManager: language=PYTHON
+2026-01-20T23:40:11.320+08:00 DEBUG --- [           main] c.a.a.a.c.e.bridge.AgentToolBridge       : AgentToolBridge#<init> 初始化: 注册了0个工具
+2026-01-20T23:40:11.321+08:00 DEBUG --- [           main] c.a.a.a.c.executor.bridge.StateBridge    : StateBridge#<init> 初始化完成
+2026-01-20T23:40:11.321+08:00  INFO --- [           main] c.a.a.a.core.executor.GraalCodeExecutor  : GraalCodeExecutor#<init> 初始化完成: language=PYTHON, allowIO=false, timeout=30000ms, executableTools=true, customBridgeFactory=false
+2026-01-20T23:40:11.321+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#createCodeactSubAgentInterceptor 创建子Agent拦截器
+2026-01-20T23:40:11.326+08:00  INFO --- [           main] c.a.a.a.a.subagent.CodeactSubAgent       : CodeactSubAgent#<init> 初始化: name=code-generator
+2026-01-20T23:40:11.326+08:00  INFO --- [           main] c.a.a.a.a.subagent.CodeactSubAgent       : CodeactSubAgent#<init> 初始化: name=condition-code-generator
+2026-01-20T23:40:11.326+08:00  INFO --- [           main] c.a.a.a.a.s.CodeactSubAgentInterceptor   : CodeactSubAgentInterceptor#<init> 创建默认代码生成子Agent
+2026-01-20T23:40:11.473+08:00  INFO --- [           main] c.a.a.a.a.s.CodeactSubAgentInterceptor   : CodeactSubAgentInterceptor#<init> 初始化完成: subAgentCount=2
+2026-01-20T23:40:11.474+08:00  INFO --- [           main] c.a.a.a.a.tools.ExecuteCodeTool          : ExecuteCodeTool#<init> 初始化完成
+2026-01-20T23:40:11.477+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build 拦截器分类完成: modelInterceptors=1, toolInterceptors=0
+2026-01-20T23:40:11.478+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build 从拦截器提取工具: interceptor=CodeactSubAgent, toolCount=2
+2026-01-20T23:40:11.492+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build 工具收集完成: interceptorTools=2, regularTools=3, total=6
+2026-01-20T23:40:11.493+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build 设置ModelInterceptors到LlmNode: count=1
+2026-01-20T23:40:11.494+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build CodeactAgent构建完成
+2026-01-20T23:40:11.494+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=开始罗列已注册的工具
+2026-01-20T23:40:11.494+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=CodeAct阶段工具数量, count=11
+2026-01-20T23:40:11.494+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=CodeAct工具详情, index=1, name=unified_search, description=统一搜索工具，可同时搜索项目、知识库、Web等多个数据源
+2026-01-20T23:40:11.494+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=CodeAct工具详情, index=2, name=search_knowledge, description=搜索团队知识库，包括FAQ、规范、最佳实践等
+2026-01-20T23:40:11.494+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=CodeAct工具详情, index=3, name=send_success_message, description=Send a success message to the IDE console
+2026-01-20T23:40:11.494+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=CodeAct工具详情, index=4, name=search_web, description=执行Web搜索，获取公开互联网信息
+2026-01-20T23:40:11.494+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=CodeAct工具详情, index=5, name=unsubscribe_trigger, description=取消订阅并删除一个触发器
+2026-01-20T23:40:11.494+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=CodeAct工具详情, index=6, name=get_trigger_detail, description=获取指定触发器的详细信息
+2026-01-20T23:40:11.495+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=CodeAct工具详情, index=7, name=send_error_message, description=Send an error message to the IDE console
+2026-01-20T23:40:11.495+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=CodeAct工具详情, index=8, name=search_project, description=搜索项目上下文信息，包括代码、配置、文档等
+2026-01-20T23:40:11.495+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=CodeAct工具详情, index=9, name=send_notification, description=Send a notification message
+2026-01-20T23:40:11.495+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=CodeAct工具详情, index=10, name=subscribe_trigger, description=创建并订阅一个新的触发器
+2026-01-20T23:40:11.495+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=CodeAct工具详情, index=11, name=list_triggers, description=列出所有触发器
+2026-01-20T23:40:11.495+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=React阶段工具数量, count=6
+2026-01-20T23:40:11.495+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=React工具详情, index=1, name=write_code, description=Generate and register a new function with specified name and parameters. IMPORTANT: You MUST provide both 'functionName' and 'parameters' fields. Example: write_code(requirement='calculate sum', functionName='calculate_sum', parameters=['a', 'b'])
+2026-01-20T23:40:11.495+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=React工具详情, index=2, name=write_condition_code, description=Generate and register a condition check function for triggers. This function MUST return a boolean value (True/False). Example: write_condition_code(requirement='check if it is a working day', functionName='check_is_working_day', parameters=['date'])
+2026-01-20T23:40:11.495+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=React工具详情, index=3, name=send_success_message, description=Send a success message to the IDE console
+2026-01-20T23:40:11.495+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=React工具详情, index=4, name=send_error_message, description=Send an error message to the IDE console
+2026-01-20T23:40:11.495+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=React工具详情, index=5, name=send_notification, description=Send a notification message
+2026-01-20T23:40:11.495+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=React工具详情, index=6, name=execute_code, description=Execute a previously generated function by its exact name with matching parameters. CRITICAL: The functionName MUST exactly match the name used in write_code. The 'args' parameter names MUST exactly match the 'parameters' specified in write_code. Example: If you called write_code with functionName='calculate_sum' and parameters=['a', 'b'], then you must call execute_code with functionName='calculate_sum' and args={'a': 10, 'b': 20}. Parameter value types supported: String, Number, Boolean, List, Map/Object.
+2026-01-20T23:40:11.495+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=工具罗列完成
+2026-01-20T23:40:11.496+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgent#<init> 初始化完成: language=PYTHON
+2026-01-20T23:40:11.499+08:00  INFO --- [           main] c.a.a.a.autoconfigure.AgentStaticLoader  : AgentStaticLoader#<init> 初始化 Agent 加载器
+2026-01-20T23:40:11.510+08:00 DEBUG --- [           main] c.a.a.a.autoconfigure.AgentStaticLoader  : AgentStaticLoader#<init> Agent 图结构:
+@startuml CodeactAgent
+skinparam usecaseFontSize 14
+skinparam usecaseStereotypeFontSize 12
+skinparam hexagonFontSize 14
+skinparam hexagonStereotypeFontSize 12
+title "CodeactAgent"
+footer
+
+powered by spring-ai-alibaba
+end footer
+circle start<<input>> as __START__
+circle stop as __END__
+usecase "_AGENT_MODEL_"<<Node>>
+usecase "_AGENT_TOOL_"<<Node>>
+usecase "_AGENT_HOOK_FastIntentReactHook.before"<<Node>>
+usecase "_AGENT_HOOK_UnifiedIntentRecognitionHook.before"<<Node>>
+usecase "_AGENT_HOOK_AfterAgentLearningHook.after"<<Node>>
+usecase "_AGENT_HOOK_ModelInputEvaluationHook-REACT.beforeModel"<<Node>>
+usecase "_AGENT_HOOK_EvaluationPromptInjectionHook-REACT.beforeModel"<<Node>>
+hexagon "check state" as condition1<<Condition>>
+hexagon "check state" as condition2<<Condition>>
+hexagon "check state" as condition3<<Condition>>
+hexagon "check state" as condition4<<Condition>>
+"__START__" -down-> "_AGENT_HOOK_FastIntentReactHook.before"
+"_AGENT_HOOK_FastIntentReactHook.before" .down.> "condition1"
+"condition1" .down.> "_AGENT_TOOL_"
+'"_AGENT_HOOK_FastIntentReactHook.before" .down.> "_AGENT_TOOL_"
+"condition1" .down.> "_AGENT_HOOK_UnifiedIntentRecognitionHook.before"
+'"_AGENT_HOOK_FastIntentReactHook.before" .down.> "_AGENT_HOOK_UnifiedIntentRecognitionHook.before"
+"_AGENT_HOOK_UnifiedIntentRecognitionHook.before" .down.> "condition2"
+"condition2" .down.> "_AGENT_HOOK_AfterAgentLearningHook.after"
+'"_AGENT_HOOK_UnifiedIntentRecognitionHook.before" .down.> "_AGENT_HOOK_AfterAgentLearningHook.after"
+"condition2" .down.> "_AGENT_TOOL_"
+'"_AGENT_HOOK_UnifiedIntentRecognitionHook.before" .down.> "_AGENT_TOOL_"
+"condition2" .down.> "_AGENT_HOOK_ModelInputEvaluationHook-REACT.beforeModel"
+'"_AGENT_HOOK_UnifiedIntentRecognitionHook.before" .down.> "_AGENT_HOOK_ModelInputEvaluationHook-REACT.beforeModel"
+"_AGENT_HOOK_ModelInputEvaluationHook-REACT.beforeModel" -down-> "_AGENT_HOOK_EvaluationPromptInjectionHook-REACT.beforeModel"
+"_AGENT_HOOK_EvaluationPromptInjectionHook-REACT.beforeModel" -down-> "_AGENT_MODEL_"
+"_AGENT_HOOK_AfterAgentLearningHook.after" -down-> "__END__"
+"_AGENT_MODEL_" .down.> "condition3"
+"condition3" .down.> "_AGENT_HOOK_ModelInputEvaluationHook-REACT.beforeModel"
+'"_AGENT_MODEL_" .down.> "_AGENT_HOOK_ModelInputEvaluationHook-REACT.beforeModel"
+"condition3" .down.> "_AGENT_TOOL_"
+'"_AGENT_MODEL_" .down.> "_AGENT_TOOL_"
+"condition3" .down.> "_AGENT_HOOK_AfterAgentLearningHook.after"
+'"_AGENT_MODEL_" .down.> "_AGENT_HOOK_AfterAgentLearningHook.after"
+"_AGENT_TOOL_" .down.> "condition4"
+"condition4" .down.> "_AGENT_HOOK_ModelInputEvaluationHook-REACT.beforeModel"
+'"_AGENT_TOOL_" .down.> "_AGENT_HOOK_ModelInputEvaluationHook-REACT.beforeModel"
+"condition4" .down.> "_AGENT_HOOK_AfterAgentLearningHook.after"
+'"_AGENT_TOOL_" .down.> "_AGENT_HOOK_AfterAgentLearningHook.after"
+@enduml
+
+2026-01-20T23:40:11.511+08:00  INFO --- [           main] c.a.a.a.autoconfigure.AgentStaticLoader  : AgentStaticLoader#<init> 已注册 agent: grayscale_agent
+2026-01-20T23:40:11.517+08:00  INFO --- [           main] .a.a.a.p.c.ParamOptionsAutoConfiguration : ParamOptionsAutoConfiguration - Creating OptionsCache with TTL: 300000ms
+2026-01-20T23:40:11.518+08:00  INFO --- [           main] a.a.a.p.s.DefaultParameterOptionsService : DefaultParameterOptionsService initialized with 3 handlers
+2026-01-20T23:40:11.524+08:00 DEBUG --- [           main] c.a.a.a.autoconfigure.AgentStaticLoader  : AgentStaticLoader#listAgents 列出所有 agent
+2026-01-20T23:40:11.524+08:00  INFO --- [           main] c.a.c.a.a.s.controller.AgentController   : AgentController initialized with 1 dynamic agents: [grayscale_agent]
+2026-01-20T23:40:11.539+08:00  INFO --- [           main] e.e.c.CodeactEvaluationAutoConfiguration : CodeactEvaluationAutoConfiguration#inputRoutingEvaluationHook - reason=创建输入路由评估 Hook
+2026-01-20T23:40:11.540+08:00  INFO --- [           main] e.c.ExperienceExtensionAutoConfiguration : ExperienceExtensionAutoConfiguration#codeExperienceModelHook - reason=creating code experience model hook bean
+2026-01-20T23:40:11.541+08:00  INFO --- [           main] e.c.ExperienceExtensionAutoConfiguration : ExperienceExtensionAutoConfiguration#reactExperienceAgentHook - reason=creating react experience agent hook bean
+2026-01-20T23:40:11.543+08:00  INFO --- [           main] e.c.ExperienceExtensionAutoConfiguration : ExperienceExtensionAutoConfiguration#commonSenseExperienceModelHook - reason=creating common sense prompt model hook bean
+2026-01-20T23:40:11.544+08:00  INFO --- [           main] a.e.s.c.SearchExtensionAutoConfiguration : SearchExtensionAutoConfiguration#searchFacade - reason=creating search facade with 3 providers
+2026-01-20T23:40:11.546+08:00  INFO --- [           main] c.a.a.a.e.s.i.DefaultSearchFacade        : DefaultSearchFacade#init - reason=initialized with 3 providers
+2026-01-20T23:40:11.547+08:00  INFO --- [           main] a.e.s.c.SearchExtensionAutoConfiguration : SearchExtensionAutoConfiguration#searchCodeactTools - reason=开始创建Search工具
+2026-01-20T23:40:11.549+08:00  INFO --- [           main] c.a.a.a.e.s.t.SearchCodeactToolFactory   : SearchCodeactToolFactory#createTools - reason=创建搜索工具成功, providerName=MockBaiduWebSearchProvider, toolName=search_web
+2026-01-20T23:40:11.551+08:00  INFO --- [           main] c.a.a.a.e.s.t.SearchCodeactToolFactory   : SearchCodeactToolFactory#createTools - reason=创建搜索工具成功, providerName=MockKnowledgeStoreSearchProvider, toolName=search_knowledge
+2026-01-20T23:40:11.552+08:00  INFO --- [           main] c.a.a.a.e.s.t.SearchCodeactToolFactory   : SearchCodeactToolFactory#createTools - reason=创建搜索工具成功, providerName=MockProjectContextSearchProvider, toolName=search_project
+2026-01-20T23:40:11.552+08:00  INFO --- [           main] c.a.a.a.e.s.t.SearchCodeactToolFactory   : SearchCodeactToolFactory#createTools - reason=搜索工具创建完成, totalCount=3
+2026-01-20T23:40:11.552+08:00  INFO --- [           main] a.e.s.c.SearchExtensionAutoConfiguration : SearchExtensionAutoConfiguration#searchCodeactTools - reason=Search工具创建完成, count=3
+2026-01-20T23:40:11.553+08:00  INFO --- [           main] a.e.s.c.SearchExtensionAutoConfiguration : SearchExtensionAutoConfiguration#searchCodeactTools - reason=创建Search工具, index=1, name=search_web, description=执行Web搜索，获取公开互联网信息
+2026-01-20T23:40:11.553+08:00  INFO --- [           main] a.e.s.c.SearchExtensionAutoConfiguration : SearchExtensionAutoConfiguration#searchCodeactTools - reason=创建Search工具, index=2, name=search_knowledge, description=搜索团队知识库，包括FAQ、规范、最佳实践等
+2026-01-20T23:40:11.553+08:00  INFO --- [           main] a.e.s.c.SearchExtensionAutoConfiguration : SearchExtensionAutoConfiguration#searchCodeactTools - reason=创建Search工具, index=3, name=search_project, description=搜索项目上下文信息，包括代码、配置、文档等
+2026-01-20T23:40:11.557+08:00  INFO --- [           main] Configuration$ElasticsearchConfiguration : ElasticsearchConfiguration#diagnostics - reason=ElasticsearchClient bean found
+2026-01-20T23:40:11.557+08:00  INFO --- [           main] Configuration$ElasticsearchConfiguration : ElasticsearchConfiguration#diagnostics - reason=EmbeddingModel bean found
+2026-01-20T23:40:11.558+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#diagnostics - Planning module status:
+2026-01-20T23:40:11.558+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration :   - ActionRepository: MybatisPlusActionRepository
+2026-01-20T23:40:11.559+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration :   - ActionProvider: SemanticActionProvider
+2026-01-20T23:40:11.559+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration :   - PlanGenerator: DefaultPlanGenerator
+2026-01-20T23:40:11.559+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration :   - PlanExecutor: DefaultPlanExecutor
+2026-01-20T23:40:11.559+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#planningCodeactTools - reason=creating planning tools list
+2026-01-20T23:40:11.560+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#planningCodeactTools - reason=created planning tools, count=4
+2026-01-20T23:40:11.845+08:00  INFO --- [           main] c.a.a.a.c.c.CodeactCoreAutoConfiguration : CodeactCoreAutoConfiguration#returnSchemaRegistry - reason=创建ReturnSchemaRegistry单例Bean
+2026-01-20T23:40:11.846+08:00  INFO --- [           main] .a.a.a.c.t.s.DefaultReturnSchemaRegistry : DefaultReturnSchemaRegistry#<init> - reason=创建新实例, hashCode=438506351
+2026-01-20T23:40:12.278+08:00  WARN --- [           main] o.s.m.p.s.SyncMcpSamplingProvider        : No sampling methods found
+2026-01-20T23:40:12.279+08:00  WARN --- [           main] o.s.m.p.e.SyncMcpElicitationProvider     : No elicitation methods found
+2026-01-20T23:40:12.297+08:00  WARN --- [           main] ConfigServletWebServerApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.context.ApplicationContextException: Failed to start bean 'webServerStartStop'
+2026-01-20T23:40:12.302+08:00  INFO --- [           main] .p.s.InMemoryParamCollectionSessionStore : InMemoryParamCollectionSessionStore#shutdown - reason=shutdown completed
+2026-01-20T23:40:12.303+08:00  INFO --- [           main] c.a.a.a.e.e.GraphBasedEvaluationExecutor : Shutting down ExecutorService
+2026-01-20T23:40:12.303+08:00  INFO --- [           main] c.a.a.a.e.l.i.AsyncLearningHandler       : AsyncLearningHandler#shutdown - reason=shutting down async learning handler
+2026-01-20T23:40:12.306+08:00  INFO --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-01-20T23:40:12.317+08:00  INFO --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-01-20T23:40:12.338+08:00  INFO --- [           main] .s.b.a.l.ConditionEvaluationReportLogger : 
+
+Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
+2026-01-20T23:40:12.365+08:00 ERROR --- [           main] o.s.b.d.LoggingFailureAnalysisReporter   : 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Web server failed to start. Port 8080 was already in use.
+
+Action:
+
+Identify and stop the process that's listening on port 8080 or configure this application to listen on another port.
+
+2026-01-20T23:40:12.367+08:00  INFO --- [r-shutdown-hook] c.a.c.a.g.internal.node.ParallelNode     : Shutting down ParallelNode default executor
+2026-01-20T23:40:12.367+08:00  INFO --- [r-shutdown-hook] c.a.c.a.g.internal.node.ParallelNode     : ParallelNode default thread pool terminated
+2026-01-20T23:40:12.367+08:00  INFO --- [r-shutdown-hook] c.a.c.a.g.internal.node.ParallelNode     : ParallelNode default executor shut down successfully
+2026-01-20T23:53:31.111+08:00  INFO --- [           main] c.a.a.a.start.AssistantAgentApplication  : Starting AssistantAgentApplication using Java 21.0.9 with PID 10968 (D:\devfive\AssistantAgent\assistant-agent-start\target\classes started by zhou_ in D:\devfive\AssistantAgent\assistant-agent-start)
+2026-01-20T23:53:31.112+08:00 DEBUG --- [           main] c.a.a.a.start.AssistantAgentApplication  : Running with Spring Boot v3.4.8, Spring v6.2.9
+2026-01-20T23:53:31.113+08:00  INFO --- [           main] c.a.a.a.start.AssistantAgentApplication  : No active profile set, falling back to 1 default profile: "default"
+2026-01-20T23:53:32.344+08:00  INFO --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Elasticsearch repositories in DEFAULT mode.
+2026-01-20T23:53:32.371+08:00  INFO --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 21 ms. Found 0 Elasticsearch repository interfaces.
+2026-01-20T23:53:32.377+08:00  INFO --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Reactive Elasticsearch repositories in DEFAULT mode.
+2026-01-20T23:53:32.384+08:00  INFO --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 4 ms. Found 0 Reactive Elasticsearch repository interfaces.
+2026-01-20T23:53:33.570+08:00  INFO --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-01-20T23:53:33.590+08:00  INFO --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-01-20T23:53:33.590+08:00  INFO --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.43]
+2026-01-20T23:53:33.686+08:00  INFO --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-01-20T23:53:33.686+08:00  INFO --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2525 ms
+2026-01-20T23:53:33.752+08:00  INFO --- [           main] e.l.c.LearningExtensionAutoConfiguration : LearningExtensionAutoConfiguration#constructor - reason=learning extension auto-configuration initialized
+2026-01-20T23:53:33.774+08:00  INFO --- [           main] a.e.s.c.SearchExtensionAutoConfiguration : SearchExtensionAutoConfiguration#init - reason=search extension framework is enabled
+2026-01-20T23:53:33.776+08:00  INFO --- [           main] c.a.a.a.s.s.MockBaiduWebSearchProvider   : MockBaiduWebSearchProvider#init - reason=使用简单模式初始化
+2026-01-20T23:53:33.778+08:00  INFO --- [           main] a.e.s.c.SearchExtensionAutoConfiguration : SearchExtensionAutoConfiguration#unifiedSearchCodeactTool - reason=创建统一搜索工具, providerCount=3
+2026-01-20T23:53:33.824+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#init - reason=planning extension is enabled
+2026-01-20T23:53:33.825+08:00  INFO --- [           main] Configuration$ElasticsearchConfiguration : ElasticsearchConfiguration#init - reason=ES configuration class loaded (elasticsearch.enabled=true)
+2026-01-20T23:53:33.827+08:00  INFO --- [           main] toConfiguration$MybatisPlusConfiguration : MybatisPlusConfiguration#init - reason=MySQL configuration class loaded (mysql.enabled=true, MyBatisPlus present)
+2026-01-20T23:53:34.154+08:00  INFO --- [           main] toConfiguration$MybatisPlusConfiguration : MybatisPlusConfiguration#actionEntityConverter - reason=creating entity converter
+2026-01-20T23:53:34.156+08:00  INFO --- [           main] toConfiguration$MybatisPlusConfiguration : MybatisPlusConfiguration#mybatisPlusActionRepository - reason=ActionRegistryMapper found, creating MySQL repository
+2026-01-20T23:53:34.675+08:00  INFO --- [           main] Configuration$ElasticsearchConfiguration : ElasticsearchConfiguration#actionVectorizationService - reason=creating ES vectorization service
+2026-01-20T23:53:34.755+08:00  INFO --- [           main] c.a.a.a.p.v.ActionVectorizationService   : ActionVectorizationService#init - reason=ES index initialized on startup
+2026-01-20T23:53:34.770+08:00  INFO --- [           main] Configuration$ElasticsearchConfiguration : ElasticsearchConfiguration#semanticActionProvider - reason=creating semantic action provider, semanticWeight=0.6, keywordWeight=0.4, matchThreshold=0.5
+2026-01-20T23:53:34.774+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#defaultPlanGenerator - reason=creating default plan generator
+2026-01-20T23:53:34.776+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#planActionCodeactTool - reason=creating plan_action tool
+2026-01-20T23:53:34.779+08:00 DEBUG --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#queryStepExecutor - reason=creating query step executor
+2026-01-20T23:53:34.781+08:00 DEBUG --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#inputStepExecutor - reason=creating input step executor
+2026-01-20T23:53:34.783+08:00 DEBUG --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#executeStepExecutor - reason=creating execute step executor
+2026-01-20T23:53:34.784+08:00 DEBUG --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#apiCallStepExecutor - reason=creating api call step executor
+2026-01-20T23:53:34.791+08:00 DEBUG --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#validationStepExecutor - reason=creating validation step executor
+2026-01-20T23:53:34.793+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#stepExecutorRegistry - reason=creating executor registry, executorCount=5
+2026-01-20T23:53:34.794+08:00  INFO --- [           main] c.a.a.a.p.internal.StepExecutorRegistry  : StepExecutorRegistry#register - reason=registered executor, type=QUERY, executorClass=QueryStepExecutor
+2026-01-20T23:53:34.795+08:00  INFO --- [           main] c.a.a.a.p.internal.StepExecutorRegistry  : StepExecutorRegistry#register - reason=registered executor, type=INPUT, executorClass=InputStepExecutor
+2026-01-20T23:53:34.795+08:00  INFO --- [           main] c.a.a.a.p.internal.StepExecutorRegistry  : StepExecutorRegistry#register - reason=registered executor, type=EXECUTE, executorClass=ExecuteStepExecutor
+2026-01-20T23:53:34.795+08:00  INFO --- [           main] c.a.a.a.p.internal.StepExecutorRegistry  : StepExecutorRegistry#register - reason=registered executor, type=API_CALL, executorClass=ApiCallStepExecutor
+2026-01-20T23:53:34.796+08:00  INFO --- [           main] c.a.a.a.p.internal.StepExecutorRegistry  : StepExecutorRegistry#register - reason=registered executor, type=VALIDATION, executorClass=ValidationStepExecutor
+2026-01-20T23:53:34.796+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#defaultPlanExecutor - reason=creating default plan executor
+2026-01-20T23:53:34.798+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#executeActionCodeactTool - reason=creating execute_action tool
+2026-01-20T23:53:34.799+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#listActionsCodeactTool - reason=creating list_actions tool
+2026-01-20T23:53:34.800+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#getActionDetailsCodeactTool - reason=creating get_action_details tool
+2026-01-20T23:53:34.873+08:00  INFO --- [           main] e.l.c.LearningExtensionAutoConfiguration : LearningExtensionAutoConfiguration#experienceLearningExtractor - reason=creating LLM-based experience learning extractor
+2026-01-20T23:53:34.874+08:00  INFO --- [           main] .a.a.a.e.l.e.ExperienceLearningExtractor : ExperienceLearningExtractor#constructor - reason=LLM-based extractor initialized
+2026-01-20T23:53:34.876+08:00  INFO --- [           main] e.l.c.LearningExtensionAutoConfiguration : LearningExtensionAutoConfiguration#inMemoryLearningRepository - reason=creating in-memory learning repository
+2026-01-20T23:53:34.879+08:00  INFO --- [           main] c.a.a.a.start.config.PersistenceConfig   : PersistenceConfig#init - reason=persistence configuration loaded
+2026-01-20T23:53:34.883+08:00  INFO --- [           main] c.a.a.a.start.config.PersistenceConfig   : PersistenceConfig#elasticsearchExperienceRepository - reason=creating Elasticsearch experience repository (PRIMARY), indexName=experiences
+2026-01-20T23:53:34.887+08:00  INFO --- [           main] e.l.c.LearningExtensionAutoConfiguration : LearningExtensionAutoConfiguration#experienceLearningRepository - reason=creating experience learning repository
+2026-01-20T23:53:34.895+08:00  INFO --- [           main] e.l.c.LearningExtensionAutoConfiguration : LearningExtensionAutoConfiguration#learningStrategy - reason=creating learning strategy, asyncEnabled=true
+2026-01-20T23:53:34.897+08:00  INFO --- [           main] e.l.c.LearningExtensionAutoConfiguration : LearningExtensionAutoConfiguration#asyncLearningHandler - reason=creating async learning handler, threadPoolSize=2, queueCapacity=100
+2026-01-20T23:53:34.898+08:00  INFO --- [           main] c.a.a.a.e.l.i.AsyncLearningHandler       : AsyncLearningHandler#constructor - reason=async learning handler initialized, threadPoolSize=2, queueCapacity=100
+2026-01-20T23:53:34.900+08:00  INFO --- [           main] e.l.c.LearningExtensionAutoConfiguration : LearningExtensionAutoConfiguration#learningExecutor - reason=creating learning executor, extractorCount=1, repositoryCount=2
+2026-01-20T23:53:34.902+08:00  INFO --- [           main] e.l.c.LearningExtensionAutoConfiguration : LearningExtensionAutoConfiguration#afterAgentLearningHook - reason=creating after agent learning hook, learningType=experience
+2026-01-20T23:53:34.908+08:00  INFO --- [           main] c.a.a.a.start.config.PersistenceConfig   : PersistenceConfig#elasticsearchExperienceProvider - reason=creating Elasticsearch experience provider (PRIMARY), indexName=experiences
+2026-01-20T23:53:34.913+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#<init> - reason=初始化默认评估套件配置, experienceProviderAvailable=true
+2026-01-20T23:53:34.915+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#evaluatorRegistry - reason=创建 EvaluatorRegistry Bean
+2026-01-20T23:53:34.917+08:00 DEBUG --- [           main] c.a.a.a.e.evaluator.EvaluatorRegistry    : Registered evaluator 'llm-based' of type LLMBasedEvaluator
+2026-01-20T23:53:34.919+08:00 DEBUG --- [           main] c.a.a.a.e.evaluator.EvaluatorRegistry    : Registered evaluator 'passthrough' of type RuleBasedEvaluator
+2026-01-20T23:53:34.921+08:00 DEBUG --- [           main] c.a.a.a.e.evaluator.EvaluatorRegistry    : Registered evaluator 'react_experience_evaluator' of type RuleBasedEvaluator
+2026-01-20T23:53:34.921+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#createDefaultEvaluatorRegistry - reason=注册 React 阶段经验检索评估器
+2026-01-20T23:53:34.921+08:00 DEBUG --- [           main] c.a.a.a.e.evaluator.EvaluatorRegistry    : Registered evaluator 'codeact_experience_evaluator' of type RuleBasedEvaluator
+2026-01-20T23:53:34.921+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#createDefaultEvaluatorRegistry - reason=注册 CodeAct 阶段经验检索评估器
+2026-01-20T23:53:34.922+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#evaluationService - reason=创建默认 EvaluationService, sharedRegistryEvaluators=[llm-based, passthrough, codeact_experience_evaluator, react_experience_evaluator]
+2026-01-20T23:53:34.924+08:00 DEBUG --- [           main] c.a.a.a.e.e.GraphBasedEvaluationExecutor : Created default ExecutorService for batch processing
+2026-01-20T23:53:34.925+08:00  INFO --- [           main] .c.ExperienceEvaluationCriterionProvider : ExperienceEvaluationCriterionProvider#<init> - reason=初始化经验评估 Criterion 提供者
+2026-01-20T23:53:34.929+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#structuredParamExtractor - reason=creating structured param extractor
+2026-01-20T23:53:34.937+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#parameterValidator - reason=creating parameter validator
+2026-01-20T23:53:34.940+08:00  INFO --- [           main] .a.a.a.p.c.ParamOptionsAutoConfiguration : ParamOptionsAutoConfiguration - Parameter options module initialized
+2026-01-20T23:53:34.941+08:00  INFO --- [           main] .a.a.a.p.c.ParamOptionsAutoConfiguration : ParamOptionsAutoConfiguration - Creating RestTemplate for HTTP handlers
+2026-01-20T23:53:34.945+08:00  INFO --- [           main] c.a.a.a.planning.executor.HttpExecutor   : HttpExecutor#init - initialized
+2026-01-20T23:53:34.946+08:00  INFO --- [           main] c.a.a.a.p.executor.InternalExecutor      : InternalExecutor#init - initialized
+2026-01-20T23:53:34.948+08:00  INFO --- [           main] c.a.a.a.p.e.ActionExecutorFactory        : ActionExecutorFactory#init - initialized executors: INTERNAL(InternalExecutor), HTTP(HttpExecutor), DATA_AGENT(DataAgentExecutor), MCP(McpExecutor)
+2026-01-20T23:53:34.949+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#sessionProvider - reason=creating in-memory session provider
+2026-01-20T23:53:34.950+08:00  INFO --- [           main] c.a.a.a.p.s.InMemorySessionProvider      : InMemorySessionProvider#init - initialized
+2026-01-20T23:53:34.952+08:00  INFO --- [           main] c.a.a.a.p.s.ParamCollectionService       : ParamCollectionService#init - sessionProvider=InMemory
+2026-01-20T23:53:34.953+08:00 DEBUG --- [           main] c.a.a.a.e.evaluator.EvaluatorRegistry    : Registered evaluator 'action_intent_evaluator' of type ActionIntentEvaluator
+2026-01-20T23:53:34.954+08:00  INFO --- [           main] p.i.PlanningIntegrationAutoConfiguration : PlanningIntegrationAutoConfiguration#actionIntentEvaluator - initialized and registered, paramCollection=true, llmVerification=true, maxCandidates=5
+2026-01-20T23:53:34.954+08:00  INFO --- [           main] .p.i.PlanningEvaluationCriterionProvider : PlanningEvaluationCriterionProvider#init - initialized, llmVerificationEnabled=true
+2026-01-20T23:53:34.954+08:00  INFO --- [           main] p.i.PlanningIntegrationAutoConfiguration : PlanningIntegrationAutoConfiguration#planningEvaluationCriterionProvider - registered planning evaluation criterion provider
+2026-01-20T23:53:34.955+08:00  INFO --- [           main] .c.ExperienceEvaluationCriterionProvider : ExperienceEvaluationCriterionProvider#getReactPhaseCriteria - reason=提供 React 阶段评估 Criteria
+2026-01-20T23:53:34.957+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#createReactPhaseSuite - reason=添加自定义 Criterion, provider=ExperienceEvaluationCriterionProvider, count=3
+2026-01-20T23:53:34.958+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#createReactPhaseSuite - reason=添加自定义 Criterion, provider=PlanningEvaluationCriterionProvider, count=2
+2026-01-20T23:53:34.959+08:00  INFO --- [           main] a.a.e.a.BatchAggregationStrategyRegistry : Registered batch aggregation strategy: ANY_TRUE
+2026-01-20T23:53:34.960+08:00  INFO --- [           main] a.a.e.a.BatchAggregationStrategyRegistry : Registered batch aggregation strategy: ALL_TRUE
+2026-01-20T23:53:34.997+08:00  INFO --- [           main] c.a.c.a.g.internal.node.ParallelNode     : Calculated core pool size: 32 (CPU cores: 16)
+2026-01-20T23:53:34.997+08:00  INFO --- [           main] c.a.c.a.g.internal.node.ParallelNode     : Calculated maximum pool size: 64 (CPU cores: 16)
+2026-01-20T23:53:34.997+08:00  INFO --- [           main] c.a.c.a.g.internal.node.ParallelNode     : Calculated queue capacity: 1000
+2026-01-20T23:53:34.998+08:00  INFO --- [           main] c.a.a.a.e.DefaultEvaluationService       : Registered evaluation suite: react-phase-suite
+2026-01-20T23:53:34.998+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#evaluationService - reason=注册 React Phase Suite, suiteId=react-phase-suite
+2026-01-20T23:53:34.998+08:00  INFO --- [           main] .c.ExperienceEvaluationCriterionProvider : ExperienceEvaluationCriterionProvider#getCodeActPhaseCriteria - reason=提供 CodeAct 阶段评估 Criteria
+2026-01-20T23:53:34.998+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#createCodeActPhaseSuite - reason=添加自定义 Criterion, provider=ExperienceEvaluationCriterionProvider, count=3
+2026-01-20T23:53:34.999+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#createCodeActPhaseSuite - reason=添加自定义 Criterion, provider=PlanningEvaluationCriterionProvider, count=2
+2026-01-20T23:53:34.999+08:00  INFO --- [           main] a.a.e.a.BatchAggregationStrategyRegistry : Registered batch aggregation strategy: ANY_TRUE
+2026-01-20T23:53:34.999+08:00  INFO --- [           main] a.a.e.a.BatchAggregationStrategyRegistry : Registered batch aggregation strategy: ALL_TRUE
+2026-01-20T23:53:35.000+08:00  INFO --- [           main] c.a.a.a.e.DefaultEvaluationService       : Registered evaluation suite: codeact-phase-suite
+2026-01-20T23:53:35.000+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#evaluationService - reason=注册 CodeAct Phase Suite, suiteId=codeact-phase-suite
+2026-01-20T23:53:35.002+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#codeactEvaluationContextFactory - reason=创建 EvaluationContextFactory
+2026-01-20T23:53:35.003+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#codeactEvaluationResultAttacher - reason=创建 EvaluationResultAttacher
+2026-01-20T23:53:35.007+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#reactPhaseEvaluationHooks - reason=创建 React Phase ModelInputEvaluationHook
+2026-01-20T23:53:35.009+08:00  INFO --- [           main] .a.a.e.e.p.EvaluationPromptInjectionHook : EvaluationPromptInjectionHook#<init> - reason=初始化, phase=REACT, providerCount=1
+2026-01-20T23:53:35.009+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#reactPhaseEvaluationHooks - reason=创建 React Phase EvaluationPromptInjectionHook, providersCount=2
+2026-01-20T23:53:35.010+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#codeactPhaseEvaluationHooks - reason=创建 CodeAct Phase ModelInputEvaluationHook
+2026-01-20T23:53:35.010+08:00  INFO --- [           main] .a.a.e.e.p.EvaluationPromptInjectionHook : EvaluationPromptInjectionHook#<init> - reason=初始化, phase=CODEACT, providerCount=1
+2026-01-20T23:53:35.011+08:00  INFO --- [           main] c.a.a.a.a.e.DefaultEvaluationSuiteConfig : DefaultEvaluationSuiteConfig#codeactPhaseEvaluationHooks - reason=创建 CodeAct Phase EvaluationPromptInjectionHook, providersCount=2
+2026-01-20T23:53:35.013+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#keywordMatcher - reason=creating keyword matcher
+2026-01-20T23:53:35.015+08:00  INFO --- [           main] .ParamCollectionSessionAutoConfiguration : ParamCollectionSessionAutoConfiguration#inMemoryParamCollectionSessionStore - reason=creating in-memory session store (Redis not available), ttl=PT30M
+2026-01-20T23:53:35.016+08:00  WARN --- [           main] .ParamCollectionSessionAutoConfiguration : ParamCollectionSessionAutoConfiguration#inMemoryParamCollectionSessionStore - reason=WARNING: In-memory session store is not suitable for distributed environment!
+2026-01-20T23:53:35.017+08:00  INFO --- [           main] .p.s.InMemoryParamCollectionSessionStore : InMemoryParamCollectionSessionStore#<init> - reason=initialized, defaultTtl=PT30M
+2026-01-20T23:53:35.017+08:00  WARN --- [           main] .p.s.InMemoryParamCollectionSessionStore : InMemoryParamCollectionSessionStore#<init> - reason=WARNING: Using in-memory session store, not suitable for distributed environment!
+2026-01-20T23:53:35.020+08:00  INFO --- [           main] iguration$UnifiedIntentHookConfiguration : UnifiedIntentHookConfiguration#unifiedIntentRecognitionHook - reason=creating unified intent hook, experienceProviderPresent=true, chatModelPresent=true, sessionStorePresent=true, directExecuteThreshold=0.95, hintThreshold=0.5
+2026-01-20T23:53:35.115+08:00  INFO --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-01-20T23:53:35.334+08:00  INFO --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@23d07ad3
+2026-01-20T23:53:35.336+08:00  INFO --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-01-20T23:53:35.434+08:00  INFO --- [           main] c.a.a.a.p.i.UnifiedIntentRecognitionHook : UnifiedIntentRecognitionHook#initKeywordMatcher - reason=initialized, actionCount=0, keywordIndexSize=0
+2026-01-20T23:53:35.439+08:00  INFO --- [           main] .a.e.r.c.ReplyExtensionAutoConfiguration : ReplyExtensionAutoConfiguration#init - reason=reply module enabled
+2026-01-20T23:53:35.441+08:00  INFO --- [           main] .a.e.r.c.ReplyExtensionAutoConfiguration : ReplyExtensionAutoConfiguration#replyCodeactToolFactory - reason=创建CodeactTool工厂, channels=1
+2026-01-20T23:53:35.442+08:00  INFO --- [           main] c.a.a.a.e.r.t.ReplyCodeactToolFactory    : ReplyCodeactToolFactory#init - reason=工厂初始化完成, channels=1
+2026-01-20T23:53:35.455+08:00  INFO --- [           main] .a.e.r.c.ReplyExtensionAutoConfiguration : ReplyExtensionAutoConfiguration#replyCodeactTools - reason=开始创建Reply工具
+2026-01-20T23:53:35.460+08:00  INFO --- [           main] c.a.a.a.e.r.t.ReplyCodeactToolFactory    : ReplyCodeactToolFactory#createTools - reason=创建工具成功, toolName=send_success_message, channelCode=IDE_TEXT
+2026-01-20T23:53:35.461+08:00  INFO --- [           main] c.a.a.a.e.r.t.ReplyCodeactToolFactory    : ReplyCodeactToolFactory#createTools - reason=创建工具成功, toolName=send_error_message, channelCode=IDE_TEXT
+2026-01-20T23:53:35.462+08:00  INFO --- [           main] c.a.a.a.e.r.t.ReplyCodeactToolFactory    : ReplyCodeactToolFactory#createTools - reason=创建工具成功, toolName=send_notification, channelCode=IDE_TEXT
+2026-01-20T23:53:35.462+08:00  INFO --- [           main] c.a.a.a.e.r.t.ReplyCodeactToolFactory    : ReplyCodeactToolFactory#createTools - reason=工具创建完成, totalCount=3
+2026-01-20T23:53:35.463+08:00  INFO --- [           main] .a.e.r.c.ReplyExtensionAutoConfiguration : ReplyExtensionAutoConfiguration#replyCodeactTools - reason=Reply工具创建完成, count=3
+2026-01-20T23:53:35.463+08:00  INFO --- [           main] .a.e.r.c.ReplyExtensionAutoConfiguration : ReplyExtensionAutoConfiguration#replyCodeactTools - reason=创建Reply工具, index=1, name=send_success_message, description=Send a success message to the IDE console
+2026-01-20T23:53:35.463+08:00  INFO --- [           main] .a.e.r.c.ReplyExtensionAutoConfiguration : ReplyExtensionAutoConfiguration#replyCodeactTools - reason=创建Reply工具, index=2, name=send_error_message, description=Send an error message to the IDE console
+2026-01-20T23:53:35.463+08:00  INFO --- [           main] .a.e.r.c.ReplyExtensionAutoConfiguration : ReplyExtensionAutoConfiguration#replyCodeactTools - reason=创建Reply工具, index=3, name=send_notification, description=Send a notification message
+2026-01-20T23:53:35.465+08:00  INFO --- [           main] a.e.s.c.SearchExtensionAutoConfiguration : SearchExtensionAutoConfiguration#searchCodeactToolFactory - reason=创建SearchCodeactTool工厂, providerCount=3
+2026-01-20T23:53:35.482+08:00  INFO --- [           main] c.a.a.a.e.t.c.TriggerAutoConfiguration   : TriggerAutoConfiguration#triggerCodeactToolFactory - reason=创建TriggerCodeactTool工厂
+2026-01-20T23:53:35.483+08:00  INFO --- [           main] c.a.a.a.e.t.c.TriggerAutoConfiguration   : TriggerAutoConfiguration#triggerCodeactTools - reason=开始创建Trigger工具
+2026-01-20T23:53:35.488+08:00  INFO --- [           main] c.a.a.a.e.t.t.TriggerCodeactToolFactory  : TriggerCodeactToolFactory#createTools - reason=创建SubscribeTriggerCodeactTool成功
+2026-01-20T23:53:35.489+08:00  INFO --- [           main] c.a.a.a.e.t.t.TriggerCodeactToolFactory  : TriggerCodeactToolFactory#createTools - reason=创建UnsubscribeTriggerCodeactTool成功
+2026-01-20T23:53:35.490+08:00  INFO --- [           main] c.a.a.a.e.t.t.TriggerCodeactToolFactory  : TriggerCodeactToolFactory#createTools - reason=创建ListTriggersCodeactTool成功
+2026-01-20T23:53:35.492+08:00  INFO --- [           main] c.a.a.a.e.t.t.TriggerCodeactToolFactory  : TriggerCodeactToolFactory#createTools - reason=创建GetTriggerDetailCodeactTool成功
+2026-01-20T23:53:35.492+08:00  INFO --- [           main] c.a.a.a.e.t.t.TriggerCodeactToolFactory  : TriggerCodeactToolFactory#createTools - reason=触发器工具创建完成, count=4
+2026-01-20T23:53:35.492+08:00  INFO --- [           main] c.a.a.a.e.t.c.TriggerAutoConfiguration   : TriggerAutoConfiguration#triggerCodeactTools - reason=Trigger工具创建完成, count=4
+2026-01-20T23:53:35.492+08:00  INFO --- [           main] c.a.a.a.e.t.c.TriggerAutoConfiguration   : TriggerAutoConfiguration#triggerCodeactTools - reason=创建Trigger工具, index=1, name=subscribe_trigger, description=创建并订阅一个新的触发器
+2026-01-20T23:53:35.492+08:00  INFO --- [           main] c.a.a.a.e.t.c.TriggerAutoConfiguration   : TriggerAutoConfiguration#triggerCodeactTools - reason=创建Trigger工具, index=2, name=unsubscribe_trigger, description=取消订阅并删除一个触发器
+2026-01-20T23:53:35.492+08:00  INFO --- [           main] c.a.a.a.e.t.c.TriggerAutoConfiguration   : TriggerAutoConfiguration#triggerCodeactTools - reason=创建Trigger工具, index=3, name=list_triggers, description=列出所有触发器
+2026-01-20T23:53:35.492+08:00  INFO --- [           main] c.a.a.a.e.t.c.TriggerAutoConfiguration   : TriggerAutoConfiguration#triggerCodeactTools - reason=创建Trigger工具, index=4, name=get_trigger_detail, description=获取指定触发器的详细信息
+2026-01-20T23:53:35.505+08:00  INFO --- [           main] e.c.ExperienceExtensionAutoConfiguration : ExperienceExtensionAutoConfiguration#fastIntentService - reason=creating FastIntentService, extraMatchers=0
+2026-01-20T23:53:35.508+08:00  INFO --- [           main] e.c.ExperienceExtensionAutoConfiguration : ExperienceExtensionAutoConfiguration#fastIntentReactHook - reason=creating fast intent react hook bean
+2026-01-20T23:53:35.512+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=创建 CodeactAgent
+2026-01-20T23:53:35.512+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=配置 MemorySaver 以支持多轮对话上下文保持
+2026-01-20T23:53:35.512+08:00  WARN --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=临时禁用 streaming 模式以排查循环问题
+2026-01-20T23:53:35.512+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=添加UnifiedSearchCodeactTool
+2026-01-20T23:53:35.516+08:00  INFO --- [           main] c.a.a.a.e.s.t.SearchCodeactToolFactory   : SearchCodeactToolFactory#createTools - reason=创建搜索工具成功, providerName=MockBaiduWebSearchProvider, toolName=search_web
+2026-01-20T23:53:35.518+08:00  INFO --- [           main] c.a.a.a.e.s.t.SearchCodeactToolFactory   : SearchCodeactToolFactory#createTools - reason=创建搜索工具成功, providerName=MockKnowledgeStoreSearchProvider, toolName=search_knowledge
+2026-01-20T23:53:35.520+08:00  INFO --- [           main] c.a.a.a.e.s.t.SearchCodeactToolFactory   : SearchCodeactToolFactory#createTools - reason=创建搜索工具成功, providerName=MockProjectContextSearchProvider, toolName=search_project
+2026-01-20T23:53:35.520+08:00  INFO --- [           main] c.a.a.a.e.s.t.SearchCodeactToolFactory   : SearchCodeactToolFactory#createTools - reason=搜索工具创建完成, totalCount=3
+2026-01-20T23:53:35.520+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=添加SearchCodeactTools, count=3
+2026-01-20T23:53:35.520+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=添加ReplyCodeactTools, count=3
+2026-01-20T23:53:35.520+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=添加TriggerCodeactTools, count=4
+2026-01-20T23:53:35.520+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#createMcpDynamicTools - reason=Creating MCP dynamic tools
+2026-01-20T23:53:35.523+08:00  INFO --- [           main] c.a.a.a.e.d.mcp.McpDynamicToolFactory    : McpDynamicToolFactory#createTools - reason=开始创建MCP动态工具
+2026-01-20T23:53:35.525+08:00  INFO --- [           main] c.a.a.a.e.d.mcp.McpDynamicToolFactory    : McpDynamicToolFactory#createTools - reason=无可用的MCP工具
+2026-01-20T23:53:35.525+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#createMcpDynamicTools - reason=MCP dynamic tools created, count=0
+2026-01-20T23:53:35.525+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=Added MCP dynamic tools, count=0
+2026-01-20T23:53:35.525+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#createHttpDynamicTools - reason=HTTP dynamic tools disabled by default
+2026-01-20T23:53:35.525+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=合并后CodeactTool总数, count=11
+2026-01-20T23:53:35.525+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=React阶段使用内置工具(write_code, execute_code, write_condition_code)
+2026-01-20T23:53:35.525+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=注入 React Phase 评估 Hooks, count=2
+2026-01-20T23:53:35.525+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=注入 CodeAct Phase 评估 Hooks, count=2
+2026-01-20T23:53:35.525+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=已准备注入AfterAgentLearningHook
+2026-01-20T23:53:35.525+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=已准备注入FastIntentReactHook
+2026-01-20T23:53:35.525+08:00  INFO --- [           main] c.a.a.a.start.config.CodeactAgentConfig  : CodeactAgentConfig#grayscaleCodeactAgent - reason=已准备注入UnifiedIntentRecognitionHook
+2026-01-20T23:53:35.527+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build 开始构建CodeactAgent
+2026-01-20T23:53:35.530+08:00  INFO --- [           main] .a.a.a.c.t.s.DefaultReturnSchemaRegistry : DefaultReturnSchemaRegistry#<init> - reason=创建新实例, hashCode=1910857288
+2026-01-20T23:53:35.531+08:00 DEBUG --- [           main] c.a.a.a.c.t.DefaultCodeactToolRegistry   : DefaultCodeactToolRegistry#<init> - reason=创建注册表, returnSchemaRegistry=DefaultReturnSchemaRegistry
+2026-01-20T23:53:35.531+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=创建默认CodeactToolRegistry
+2026-01-20T23:53:35.531+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=开始注册CodeactTool, count=11
+2026-01-20T23:53:35.531+08:00  INFO --- [           main] c.a.a.a.c.t.DefaultCodeactToolRegistry   : DefaultCodeactToolRegistry#register - reason=工具注册成功, name=unified_search
+2026-01-20T23:53:35.531+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=CodeactTool注册成功, name=unified_search
+2026-01-20T23:53:35.531+08:00  INFO --- [           main] c.a.a.a.c.t.DefaultCodeactToolRegistry   : DefaultCodeactToolRegistry#register - reason=工具注册成功, name=search_web
+2026-01-20T23:53:35.531+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=CodeactTool注册成功, name=search_web
+2026-01-20T23:53:35.531+08:00  INFO --- [           main] c.a.a.a.c.t.DefaultCodeactToolRegistry   : DefaultCodeactToolRegistry#register - reason=工具注册成功, name=search_knowledge
+2026-01-20T23:53:35.531+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=CodeactTool注册成功, name=search_knowledge
+2026-01-20T23:53:35.531+08:00  INFO --- [           main] c.a.a.a.c.t.DefaultCodeactToolRegistry   : DefaultCodeactToolRegistry#register - reason=工具注册成功, name=search_project
+2026-01-20T23:53:35.531+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=CodeactTool注册成功, name=search_project
+2026-01-20T23:53:35.531+08:00  INFO --- [           main] c.a.a.a.c.t.DefaultCodeactToolRegistry   : DefaultCodeactToolRegistry#register - reason=工具注册成功, name=send_success_message
+2026-01-20T23:53:35.531+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=CodeactTool注册成功, name=send_success_message
+2026-01-20T23:53:35.531+08:00  INFO --- [           main] c.a.a.a.c.t.DefaultCodeactToolRegistry   : DefaultCodeactToolRegistry#register - reason=工具注册成功, name=send_error_message
+2026-01-20T23:53:35.531+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=CodeactTool注册成功, name=send_error_message
+2026-01-20T23:53:35.531+08:00  INFO --- [           main] c.a.a.a.c.t.DefaultCodeactToolRegistry   : DefaultCodeactToolRegistry#register - reason=工具注册成功, name=send_notification
+2026-01-20T23:53:35.531+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=CodeactTool注册成功, name=send_notification
+2026-01-20T23:53:35.532+08:00  INFO --- [           main] c.a.a.a.c.t.DefaultCodeactToolRegistry   : DefaultCodeactToolRegistry#register - reason=工具注册成功, name=subscribe_trigger
+2026-01-20T23:53:35.532+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=CodeactTool注册成功, name=subscribe_trigger
+2026-01-20T23:53:35.532+08:00  INFO --- [           main] c.a.a.a.c.t.DefaultCodeactToolRegistry   : DefaultCodeactToolRegistry#register - reason=工具注册成功, name=unsubscribe_trigger
+2026-01-20T23:53:35.532+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=CodeactTool注册成功, name=unsubscribe_trigger
+2026-01-20T23:53:35.532+08:00  INFO --- [           main] c.a.a.a.c.t.DefaultCodeactToolRegistry   : DefaultCodeactToolRegistry#register - reason=工具注册成功, name=list_triggers
+2026-01-20T23:53:35.532+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=CodeactTool注册成功, name=list_triggers
+2026-01-20T23:53:35.532+08:00  INFO --- [           main] c.a.a.a.c.t.DefaultCodeactToolRegistry   : DefaultCodeactToolRegistry#register - reason=工具注册成功, name=get_trigger_detail
+2026-01-20T23:53:35.532+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=CodeactTool注册成功, name=get_trigger_detail
+2026-01-20T23:53:35.532+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build - reason=CodeactTool注册完成, count=11
+2026-01-20T23:53:35.532+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build 创建默认CodeContext: language=PYTHON
+2026-01-20T23:53:35.533+08:00 DEBUG --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build 创建默认RuntimeEnvironmentManager: language=PYTHON
+2026-01-20T23:53:35.535+08:00 DEBUG --- [           main] c.a.a.a.c.e.bridge.AgentToolBridge       : AgentToolBridge#<init> 初始化: 注册了0个工具
+2026-01-20T23:53:35.535+08:00 DEBUG --- [           main] c.a.a.a.c.executor.bridge.StateBridge    : StateBridge#<init> 初始化完成
+2026-01-20T23:53:35.536+08:00  INFO --- [           main] c.a.a.a.core.executor.GraalCodeExecutor  : GraalCodeExecutor#<init> 初始化完成: language=PYTHON, allowIO=false, timeout=30000ms, executableTools=true, customBridgeFactory=false
+2026-01-20T23:53:35.536+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#createCodeactSubAgentInterceptor 创建子Agent拦截器
+2026-01-20T23:53:35.541+08:00  INFO --- [           main] c.a.a.a.a.subagent.CodeactSubAgent       : CodeactSubAgent#<init> 初始化: name=code-generator
+2026-01-20T23:53:35.542+08:00  INFO --- [           main] c.a.a.a.a.subagent.CodeactSubAgent       : CodeactSubAgent#<init> 初始化: name=condition-code-generator
+2026-01-20T23:53:35.542+08:00  INFO --- [           main] c.a.a.a.a.s.CodeactSubAgentInterceptor   : CodeactSubAgentInterceptor#<init> 创建默认代码生成子Agent
+2026-01-20T23:53:35.698+08:00  INFO --- [           main] c.a.a.a.a.s.CodeactSubAgentInterceptor   : CodeactSubAgentInterceptor#<init> 初始化完成: subAgentCount=2
+2026-01-20T23:53:35.699+08:00  INFO --- [           main] c.a.a.a.a.tools.ExecuteCodeTool          : ExecuteCodeTool#<init> 初始化完成
+2026-01-20T23:53:35.700+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build 拦截器分类完成: modelInterceptors=1, toolInterceptors=0
+2026-01-20T23:53:35.701+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build 从拦截器提取工具: interceptor=CodeactSubAgent, toolCount=2
+2026-01-20T23:53:35.711+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build 工具收集完成: interceptorTools=2, regularTools=3, total=6
+2026-01-20T23:53:35.712+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build 设置ModelInterceptors到LlmNode: count=1
+2026-01-20T23:53:35.713+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#build CodeactAgent构建完成
+2026-01-20T23:53:35.713+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=开始罗列已注册的工具
+2026-01-20T23:53:35.713+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=CodeAct阶段工具数量, count=11
+2026-01-20T23:53:35.713+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=CodeAct工具详情, index=1, name=unified_search, description=统一搜索工具，可同时搜索项目、知识库、Web等多个数据源
+2026-01-20T23:53:35.713+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=CodeAct工具详情, index=2, name=search_knowledge, description=搜索团队知识库，包括FAQ、规范、最佳实践等
+2026-01-20T23:53:35.713+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=CodeAct工具详情, index=3, name=send_success_message, description=Send a success message to the IDE console
+2026-01-20T23:53:35.713+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=CodeAct工具详情, index=4, name=search_web, description=执行Web搜索，获取公开互联网信息
+2026-01-20T23:53:35.713+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=CodeAct工具详情, index=5, name=unsubscribe_trigger, description=取消订阅并删除一个触发器
+2026-01-20T23:53:35.713+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=CodeAct工具详情, index=6, name=get_trigger_detail, description=获取指定触发器的详细信息
+2026-01-20T23:53:35.713+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=CodeAct工具详情, index=7, name=send_error_message, description=Send an error message to the IDE console
+2026-01-20T23:53:35.713+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=CodeAct工具详情, index=8, name=search_project, description=搜索项目上下文信息，包括代码、配置、文档等
+2026-01-20T23:53:35.713+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=CodeAct工具详情, index=9, name=send_notification, description=Send a notification message
+2026-01-20T23:53:35.713+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=CodeAct工具详情, index=10, name=subscribe_trigger, description=创建并订阅一个新的触发器
+2026-01-20T23:53:35.713+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=CodeAct工具详情, index=11, name=list_triggers, description=列出所有触发器
+2026-01-20T23:53:35.713+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=React阶段工具数量, count=6
+2026-01-20T23:53:35.713+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=React工具详情, index=1, name=write_code, description=Generate and register a new function with specified name and parameters. IMPORTANT: You MUST provide both 'functionName' and 'parameters' fields. Example: write_code(requirement='calculate sum', functionName='calculate_sum', parameters=['a', 'b'])
+2026-01-20T23:53:35.714+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=React工具详情, index=2, name=write_condition_code, description=Generate and register a condition check function for triggers. This function MUST return a boolean value (True/False). Example: write_condition_code(requirement='check if it is a working day', functionName='check_is_working_day', parameters=['date'])
+2026-01-20T23:53:35.714+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=React工具详情, index=3, name=send_success_message, description=Send a success message to the IDE console
+2026-01-20T23:53:35.714+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=React工具详情, index=4, name=send_error_message, description=Send an error message to the IDE console
+2026-01-20T23:53:35.714+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=React工具详情, index=5, name=send_notification, description=Send a notification message
+2026-01-20T23:53:35.714+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=React工具详情, index=6, name=execute_code, description=Execute a previously generated function by its exact name with matching parameters. CRITICAL: The functionName MUST exactly match the name used in write_code. The 'args' parameter names MUST exactly match the 'parameters' specified in write_code. Example: If you called write_code with functionName='calculate_sum' and parameters=['a', 'b'], then you must call execute_code with functionName='calculate_sum' and args={'a': 10, 'b': 20}. Parameter value types supported: String, Number, Boolean, List, Map/Object.
+2026-01-20T23:53:35.714+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgentBuilder#logRegisteredTools - reason=工具罗列完成
+2026-01-20T23:53:35.714+08:00  INFO --- [           main] c.a.a.agent.autoconfigure.CodeactAgent   : CodeactAgent#<init> 初始化完成: language=PYTHON
+2026-01-20T23:53:35.716+08:00  INFO --- [           main] c.a.a.a.autoconfigure.AgentStaticLoader  : AgentStaticLoader#<init> 初始化 Agent 加载器
+2026-01-20T23:53:35.726+08:00 DEBUG --- [           main] c.a.a.a.autoconfigure.AgentStaticLoader  : AgentStaticLoader#<init> Agent 图结构:
+@startuml CodeactAgent
+skinparam usecaseFontSize 14
+skinparam usecaseStereotypeFontSize 12
+skinparam hexagonFontSize 14
+skinparam hexagonStereotypeFontSize 12
+title "CodeactAgent"
+footer
+
+powered by spring-ai-alibaba
+end footer
+circle start<<input>> as __START__
+circle stop as __END__
+usecase "_AGENT_MODEL_"<<Node>>
+usecase "_AGENT_TOOL_"<<Node>>
+usecase "_AGENT_HOOK_FastIntentReactHook.before"<<Node>>
+usecase "_AGENT_HOOK_UnifiedIntentRecognitionHook.before"<<Node>>
+usecase "_AGENT_HOOK_AfterAgentLearningHook.after"<<Node>>
+usecase "_AGENT_HOOK_ModelInputEvaluationHook-REACT.beforeModel"<<Node>>
+usecase "_AGENT_HOOK_EvaluationPromptInjectionHook-REACT.beforeModel"<<Node>>
+hexagon "check state" as condition1<<Condition>>
+hexagon "check state" as condition2<<Condition>>
+hexagon "check state" as condition3<<Condition>>
+hexagon "check state" as condition4<<Condition>>
+"__START__" -down-> "_AGENT_HOOK_FastIntentReactHook.before"
+"_AGENT_HOOK_FastIntentReactHook.before" .down.> "condition1"
+"condition1" .down.> "_AGENT_TOOL_"
+'"_AGENT_HOOK_FastIntentReactHook.before" .down.> "_AGENT_TOOL_"
+"condition1" .down.> "_AGENT_HOOK_UnifiedIntentRecognitionHook.before"
+'"_AGENT_HOOK_FastIntentReactHook.before" .down.> "_AGENT_HOOK_UnifiedIntentRecognitionHook.before"
+"_AGENT_HOOK_UnifiedIntentRecognitionHook.before" .down.> "condition2"
+"condition2" .down.> "_AGENT_HOOK_AfterAgentLearningHook.after"
+'"_AGENT_HOOK_UnifiedIntentRecognitionHook.before" .down.> "_AGENT_HOOK_AfterAgentLearningHook.after"
+"condition2" .down.> "_AGENT_TOOL_"
+'"_AGENT_HOOK_UnifiedIntentRecognitionHook.before" .down.> "_AGENT_TOOL_"
+"condition2" .down.> "_AGENT_HOOK_ModelInputEvaluationHook-REACT.beforeModel"
+'"_AGENT_HOOK_UnifiedIntentRecognitionHook.before" .down.> "_AGENT_HOOK_ModelInputEvaluationHook-REACT.beforeModel"
+"_AGENT_HOOK_ModelInputEvaluationHook-REACT.beforeModel" -down-> "_AGENT_HOOK_EvaluationPromptInjectionHook-REACT.beforeModel"
+"_AGENT_HOOK_EvaluationPromptInjectionHook-REACT.beforeModel" -down-> "_AGENT_MODEL_"
+"_AGENT_HOOK_AfterAgentLearningHook.after" -down-> "__END__"
+"_AGENT_MODEL_" .down.> "condition3"
+"condition3" .down.> "_AGENT_HOOK_ModelInputEvaluationHook-REACT.beforeModel"
+'"_AGENT_MODEL_" .down.> "_AGENT_HOOK_ModelInputEvaluationHook-REACT.beforeModel"
+"condition3" .down.> "_AGENT_TOOL_"
+'"_AGENT_MODEL_" .down.> "_AGENT_TOOL_"
+"condition3" .down.> "_AGENT_HOOK_AfterAgentLearningHook.after"
+'"_AGENT_MODEL_" .down.> "_AGENT_HOOK_AfterAgentLearningHook.after"
+"_AGENT_TOOL_" .down.> "condition4"
+"condition4" .down.> "_AGENT_HOOK_ModelInputEvaluationHook-REACT.beforeModel"
+'"_AGENT_TOOL_" .down.> "_AGENT_HOOK_ModelInputEvaluationHook-REACT.beforeModel"
+"condition4" .down.> "_AGENT_HOOK_AfterAgentLearningHook.after"
+'"_AGENT_TOOL_" .down.> "_AGENT_HOOK_AfterAgentLearningHook.after"
+@enduml
+
+2026-01-20T23:53:35.726+08:00  INFO --- [           main] c.a.a.a.autoconfigure.AgentStaticLoader  : AgentStaticLoader#<init> 已注册 agent: grayscale_agent
+2026-01-20T23:53:35.734+08:00  INFO --- [           main] c.a.a.a.p.p.a.PermissionAdapterRegistry  : PermissionAdapterRegistry#registerAdapter - registered adapter: system=gov-platform, name=政务服务平台权限适配器
+2026-01-20T23:53:35.734+08:00  INFO --- [           main] c.a.a.a.p.p.a.PermissionAdapterRegistry  : PermissionAdapterRegistry#registerAdapter - registered adapter: system=oa-system, name=OA办公系统权限适配器
+2026-01-20T23:53:35.734+08:00  INFO --- [           main] c.a.a.a.p.p.a.PermissionAdapterRegistry  : PermissionAdapterRegistry initialized with 2 adapters: [gov-platform, oa-system]
+2026-01-20T23:53:35.738+08:00  INFO --- [           main] a.a.p.p.s.InMemoryIdentityMappingService : InMemoryIdentityMappingService#bindIdentity - bound: platformUser=U001, system=oa-system, externalUser=zhang.san@company.com
+2026-01-20T23:53:35.739+08:00  INFO --- [           main] a.a.p.p.s.InMemoryIdentityMappingService : InMemoryIdentityMappingService#bindIdentity - bound: platformUser=U001, system=gov-platform, externalUser=320102199001011234
+2026-01-20T23:53:35.739+08:00  INFO --- [           main] a.a.p.p.s.InMemoryIdentityMappingService : InMemoryIdentityMappingService#bindIdentity - bound: platformUser=U002, system=oa-system, externalUser=li.si@company.com
+2026-01-20T23:53:35.739+08:00  INFO --- [           main] a.a.p.p.s.InMemoryIdentityMappingService : InMemoryIdentityMappingService#bindIdentity - bound: platformUser=U003, system=oa-system, externalUser=wang.wu@company.com
+2026-01-20T23:53:35.739+08:00  INFO --- [           main] a.a.p.p.s.InMemoryIdentityMappingService : InMemoryIdentityMappingService#bindIdentity - bound: platformUser=U003, system=gov-platform, externalUser=leader_001
+2026-01-20T23:53:35.739+08:00  INFO --- [           main] a.a.p.p.s.InMemoryIdentityMappingService : InMemoryIdentityMappingService#bindIdentity - bound: platformUser=U004, system=gov-platform, externalUser=staff_001
+2026-01-20T23:53:35.739+08:00  INFO --- [           main] a.a.p.p.s.InMemoryIdentityMappingService : InMemoryIdentityMappingService#bindIdentity - bound: platformUser=U005, system=oa-system, externalUser=sun.qi@company.com
+2026-01-20T23:53:35.739+08:00  INFO --- [           main] a.a.p.p.s.InMemoryIdentityMappingService : InMemoryIdentityMappingService initialized with demo data
+2026-01-20T23:53:35.743+08:00  INFO --- [           main] .a.a.a.p.c.ParamOptionsAutoConfiguration : ParamOptionsAutoConfiguration - Creating OptionsCache with TTL: 300000ms
+2026-01-20T23:53:35.744+08:00  INFO --- [           main] a.a.a.p.s.DefaultParameterOptionsService : DefaultParameterOptionsService initialized with 3 handlers
+2026-01-20T23:53:35.754+08:00 DEBUG --- [           main] c.a.a.a.autoconfigure.AgentStaticLoader  : AgentStaticLoader#listAgents 列出所有 agent
+2026-01-20T23:53:35.754+08:00  INFO --- [           main] c.a.c.a.a.s.controller.AgentController   : AgentController initialized with 1 dynamic agents: [grayscale_agent]
+2026-01-20T23:53:35.765+08:00  INFO --- [           main] e.e.c.CodeactEvaluationAutoConfiguration : CodeactEvaluationAutoConfiguration#inputRoutingEvaluationHook - reason=创建输入路由评估 Hook
+2026-01-20T23:53:35.765+08:00  INFO --- [           main] e.c.ExperienceExtensionAutoConfiguration : ExperienceExtensionAutoConfiguration#codeExperienceModelHook - reason=creating code experience model hook bean
+2026-01-20T23:53:35.767+08:00  INFO --- [           main] e.c.ExperienceExtensionAutoConfiguration : ExperienceExtensionAutoConfiguration#reactExperienceAgentHook - reason=creating react experience agent hook bean
+2026-01-20T23:53:35.768+08:00  INFO --- [           main] e.c.ExperienceExtensionAutoConfiguration : ExperienceExtensionAutoConfiguration#commonSenseExperienceModelHook - reason=creating common sense prompt model hook bean
+2026-01-20T23:53:35.769+08:00  INFO --- [           main] a.e.s.c.SearchExtensionAutoConfiguration : SearchExtensionAutoConfiguration#searchFacade - reason=creating search facade with 3 providers
+2026-01-20T23:53:35.770+08:00  INFO --- [           main] c.a.a.a.e.s.i.DefaultSearchFacade        : DefaultSearchFacade#init - reason=initialized with 3 providers
+2026-01-20T23:53:35.771+08:00  INFO --- [           main] a.e.s.c.SearchExtensionAutoConfiguration : SearchExtensionAutoConfiguration#searchCodeactTools - reason=开始创建Search工具
+2026-01-20T23:53:35.773+08:00  INFO --- [           main] c.a.a.a.e.s.t.SearchCodeactToolFactory   : SearchCodeactToolFactory#createTools - reason=创建搜索工具成功, providerName=MockBaiduWebSearchProvider, toolName=search_web
+2026-01-20T23:53:35.775+08:00  INFO --- [           main] c.a.a.a.e.s.t.SearchCodeactToolFactory   : SearchCodeactToolFactory#createTools - reason=创建搜索工具成功, providerName=MockKnowledgeStoreSearchProvider, toolName=search_knowledge
+2026-01-20T23:53:35.777+08:00  INFO --- [           main] c.a.a.a.e.s.t.SearchCodeactToolFactory   : SearchCodeactToolFactory#createTools - reason=创建搜索工具成功, providerName=MockProjectContextSearchProvider, toolName=search_project
+2026-01-20T23:53:35.778+08:00  INFO --- [           main] c.a.a.a.e.s.t.SearchCodeactToolFactory   : SearchCodeactToolFactory#createTools - reason=搜索工具创建完成, totalCount=3
+2026-01-20T23:53:35.778+08:00  INFO --- [           main] a.e.s.c.SearchExtensionAutoConfiguration : SearchExtensionAutoConfiguration#searchCodeactTools - reason=Search工具创建完成, count=3
+2026-01-20T23:53:35.778+08:00  INFO --- [           main] a.e.s.c.SearchExtensionAutoConfiguration : SearchExtensionAutoConfiguration#searchCodeactTools - reason=创建Search工具, index=1, name=search_web, description=执行Web搜索，获取公开互联网信息
+2026-01-20T23:53:35.778+08:00  INFO --- [           main] a.e.s.c.SearchExtensionAutoConfiguration : SearchExtensionAutoConfiguration#searchCodeactTools - reason=创建Search工具, index=2, name=search_knowledge, description=搜索团队知识库，包括FAQ、规范、最佳实践等
+2026-01-20T23:53:35.778+08:00  INFO --- [           main] a.e.s.c.SearchExtensionAutoConfiguration : SearchExtensionAutoConfiguration#searchCodeactTools - reason=创建Search工具, index=3, name=search_project, description=搜索项目上下文信息，包括代码、配置、文档等
+2026-01-20T23:53:35.781+08:00  INFO --- [           main] Configuration$ElasticsearchConfiguration : ElasticsearchConfiguration#diagnostics - reason=ElasticsearchClient bean found
+2026-01-20T23:53:35.781+08:00  INFO --- [           main] Configuration$ElasticsearchConfiguration : ElasticsearchConfiguration#diagnostics - reason=EmbeddingModel bean found
+2026-01-20T23:53:35.782+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#diagnostics - Planning module status:
+2026-01-20T23:53:35.783+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration :   - ActionRepository: MybatisPlusActionRepository
+2026-01-20T23:53:35.783+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration :   - ActionProvider: SemanticActionProvider
+2026-01-20T23:53:35.783+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration :   - PlanGenerator: DefaultPlanGenerator
+2026-01-20T23:53:35.783+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration :   - PlanExecutor: DefaultPlanExecutor
+2026-01-20T23:53:35.783+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#planningCodeactTools - reason=creating planning tools list
+2026-01-20T23:53:35.784+08:00  INFO --- [           main] a.p.c.PlanningExtensionAutoConfiguration : PlanningExtensionAutoConfiguration#planningCodeactTools - reason=created planning tools, count=4
+2026-01-20T23:53:36.045+08:00  INFO --- [           main] c.a.a.a.c.c.CodeactCoreAutoConfiguration : CodeactCoreAutoConfiguration#returnSchemaRegistry - reason=创建ReturnSchemaRegistry单例Bean
+2026-01-20T23:53:36.045+08:00  INFO --- [           main] .a.a.a.c.t.s.DefaultReturnSchemaRegistry : DefaultReturnSchemaRegistry#<init> - reason=创建新实例, hashCode=646910575
+2026-01-20T23:53:36.426+08:00  WARN --- [           main] o.s.m.p.s.SyncMcpSamplingProvider        : No sampling methods found
+2026-01-20T23:53:36.427+08:00  WARN --- [           main] o.s.m.p.e.SyncMcpElicitationProvider     : No elicitation methods found
+2026-01-20T23:53:36.452+08:00  INFO --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-01-20T23:53:36.463+08:00  INFO --- [           main] c.a.a.a.start.AssistantAgentApplication  : Started AssistantAgentApplication in 6.071 seconds (process running for 6.66)
+2026-01-20T23:53:36.467+08:00  INFO --- [           main] c.a.a.a.s.config.DemoExperienceConfig    : DemoExperienceConfig#run - reason=Initializing Demo Experiences
+2026-01-20T23:53:36.467+08:00  INFO --- [           main] c.a.a.a.s.config.DemoExperienceConfig    : DemoExperienceConfig#run - reason=Demo Experiences initialization completed
+2026-01-20T23:53:36.467+08:00  INFO --- [           main] c.a.a.a.s.v.ExperienceTestValidator      : ExperienceTestValidator#run - reason=Starting experience module validation
+2026-01-20T23:53:36.624+08:00 DEBUG --- [           main] .p.e.r.ElasticsearchExperienceRepository : ElasticsearchExperienceRepository#count - reason=count completed, count=0
+2026-01-20T23:53:36.664+08:00 DEBUG --- [           main] .p.e.r.ElasticsearchExperienceRepository : ElasticsearchExperienceRepository#countByTypeAndScope - reason=count completed, type=CODE, scope=null, count=0
+2026-01-20T23:53:36.682+08:00 DEBUG --- [           main] .p.e.r.ElasticsearchExperienceRepository : ElasticsearchExperienceRepository#countByTypeAndScope - reason=count completed, type=REACT, scope=null, count=0
+2026-01-20T23:53:36.691+08:00 DEBUG --- [           main] .p.e.r.ElasticsearchExperienceRepository : ElasticsearchExperienceRepository#countByTypeAndScope - reason=count completed, type=COMMON, scope=null, count=0
+2026-01-20T23:53:36.692+08:00  INFO --- [           main] c.a.a.a.s.v.ExperienceTestValidator      : ExperienceTestValidator#testExperienceCount - reason=Experience stats: total=0, code=0, react=0, common=0
+2026-01-20T23:53:36.692+08:00  INFO --- [           main] c.a.a.a.s.v.ExperienceTestValidator      : ExperienceTestValidator#testCommonExperienceQuery - reason=Testing common experience query
+2026-01-20T23:53:36.952+08:00 DEBUG --- [           main] .s.p.e.p.ElasticsearchExperienceProvider : ElasticsearchExperienceProvider#query - reason=query completed, type=COMMON, text=null, count=0
+2026-01-20T23:53:36.952+08:00  INFO --- [           main] c.a.a.a.s.v.ExperienceTestValidator      : ExperienceTestValidator#testCommonExperienceQuery - reason=Found 0 common experiences
+2026-01-20T23:53:36.952+08:00  WARN --- [           main] c.a.a.a.s.v.ExperienceTestValidator      : ExperienceTestValidator#testCommonExperienceQuery - reason=❌ MoLiHong identity experience not found
+2026-01-20T23:53:36.952+08:00  INFO --- [           main] c.a.a.a.s.v.ExperienceTestValidator      : ExperienceTestValidator#testCodeExperienceQuery - reason=Testing code experience query (demo keyword)
+2026-01-20T23:53:36.968+08:00 DEBUG --- [           main] .s.p.e.p.ElasticsearchExperienceProvider : ElasticsearchExperienceProvider#query - reason=query completed, type=CODE, text=null, count=0
+2026-01-20T23:53:36.968+08:00  INFO --- [           main] c.a.a.a.s.v.ExperienceTestValidator      : ExperienceTestValidator#testCodeExperienceQuery - reason=Found 0 demo code experiences
+2026-01-20T23:53:36.969+08:00  WARN --- [           main] c.a.a.a.s.v.ExperienceTestValidator      : ExperienceTestValidator#testCodeExperienceQuery - reason=❌ Demo code experience not found
+2026-01-20T23:53:36.969+08:00  INFO --- [           main] c.a.a.a.s.v.ExperienceTestValidator      : ExperienceTestValidator#testReactExperienceQuery - reason=Testing react experience query
+2026-01-20T23:53:36.979+08:00 DEBUG --- [           main] .s.p.e.p.ElasticsearchExperienceProvider : ElasticsearchExperienceProvider#query - reason=query completed, type=REACT, text=null, count=0
+2026-01-20T23:53:36.980+08:00  INFO --- [           main] c.a.a.a.s.v.ExperienceTestValidator      : ExperienceTestValidator#testReactExperienceQuery - reason=Found 0 react experiences
+2026-01-20T23:53:36.980+08:00  WARN --- [           main] c.a.a.a.s.v.ExperienceTestValidator      : ExperienceTestValidator#testReactExperienceQuery - reason=❌ Ambiguous intent strategy not found
+2026-01-20T23:53:36.980+08:00  INFO --- [           main] c.a.a.a.s.v.ExperienceTestValidator      : ExperienceTestValidator#run - reason=Experience module validation completed
+2026-01-20T23:54:31.072+08:00  INFO --- [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-01-20T23:54:31.072+08:00  INFO --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-01-20T23:54:31.074+08:00  INFO --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+2026-01-20T23:54:31.137+08:00 ERROR --- [nio-8080-exec-1] o.a.c.c.C.[.[.[/].[dispatcherServlet]    : Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: java.lang.IllegalArgumentException: Name for argument of type [java.lang.String] not specified, and parameter name information not available via reflection. Ensure that the compiler uses the '-parameters' flag.] with root cause
+
+java.lang.IllegalArgumentException: Name for argument of type [java.lang.String] not specified, and parameter name information not available via reflection. Ensure that the compiler uses the '-parameters' flag.
+	at org.springframework.web.method.annotation.AbstractNamedValueMethodArgumentResolver.updateNamedValueInfo(AbstractNamedValueMethodArgumentResolver.java:186)
+	at org.springframework.web.method.annotation.AbstractNamedValueMethodArgumentResolver.getNamedValueInfo(AbstractNamedValueMethodArgumentResolver.java:161)
+	at org.springframework.web.method.annotation.AbstractNamedValueMethodArgumentResolver.resolveArgument(AbstractNamedValueMethodArgumentResolver.java:107)
+	at org.springframework.web.method.support.HandlerMethodArgumentResolverComposite.resolveArgument(HandlerMethodArgumentResolverComposite.java:122)
+	at org.springframework.web.method.support.InvocableHandlerMethod.getMethodArgumentValues(InvocableHandlerMethod.java:227)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:181)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:991)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:896)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+	at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:903)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:564)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:195)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:483)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:116)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:398)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1769)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1189)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:658)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+

@@ -52,6 +52,11 @@ public class PlanningExtensionProperties {
     private boolean getActionDetailsEnabled = true;
 
     /**
+     * 是否启用 execute_system_action 工具
+     */
+    private boolean executeSystemActionEnabled = true;
+
+    /**
      * 是否启用 Web API 接口
      */
     private boolean webEnabled = true;
@@ -144,6 +149,14 @@ public class PlanningExtensionProperties {
 
     public void setGetActionDetailsEnabled(boolean getActionDetailsEnabled) {
         this.getActionDetailsEnabled = getActionDetailsEnabled;
+    }
+
+    public boolean isExecuteSystemActionEnabled() {
+        return executeSystemActionEnabled;
+    }
+
+    public void setExecuteSystemActionEnabled(boolean executeSystemActionEnabled) {
+        this.executeSystemActionEnabled = executeSystemActionEnabled;
     }
 
     public boolean isWebEnabled() {

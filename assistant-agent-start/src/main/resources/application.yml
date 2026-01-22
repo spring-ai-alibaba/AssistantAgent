@@ -41,6 +41,15 @@ server:
   port: 8080
 
 # ============================================================================
+# Authentication & JWT Configuration
+# ============================================================================
+auth:
+  jwt:
+    secret: ${JWT_SECRET:assistant-agent-secret-key-for-jwt-token-generation-must-be-long-enough-for-hs256-algorithm}
+    expiration: ${JWT_EXPIRATION:86400000}  # 24 hours (in milliseconds)
+    refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}  # 7 days (in milliseconds)
+
+# ============================================================================
 # DashScope Configuration
 # ============================================================================
 spring.ai.dashscope:
@@ -57,7 +66,7 @@ spring.ai.dashscope:
 # Experience Module - FastIntent disabled to avoid conflict with Planning Intent
 # ============================================================================
 spring.ai.alibaba.codeact.extension.experience:
-  enabled: true
+  enabled: false
   in-memory:
     enabled: false  # Disable InMemory, use Elasticsearch instead
   fast-intent-enabled: false
@@ -76,7 +85,7 @@ spring.ai.alibaba.codeact.extension.experience:
 # Learning Module - with after-agent learning
 # ============================================================================
 spring.ai.alibaba.codeact.extension.learning:
-  enabled: true
+  enabled: false
   online:
     enabled: true
     after-agent:

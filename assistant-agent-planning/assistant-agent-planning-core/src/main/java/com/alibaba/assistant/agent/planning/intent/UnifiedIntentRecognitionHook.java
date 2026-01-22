@@ -220,15 +220,15 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
                             bestMatch.getAction().getActionId(), experienceOpt.get().getId());
                     return handleFastIntentExecution(experienceOpt.get(), bestMatch.getAction(), bestMatch);
                 }
-                // 无 Experience：使用 LLM 进行参数提取和验证
-                logger.info("UnifiedIntentRecognitionHook#beforeAgent - reason=high confidence, using LLM for param extraction, actionId={}, confidence={}",
+                // 无 Experience：直接执行参数收集流程（Planning Direct Execution）
+                logger.info("UnifiedIntentRecognitionHook#beforeAgent - reason=high confidence, using Planning direct execution with param collection, actionId={}, confidence={}",
                         bestMatch.getAction().getActionId(), confidence);
-                return handleLlmParamExtraction(bestMatch, userInput, context, state, config);
+                return handlePlanningDirectExecution(bestMatch, userInput, context, state, config);
             } else if (confidence >= hintThreshold) {
-                // 中等置信度（>=0.7）：也使用 LLM 进行参数提取和验证
-                logger.info("UnifiedIntentRecognitionHook#beforeAgent - reason=medium confidence, using LLM for param extraction, actionId={}, confidence={}",
+                // 中等置信度（>=0.7）：也直接执行参数收集流程
+                logger.info("UnifiedIntentRecognitionHook#beforeAgent - reason=medium confidence, using Planning direct execution with param collection, actionId={}, confidence={}",
                         bestMatch.getAction().getActionId(), confidence);
-                return handleLlmParamExtraction(bestMatch, userInput, context, state, config);
+                return handlePlanningDirectExecution(bestMatch, userInput, context, state, config);
             } else {
                 // 低置信度（<0.7）：放行到正常 ReAct 流程
                 logger.debug("UnifiedIntentRecognitionHook#beforeAgent - reason=confidence < 0.7, defer to normal flow, confidence={}", confidence);
@@ -265,7 +265,7 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
             // 无 Experience：使用 Planning 直接执行
             logger.info("UnifiedIntentRecognitionHook#handleHighConfidence - reason=no experience, using Planning direct execution, actionId={}",
                     action.getActionId());
-            return handlePlanningDirectExecution(match, userInput, context);
+            return handlePlanningDirectExecution(match, userInput, context, state, config);
         }
     }
 
@@ -347,47 +347,61 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
         }
 
         // 构造 AssistantMessage.ToolCall
-        List<AssistantMessage.ToolCall> assistantToolCalls = new ArrayList<>();
+        List<Map<String, Object>> simpleToolCalls = new ArrayList<>();
         for (ExperienceArtifact.ToolCallSpec callSpec : toolCalls) {
             if (callSpec == null || !StringUtils.hasText(callSpec.getToolName())) {
                 continue;
             }
             String toolCallId = "fast_intent_" + UUID.randomUUID().toString().substring(0, 8);
             String argsJson = callSpec.getArguments() != null ? JSON.toJSONString(callSpec.getArguments()) : "{}";
-            assistantToolCalls.add(new AssistantMessage.ToolCall(
-                    toolCallId,
-                    "function",
-                    callSpec.getToolName(),
-                    argsJson
-            ));
+
+            // 🔥 将ToolCall转换为简单Map，避免Jackson序列化时的@class重复问题
+            Map<String, Object> simpleToolCall = new HashMap<>();
+            simpleToolCall.put("id", toolCallId);
+            simpleToolCall.put("type", "function");
+            simpleToolCall.put("name", callSpec.getToolName());
+            simpleToolCall.put("arguments", argsJson);
+            simpleToolCalls.add(simpleToolCall);
         }
 
-        if (assistantToolCalls.isEmpty()) {
+        if (simpleToolCalls.isEmpty()) {
             return CompletableFuture.completedFuture(Map.of());
+        }
+
+        // 使用真正的 AssistantMessage 对象
+        List<AssistantMessage.ToolCall> toolCallList = new ArrayList<>();
+        for (Map<String, Object> tc : simpleToolCalls) {
+            toolCallList.add(new AssistantMessage.ToolCall(
+                    (String) tc.get("id"),
+                    (String) tc.get("type"),
+                    (String) tc.get("name"),
+                    (String) tc.get("arguments")
+            ));
         }
 
         AssistantMessage assistantMessage = AssistantMessage.builder()
                 .content(react != null ? react.getAssistantText() : null)
-                .toolCalls(assistantToolCalls)
+                .toolCalls(toolCallList)
                 .build();
 
-        Map<String, Object> intentState = Map.of(
-                "hit", true,
-                "mode", "fast_intent",
-                "action_id", action.getActionId(),
-                "action_name", action.getActionName(),
-                "experience_id", experience.getId(),
-                "confidence", match.getConfidence()
-        );
+        // 构造状态（使用HashMap避免Jackson序列化时的@class重复问题）
+        Map<String, Object> intentState = new HashMap<>();
+        intentState.put("hit", true);
+        intentState.put("mode", "fast_intent");
+        intentState.put("action_id", action.getActionId());
+        intentState.put("action_name", action.getActionName());
+        intentState.put("experience_id", experience.getId());
+        intentState.put("confidence", match.getConfidence());
 
         logger.info("UnifiedIntentRecognitionHook#handleFastIntentExecution - reason=fast intent executed, actionId={}, expId={}",
                 action.getActionId(), experience.getId());
 
-        return CompletableFuture.completedFuture(Map.of(
-                "messages", List.of(assistantMessage),
-                "jump_to", JumpTo.tool,
-                "unified_intent", intentState
-        ));
+        Map<String, Object> result = new HashMap<>();
+        result.put("messages", List.of(assistantMessage));
+        result.put("jump_to", JumpTo.tool);
+        result.put("unified_intent", intentState);
+
+        return CompletableFuture.completedFuture(result);
     }
 
     /**
@@ -396,7 +410,9 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
     private CompletableFuture<Map<String, Object>> handlePlanningDirectExecution(
             ActionMatch match,
             String userInput,
-            Map<String, Object> context) {
+            Map<String, Object> context,
+            OverAllState state,
+            RunnableConfig config) {
 
         ActionDefinition action = match.getAction();
         logger.info("UnifiedIntentRecognitionHook#handlePlanningDirectExecution - reason=direct execution, actionId={}",
@@ -412,7 +428,7 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
                 // 有缺失的必填参数，生成追问问题
                 logger.info("UnifiedIntentRecognitionHook#handlePlanningDirectExecution - reason=missing required params, count={}, actionId={}",
                         missingRequiredParams.size(), action.getActionId());
-                return handleMissingParameters(action, match, missingRequiredParams);
+                return handleMissingParameters(action, match, missingRequiredParams, state, config);
             }
 
             // 1. 生成执行计划
@@ -424,27 +440,29 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
 
             // 3. 构造响应消息
             String responseText = buildResponseText(action, result);
-            AssistantMessage assistantMessage = new AssistantMessage(responseText);
 
-            // 4. 构造状态
-            Map<String, Object> intentState = Map.of(
-                    "hit", true,
-                    "mode", "planning_direct",
-                    "action_id", action.getActionId(),
-                    "action_name", action.getActionName(),
-                    "plan_id", plan.getPlanId(),
-                    "success", result.isSuccess(),
-                    "confidence", match.getConfidence()
-            );
+            // 4. 构造状态（使用HashMap避免Jackson序列化时的@class重复问题）
+            Map<String, Object> intentState = new HashMap<>();
+            intentState.put("hit", true);
+            intentState.put("mode", "planning_direct");
+            intentState.put("action_id", action.getActionId());
+            intentState.put("action_name", action.getActionName());
+            intentState.put("plan_id", plan.getPlanId());
+            intentState.put("success", result.isSuccess());
+            intentState.put("confidence", match.getConfidence());
 
             logger.info("UnifiedIntentRecognitionHook#handlePlanningDirectExecution - reason=execution completed, planId={}, success={}",
                     plan.getPlanId(), result.isSuccess());
 
-            return CompletableFuture.completedFuture(Map.of(
-                    "messages", List.of(assistantMessage),
-                    "jump_to", JumpTo.end,
-                    "unified_intent", intentState
-            ));
+            // 使用真正的 AssistantMessage 对象
+            AssistantMessage assistantMessage = new AssistantMessage(responseText);
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("messages", List.of(assistantMessage));
+            resultMap.put("jump_to", JumpTo.end);
+            resultMap.put("unified_intent", intentState);
+
+            return CompletableFuture.completedFuture(resultMap);
 
         } catch (Exception e) {
             logger.error("UnifiedIntentRecognitionHook#handlePlanningDirectExecution - reason=execution failed, actionId={}",
@@ -486,7 +504,9 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
     private CompletableFuture<Map<String, Object>> handleMissingParameters(
             ActionDefinition action,
             ActionMatch match,
-            List<ActionParameter> missingParams) {
+            List<ActionParameter> missingParams,
+            OverAllState state,
+            RunnableConfig config) {
 
         // 生成追问问题（询问第一个缺失的必填参数）
         ActionParameter firstMissing = missingParams.get(0);
@@ -495,7 +515,28 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
         logger.info("UnifiedIntentRecognitionHook#handleMissingParameters - reason=asking for param, paramName={}, actionId={}",
                 firstMissing.getName(), action.getActionId());
 
-        AssistantMessage assistantMessage = new AssistantMessage(question);
+        // 🔥 创建并保存参数收集会话到分布式存储
+        String sessionId = extractSessionId(state, config);
+        if (sessionStore != null && sessionId != null) {
+            ParamCollectionSession session = new ParamCollectionSession(sessionId);
+            session.activate(action.getActionId(), action.getActionName(),
+                    match.getConfidence() != null ? match.getConfidence() : 0.0);
+            session.setNextQuestionAndAwait(question,
+                    missingParams.stream().map(ActionParameter::getName).toList());
+            if (match.getExtractedParameters() != null) {
+                session.setCollectedParams(new HashMap<>(match.getExtractedParameters()));
+            }
+            // 从 state 获取 userId
+            if (state != null) {
+                state.value("user_id", String.class).ifPresent(session::setUserId);
+            }
+            saveSession(session);
+            logger.info("UnifiedIntentRecognitionHook#handleMissingParameters - reason=session saved to store, sessionId={}, actionId={}",
+                    sessionId, action.getActionId());
+        } else {
+            logger.warn("UnifiedIntentRecognitionHook#handleMissingParameters - reason=cannot save session, sessionStore={}, sessionId={}",
+                    sessionStore != null ? "available" : "null", sessionId);
+        }
 
         // 构造参数收集状态
         Map<String, Object> paramCollectionState = new HashMap<>();
@@ -504,23 +545,40 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
         paramCollectionState.put("actionName", action.getActionName());
         paramCollectionState.put("awaitingParam", firstMissing.getName());
         paramCollectionState.put("missingParams", missingParams.stream().map(ActionParameter::getName).toList());
-        paramCollectionState.put("collectedParams", match.getExtractedParameters() != null ?
-                match.getExtractedParameters() : Collections.emptyMap());
 
-        Map<String, Object> intentState = Map.of(
-                "hit", true,
-                "mode", "param_collection",
-                "action_id", action.getActionId(),
-                "action_name", action.getActionName(),
-                "confidence", match.getConfidence() != null ? match.getConfidence() : 0.0
-        );
+        // 🔥 创建防御性副本，确保所有值都是简单类型，避免Jackson序列化时的@class重复问题
+        Map<String, Object> simpleCollectedParams = new HashMap<>();
+        if (match.getExtractedParameters() != null) {
+            for (Map.Entry<String, Object> entry : match.getExtractedParameters().entrySet()) {
+                Object value = entry.getValue();
+                // 将复杂对象转换为字符串，保留简单类型
+                if (value != null && !(value instanceof String || value instanceof Number || value instanceof Boolean)) {
+                    simpleCollectedParams.put(entry.getKey(), value.toString());
+                } else {
+                    simpleCollectedParams.put(entry.getKey(), value);
+                }
+            }
+        }
+        paramCollectionState.put("collectedParams", simpleCollectedParams);
 
-        return CompletableFuture.completedFuture(Map.of(
-                "messages", List.of(assistantMessage),
-                "jump_to", JumpTo.end,
-                "unified_intent", intentState,
-                "param_collection", paramCollectionState
-        ));
+        // 构造状态（使用HashMap避免Jackson序列化时的@class重复问题）
+        Map<String, Object> intentState = new HashMap<>();
+        intentState.put("hit", true);
+        intentState.put("mode", "param_collection");
+        intentState.put("action_id", action.getActionId());
+        intentState.put("action_name", action.getActionName());
+        intentState.put("confidence", match.getConfidence() != null ? match.getConfidence() : 0.0);
+
+        // 使用真正的 AssistantMessage 对象
+        AssistantMessage assistantMessage = new AssistantMessage(question);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("messages", List.of(assistantMessage));
+        result.put("jump_to", JumpTo.end);
+        result.put("unified_intent", intentState);
+        result.put("param_collection", paramCollectionState);
+
+        return CompletableFuture.completedFuture(result);
     }
 
     /**
@@ -611,6 +669,7 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
                         session.setNextQuestionAndAwait(result.nextQuestion, result.missingParams);
                         saveSession(session);
 
+                        // 使用真正的 AssistantMessage 对象
                         AssistantMessage assistantMessage = new AssistantMessage(result.nextQuestion);
 
                         return CompletableFuture.completedFuture(Map.of(
@@ -634,7 +693,7 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
 
                     // 执行动作
                     Map<String, Object> context = buildMatchContext(state, config);
-                    return handlePlanningDirectExecution(match, userInput, context);
+                    return handlePlanningDirectExecution(match, userInput, context, state, config);
                 }
             } catch (Exception e) {
                 logger.error("UnifiedIntentRecognitionHook#handleParamCollectionContinuation - reason=LLM call failed", e);
@@ -665,6 +724,7 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
             session.setNextQuestionAndAwait(question, stillMissing.stream().map(ActionParameter::getName).toList());
             saveSession(session);
 
+            // 使用真正的 AssistantMessage 对象
             AssistantMessage assistantMessage = new AssistantMessage(question);
 
             return CompletableFuture.completedFuture(Map.of(
@@ -686,7 +746,7 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
         match.setExtractedParameters(collectedParams);
 
         Map<String, Object> context = buildMatchContext(state, config);
-        return handlePlanningDirectExecution(match, userInput, context);
+        return handlePlanningDirectExecution(match, userInput, context, state, config);
     }
 
     /**
@@ -720,9 +780,9 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
                     match.getExtractedParameters() : Collections.emptyMap();
             List<ActionParameter> missingParams = findMissingRequiredParameters(action, extractedParams);
             if (!missingParams.isEmpty()) {
-                return handleMissingParameters(action, match, missingParams);
+                return handleMissingParameters(action, match, missingParams, state, config);
             }
-            return handlePlanningDirectExecution(match, userInput, context);
+            return handlePlanningDirectExecution(match, userInput, context, state, config);
         }
 
         try {
@@ -747,9 +807,9 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
                         match.getExtractedParameters() : Collections.emptyMap();
                 List<ActionParameter> missingParams = findMissingRequiredParameters(action, extractedParams);
                 if (!missingParams.isEmpty()) {
-                    return handleMissingParameters(action, match, missingParams);
+                    return handleMissingParameters(action, match, missingParams, state, config);
                 }
-                return handlePlanningDirectExecution(match, userInput, context);
+                return handlePlanningDirectExecution(match, userInput, context, state, config);
             }
 
             // 检查是否有 nextQuestion
@@ -772,7 +832,7 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
 
             logger.info("UnifiedIntentRecognitionHook#handleLlmParamExtraction - reason=params complete, executing action, actionId={}",
                     action.getActionId());
-            return handlePlanningDirectExecution(match, userInput, context);
+            return handlePlanningDirectExecution(match, userInput, context, state, config);
 
         } catch (Exception e) {
             logger.error("UnifiedIntentRecognitionHook#handleLlmParamExtraction - reason=LLM call failed, actionId={}",
@@ -782,9 +842,9 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
                     match.getExtractedParameters() : Collections.emptyMap();
             List<ActionParameter> missingParams = findMissingRequiredParameters(action, extractedParams);
             if (!missingParams.isEmpty()) {
-                return handleMissingParameters(action, match, missingParams);
+                return handleMissingParameters(action, match, missingParams, state, config);
             }
-            return handlePlanningDirectExecution(match, userInput, context);
+            return handlePlanningDirectExecution(match, userInput, context, state, config);
         }
     }
 
@@ -874,8 +934,6 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
             OverAllState state,
             RunnableConfig config) {
 
-        AssistantMessage assistantMessage = new AssistantMessage(result.nextQuestion);
-
         // 获取会话ID并创建/保存会话到分布式存储
         String sessionId = extractSessionId(state, config);
         if (sessionStore != null && sessionId != null) {
@@ -895,22 +953,125 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
                     sessionId, action.getActionId());
         }
 
-        Map<String, Object> intentState = Map.of(
-                "hit", true,
-                "mode", "param_collection_llm",
-                "action_id", action.getActionId(),
-                "action_name", action.getActionName(),
-                "confidence", match.getConfidence() != null ? match.getConfidence() : 0.0
-        );
+        // 构造状态（使用HashMap避免Jackson序列化时的@class重复问题）
+        Map<String, Object> intentState = new HashMap<>();
+        intentState.put("hit", true);
+        intentState.put("mode", "param_collection_llm");
+        intentState.put("action_id", action.getActionId());
+        intentState.put("action_name", action.getActionName());
+        intentState.put("confidence", match.getConfidence() != null ? match.getConfidence() : 0.0);
 
         logger.info("UnifiedIntentRecognitionHook#handleNextQuestion - reason=returning nextQuestion, actionId={}, question={}",
                 action.getActionId(), result.nextQuestion);
 
-        return CompletableFuture.completedFuture(Map.of(
-                "messages", List.of(assistantMessage),
-                "jump_to", JumpTo.end,
-                "unified_intent", intentState
-        ));
+        // 使用真正的 AssistantMessage 对象
+        AssistantMessage assistantMessage = new AssistantMessage(result.nextQuestion);
+
+        Map<String, Object> resultMap = new HashMap<>();
+        resultMap.put("messages", List.of(assistantMessage));
+        resultMap.put("jump_to", JumpTo.end);
+        resultMap.put("unified_intent", intentState);
+
+        return CompletableFuture.completedFuture(resultMap);
+    }
+
+    /**
+     * 注入提示让 LLM 使用 plan_action 工具（符合 Code-as-Action）
+     *
+     * <p>此方法用于高置信度意图识别后，引导 LLM 调用 plan_action 工具，
+     * 而不是直接执行动作。这样可以确保：
+     * <ul>
+     *     <li>符合 Code-as-Action 核心流程</li>
+     *     <li>通过 BasePlanningCodeactTool 执行</li>
+     *     <li>可以被 Experience 模块学习</li>
+     *     <li>保持可观测性</li>
+     * </ul>
+     */
+    private CompletableFuture<Map<String, Object>> handleToolBasedHintInjection(
+            ActionMatch match,
+            String userInput) {
+
+        ActionDefinition action = match.getAction();
+        logger.info("UnifiedIntentRecognitionHook#handleToolBasedHintInjection - reason=injecting tool-based hint, actionId={}, confidence={}",
+                action.getActionId(), match.getConfidence());
+
+        // 构造明确的工具调用提示
+        StringBuilder hint = new StringBuilder();
+        hint.append("\n\n【系统指令 - 使用 plan_action 工具】\n");
+        hint.append("检测到用户意图明确匹配预定义动作，请使用 plan_action 工具来处理：\n\n");
+        hint.append("## 动作信息\n");
+        hint.append("- **动作ID**: ").append(action.getActionId()).append("\n");
+        hint.append("- **动作名称**: ").append(action.getActionName()).append("\n");
+        hint.append("- **置信度**: ").append(String.format("%.2f", match.getConfidence())).append("\n");
+        hint.append("- **描述**: ").append(action.getDescription()).append("\n");
+
+        // 如果有提取的参数，提供给 LLM
+        if (match.getExtractedParameters() != null && !match.getExtractedParameters().isEmpty()) {
+            hint.append("\n## 已识别的参数\n");
+            hint.append("```json\n");
+            hint.append(JSON.toJSONString(match.getExtractedParameters(), true));
+            hint.append("\n```\n");
+        }
+
+        // 提供动作的参数定义（帮助 LLM 理解需要哪些参数）
+        if (action.getParameters() != null && !action.getParameters().isEmpty()) {
+            hint.append("\n## 参数定义\n");
+            for (ActionParameter param : action.getParameters()) {
+                hint.append("- **").append(param.getName()).append("**");
+                if (StringUtils.hasText(param.getLabel())) {
+                    hint.append(" (").append(param.getLabel()).append(")");
+                }
+                hint.append(": ");
+                if (StringUtils.hasText(param.getDescription())) {
+                    hint.append(param.getDescription());
+                }
+                if (Boolean.TRUE.equals(param.getRequired())) {
+                    hint.append(" **[必填]**");
+                }
+                if (StringUtils.hasText(param.getPlaceholder())) {
+                    hint.append("\n  - 示例: ").append(param.getPlaceholder());
+                }
+                hint.append("\n");
+            }
+        }
+
+        hint.append("\n## 执行要求\n");
+        hint.append("请使用 **plan_action** 工具，传入以下参数：\n");
+        hint.append("```python\n");
+        hint.append("result = plan_action(\n");
+        hint.append("    action_id=\"").append(action.getActionId()).append("\"\n");
+        if (match.getExtractedParameters() != null && !match.getExtractedParameters().isEmpty()) {
+            match.getExtractedParameters().forEach((key, value) -> {
+                hint.append("    ").append(key).append("=");
+                if (value instanceof String) {
+                    hint.append("\"").append(value).append("\"");
+                } else {
+                    hint.append(value);
+                }
+                hint.append(",\n");
+            });
+        }
+        hint.append("    # 如果有缺失的必填参数，plan_action 会自动引导用户补充\n");
+        hint.append(")\n");
+        hint.append("```\n");
+
+        // 构造状态（使用HashMap避免Jackson序列化时的@class重复问题）
+        Map<String, Object> intentState = new HashMap<>();
+        intentState.put("hit", true);
+        intentState.put("mode", "tool_based_hint");
+        intentState.put("action_id", action.getActionId());
+        intentState.put("action_name", action.getActionName());
+        intentState.put("confidence", match.getConfidence());
+
+        logger.info("UnifiedIntentRecognitionHook#handleToolBasedHintInjection - reason=tool-based hint injected, actionId={}, hintLength={}",
+                action.getActionId(), hint.length());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("system_hint", hint.toString());
+        result.put("jump_to", JumpTo.model);
+        result.put("unified_intent", intentState);
+
+        return CompletableFuture.completedFuture(result);
     }
 
     /**
@@ -946,20 +1107,21 @@ public class UnifiedIntentRecognitionHook extends AgentHook {
 
         hint.append("\n建议：请使用相关工具来执行此动作。\n");
 
-        Map<String, Object> intentState = Map.of(
-                "hit", true,
-                "mode", "hint_injection",
-                "action_id", action.getActionId(),
-                "action_name", action.getActionName(),
-                "confidence", match.getConfidence(),
-                "hint", hint.toString()
-        );
+        // 构造状态（使用HashMap避免Jackson序列化时的@class重复问题）
+        Map<String, Object> intentState = new HashMap<>();
+        intentState.put("hit", true);
+        intentState.put("mode", "hint_injection");
+        intentState.put("action_id", action.getActionId());
+        intentState.put("action_name", action.getActionName());
+        intentState.put("confidence", match.getConfidence());
+        intentState.put("hint", hint.toString());
 
-        return CompletableFuture.completedFuture(Map.of(
-                "system_hint", hint.toString(),
-                "jump_to", JumpTo.model,
-                "unified_intent", intentState
-        ));
+        Map<String, Object> result = new HashMap<>();
+        result.put("system_hint", hint.toString());
+        result.put("jump_to", JumpTo.model);
+        result.put("unified_intent", intentState);
+
+        return CompletableFuture.completedFuture(result);
     }
 
     /**
