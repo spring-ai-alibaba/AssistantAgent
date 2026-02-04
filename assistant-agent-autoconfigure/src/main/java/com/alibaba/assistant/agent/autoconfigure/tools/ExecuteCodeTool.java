@@ -20,6 +20,7 @@ import com.alibaba.assistant.agent.core.context.CodeContext;
 import com.alibaba.assistant.agent.core.executor.GraalCodeExecutor;
 import com.alibaba.assistant.agent.core.model.ExecutionRecord;
 import com.alibaba.assistant.agent.core.model.GeneratedCode;
+import com.alibaba.assistant.agent.core.model.ToolCallRecord;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.agent.tools.ToolContextConstants;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -120,16 +121,16 @@ public class ExecuteCodeTool implements BiFunction<ExecuteCodeTool.Request, Tool
 			if (record.isSuccess()) {
 				logger.info("ExecuteCodeTool#apply 代码执行成功: functionName={}, result={}",
 					request.functionName, record.getResult());
-				return new Response(true, record.getResult(), null, record.getDurationMs());
+				return new Response(true, record.getResult(), null, record.getCallTrace(), record.getDurationMs());
 			} else {
 				logger.error("ExecuteCodeTool#apply 代码执行失败: functionName={}, error={}",
 					request.functionName, record.getErrorMessage());
-				return new Response(false, null, record.getErrorMessage(), record.getDurationMs());
+				return new Response(false, null, record.getErrorMessage(), record.getCallTrace(), record.getDurationMs());
 			}
 
 		} catch (Exception e) {
 			logger.error("ExecuteCodeTool#apply 代码执行异常", e);
-			return new Response(false, null, "Execution error: " + e.getMessage(), 0);
+			return new Response(false, null, "Execution error: " + e.getMessage(), new ArrayList<>(), 0);
 		}
 	}
 
@@ -186,15 +187,17 @@ public class ExecuteCodeTool implements BiFunction<ExecuteCodeTool.Request, Tool
 	public static class Response {
 		public boolean success;
 		public String result;
+		public List<ToolCallRecord> callTrace;
 		public String error;
 		public long durationMs;
 
 		public Response() {
 		}
 
-		public Response(boolean success, String result, String error, long durationMs) {
+		public Response(boolean success, String result, String error, List<ToolCallRecord> callTrace, long durationMs) {
 			this.success = success;
 			this.result = result;
+			this.callTrace = callTrace;
 			this.error = error;
 			this.durationMs = durationMs;
 		}
