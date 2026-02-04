@@ -147,8 +147,8 @@ public class McpDynamicToolFactory implements DynamicCodeactToolFactory {
 		String inputSchema = definition.inputSchema();
 
 		// 类名：使用配置的 server 名称或默认前缀
-		// 归一化后的类名（如 my-mcp-server -> my_mcp_server）
-		String targetClassName = nameNormalizer.normalizeClassName(defaultTargetClassNamePrefix);
+		// 归一化后的类名（如 my-mcp-server -> my_mcp_server_tools）
+		String targetClassName = nameNormalizer.normalizeClassName(defaultTargetClassNamePrefix) + "_tools";
 		String targetClassDescription = defaultTargetClassDescription;
 
 		// 优先检查是否实现了 McpServerAwareToolCallback 接口
@@ -157,7 +157,7 @@ public class McpDynamicToolFactory implements DynamicCodeactToolFactory {
 			String displayName = serverAwareCallback.getServerDisplayName();
 
 			if (serverName != null && !serverName.isEmpty()) {
-				targetClassName = nameNormalizer.normalizeClassName(serverName);
+				targetClassName = nameNormalizer.normalizeClassName(serverName) + "_tools";
 				targetClassDescription = displayName != null ? displayName : serverName;
 				// 使用原始工具名而不是 ToolDefinition 中的名称
 				toolName = serverAwareCallback.getToolName();
@@ -171,7 +171,7 @@ public class McpDynamicToolFactory implements DynamicCodeactToolFactory {
 			for (Map.Entry<String, McpServerSpec> entry : serverSpecs.entrySet()) {
 				McpServerSpec spec = entry.getValue();
 				// 使用 serverSpec 中的名称
-				targetClassName = nameNormalizer.normalizeClassName(spec.getServerName());
+				targetClassName = nameNormalizer.normalizeClassName(spec.getServerName()) + "_tools";
 				targetClassDescription = spec.getDescription();
 				break;  // 目前只支持单个 server，使用第一个
 			}

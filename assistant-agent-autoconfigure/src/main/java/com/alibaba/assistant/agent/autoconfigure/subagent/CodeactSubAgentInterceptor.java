@@ -74,6 +74,18 @@ public class CodeactSubAgentInterceptor extends ModelInterceptor {
 	private final ExperienceExtensionProperties experienceExtensionProperties;
 	private final FastIntentService fastIntentService;
 
+	/**
+	 * 需要从父 agent 传递给子 agent 的 state keys。
+	 * 通过此配置，业务方可以指定需要跨 agent 传递的状态。
+	 */
+	private final List<String> stateKeysToPropagate;
+
+	/**
+	 * 子 Agent 的系统提示词（用于代码生成阶段）。
+	 * 如果设置了此字段，将传递给 CodeGeneratorSubAgent 用于定制代码生成行为。
+	 */
+	private final String subAgentSystemPrompt;
+
 	private CodeactSubAgentInterceptor(Builder builder) {
 		this.systemPrompt = builder.systemPrompt != null ? builder.systemPrompt : DEFAULT_SYSTEM_PROMPT;
 		this.subAgents = new HashMap<>(builder.subAgents);
@@ -84,6 +96,10 @@ public class CodeactSubAgentInterceptor extends ModelInterceptor {
 		this.experienceProvider = builder.experienceProvider;
 		this.experienceExtensionProperties = builder.experienceExtensionProperties;
 		this.fastIntentService = builder.fastIntentService;
+		this.stateKeysToPropagate = builder.stateKeysToPropagate != null
+				? new ArrayList<>(builder.stateKeysToPropagate)
+				: Collections.emptyList();
+		this.subAgentSystemPrompt = builder.subAgentSystemPrompt;
 
 		// 添加默认code-generator和condition-code-generator（对标general-purpose）
 		if (includeDefaultCodeGenerator && builder.defaultModel != null) {
@@ -95,7 +111,8 @@ public class CodeactSubAgentInterceptor extends ModelInterceptor {
 					builder.defaultLanguage,
 					false,  // 不是条件判断函数
 					builder.hooks,
-					builder.returnSchemaRegistry
+					builder.returnSchemaRegistry,
+					builder.subAgentSystemPrompt  // 传递自定义系统提示词
 			);
 			this.subAgents.put("code-generator", codeGenAgent);
 
@@ -107,7 +124,8 @@ public class CodeactSubAgentInterceptor extends ModelInterceptor {
 					builder.defaultLanguage,
 					true,  // 是条件判断函数
 					builder.hooks,
-					builder.returnSchemaRegistry
+					builder.returnSchemaRegistry,
+					builder.subAgentSystemPrompt
 			);
 			this.subAgents.put("condition-code-generator", conditionCodeGenAgent);
 
@@ -115,7 +133,12 @@ public class CodeactSubAgentInterceptor extends ModelInterceptor {
 		}
 
 		// 创建内部 BaseAgentTaskTool（对标 SubAgentInterceptor 创建 TaskTool）
-		BaseAgentTaskTool taskTool = new BaseAgentTaskTool(this.subAgents);
+		// 传入 stateKeysToPropagate，支持将父 agent 的状态传递给子 agent
+		BaseAgentTaskTool taskTool = new BaseAgentTaskTool(this.subAgents, this.stateKeysToPropagate);
+
+		if (!this.stateKeysToPropagate.isEmpty()) {
+			logger.info("CodeactSubAgentInterceptor#<init> 配置状态传递: keys={}", this.stateKeysToPropagate);
+		}
 
 		// 创建WriteCodeTool和WriteConditionCodeTool（委托给 BaseAgentTaskTool）
 		CodeFastIntentSupport codeFastIntentSupport =
@@ -133,6 +156,15 @@ public class CodeactSubAgentInterceptor extends ModelInterceptor {
 
 	/**
 	 * 创建默认代码生成子Agent（对标createGeneralPurposeAgent）
+	 *
+	 * @param model ChatModel 实例
+	 * @param tools CodeactTool 列表
+	 * @param interceptors 拦截器列表
+	 * @param language 编程语言
+	 * @param isCondition 是否为条件判断函数
+	 * @param hooks Hook 列表
+	 * @param returnSchemaRegistry 返回值 Schema 注册表
+	 * @param customSystemPrompt 自定义系统提示词（可选，为 null 时使用默认提示词）
 	 */
 	private BaseAgent createDefaultCodeGeneratorAgent(
 			ChatModel model,
@@ -141,7 +173,8 @@ public class CodeactSubAgentInterceptor extends ModelInterceptor {
 			Language language,
 			boolean isCondition,
 			List<com.alibaba.cloud.ai.graph.agent.hook.Hook> hooks,
-			ReturnSchemaRegistry returnSchemaRegistry) {
+			ReturnSchemaRegistry returnSchemaRegistry,
+			String customSystemPrompt) {
 
 		List<ModelInterceptor> modelInterceptors = new ArrayList<>();
 		if (interceptors != null) {
@@ -153,7 +186,7 @@ public class CodeactSubAgentInterceptor extends ModelInterceptor {
 		}
 
 		if (isCondition) {
-			return CodeGeneratorSubAgent.builder()
+			CodeGeneratorSubAgent.Builder builder = CodeGeneratorSubAgent.builder()
 					.name("condition-code-generator")
 					.description("Generate condition function code that returns boolean")
 					.chatModel(model)
@@ -162,10 +195,14 @@ public class CodeactSubAgentInterceptor extends ModelInterceptor {
 					.modelInterceptors(modelInterceptors)
 					.hooks(hooks)
 					.isCondition(true)
-					.returnSchemaRegistry(returnSchemaRegistry)
-					.build();
+					.returnSchemaRegistry(returnSchemaRegistry);
+
+			if (customSystemPrompt != null && !customSystemPrompt.isEmpty()) {
+				builder.customSystemPrompt(customSystemPrompt);
+			}
+			return builder.build();
 		} else {
-			return CodeGeneratorSubAgent.builder()
+			CodeGeneratorSubAgent.Builder builder = CodeGeneratorSubAgent.builder()
 					.name("code-generator")
 					.description("Generate function code based on requirements")
 					.chatModel(model)
@@ -174,8 +211,12 @@ public class CodeactSubAgentInterceptor extends ModelInterceptor {
 					.modelInterceptors(modelInterceptors)
 					.hooks(hooks)
 					.isCondition(false)
-					.returnSchemaRegistry(returnSchemaRegistry)
-					.build();
+					.returnSchemaRegistry(returnSchemaRegistry);
+
+			if (customSystemPrompt != null && !customSystemPrompt.isEmpty()) {
+				builder.customSystemPrompt(customSystemPrompt);
+			}
+			return builder.build();
 		}
 	}
 
@@ -236,8 +277,25 @@ public class CodeactSubAgentInterceptor extends ModelInterceptor {
 		private ExperienceExtensionProperties experienceExtensionProperties;
 		private FastIntentService fastIntentService;
 
+		/**
+		 * 需要从父 agent 传递给子 agent 的 state keys。
+		 * 通过此配置，业务方可以指定需要跨 agent 传递的状态。
+		 */
+		private List<String> stateKeysToPropagate;
+
+		/**
+		 * 子 Agent 的自定义系统提示词（用于代码生成阶段）。
+		 * 如果设置了此字段，将传递给 CodeGeneratorSubAgent 用于定制代码生成行为。
+		 */
+		private String subAgentSystemPrompt;
+
 		public Builder systemPrompt(String systemPrompt) {
 			this.systemPrompt = systemPrompt;
+			return this;
+		}
+
+		public Builder subAgentSystemPrompt(String systemPrompt) {
+			this.subAgentSystemPrompt = systemPrompt;
 			return this;
 		}
 
@@ -293,6 +351,30 @@ public class CodeactSubAgentInterceptor extends ModelInterceptor {
 
 		public Builder hooks(List<com.alibaba.cloud.ai.graph.agent.hook.Hook> hooks) {
 			this.hooks = hooks;
+			return this;
+		}
+
+		/**
+		 * 配置需要从父 agent 传递给子 agent 的 state keys。
+		 * <p>
+		 * 这是一个通用扩展点，允许业务方将父 agent 的状态传递给 Codeact 子 agent。
+		 *
+		 * @param keys 需要传递的 state key 列表
+		 * @return this builder
+		 */
+		public Builder stateKeysToPropagate(List<String> keys) {
+			this.stateKeysToPropagate = keys;
+			return this;
+		}
+
+		/**
+		 * 配置需要从父 agent 传递给子 agent 的 state keys（可变参数形式）。
+		 *
+		 * @param keys 需要传递的 state keys
+		 * @return this builder
+		 */
+		public Builder stateKeysToPropagate(String... keys) {
+			this.stateKeysToPropagate = Arrays.asList(keys);
 			return this;
 		}
 

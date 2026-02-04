@@ -18,13 +18,17 @@ package com.alibaba.assistant.agent.autoconfigure.subagent;
 import com.alibaba.cloud.ai.graph.CompiledGraph;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.agent.BaseAgent;
+import com.alibaba.cloud.ai.graph.agent.tools.ToolContextConstants;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ToolContext;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -37,6 +41,7 @@ import java.util.function.BiFunction;
  * <li>支持 Map&lt;String, BaseAgent&gt; 而不是 Map&lt;String, ReactAgent&gt;</li>
  * <li>通过 CompiledGraph.invoke() 调用而不是 agent.call()</li>
  * <li>从 OverAllState 中提取结果</li>
+ * <li>支持配置 stateKeysToPropagate，将父 agent 的指定 state 传递给子 agent</li>
  * </ul>
  *
  * @author Assistant Agent Team
@@ -48,8 +53,22 @@ public class BaseAgentTaskTool implements BiFunction<BaseAgentTaskTool.TaskReque
 
 	private final Map<String, BaseAgent> subAgents;
 
+	/**
+	 * 需要从父 agent 的 OverAllState 传递给子 agent 的 state keys 列表。
+	 * <p>
+	 * 这是一个通用扩展点，允许业务方配置需要跨 agent 传递的状态。
+	 */
+	private final List<String> stateKeysToPropagate;
+
 	public BaseAgentTaskTool(Map<String, BaseAgent> subAgents) {
+		this(subAgents, Collections.emptyList());
+	}
+
+	public BaseAgentTaskTool(Map<String, BaseAgent> subAgents, List<String> stateKeysToPropagate) {
 		this.subAgents = subAgents;
+		this.stateKeysToPropagate = stateKeysToPropagate != null
+				? new ArrayList<>(stateKeysToPropagate)
+				: Collections.emptyList();
 	}
 
 	@Override
@@ -71,22 +90,25 @@ public class BaseAgentTaskTool implements BiFunction<BaseAgentTaskTool.TaskReque
 			// 3. Build inputs from description or structured inputs
 			Map<String, Object> inputs;
 			if (request.structuredInputs != null && !request.structuredInputs.isEmpty()) {
-				inputs = request.structuredInputs;
+				inputs = new HashMap<>(request.structuredInputs);
 				logger.info("BaseAgentTaskTool#apply 使用结构化输入: {}", inputs.keySet());
 			} else {
 				inputs = buildInputsFromDescription(request.description);
 				logger.info("BaseAgentTaskTool#apply 从描述解析输入: {}", inputs.keySet());
 			}
 
-			// 4. Invoke the subagent through CompiledGraph
+			// 4. Propagate configured state keys from parent agent
+			propagateParentStateKeys(toolContext, inputs);
+
+			// 5. Invoke the subagent through CompiledGraph
 			CompiledGraph compiledGraph = subAgent.getAndCompileGraph();
 			Optional<OverAllState> resultOpt = compiledGraph.invoke(inputs);
 
-			// 5. Extract result from state
+			// 6. Extract result from state
 			OverAllState resultState = resultOpt.orElseThrow(() ->
 					new IllegalStateException("SubAgent returned empty result"));
 
-			// 6. Try to get generated_code or any string result
+			// 7. Try to get generated_code or any string result
 			String result = resultState.value("generated_code", String.class)
 					.orElseGet(() -> extractAnyStringResult(resultState));
 
@@ -97,6 +119,52 @@ public class BaseAgentTaskTool implements BiFunction<BaseAgentTaskTool.TaskReque
 			String error = "Error executing subagent task: " + e.getMessage();
 			logger.error("BaseAgentTaskTool#apply " + error, e);
 			return error;
+		}
+	}
+
+	/**
+	 * 从父 agent 的 OverAllState 中提取配置的 keys，传递给子 agent。
+	 * <p>
+	 * 这是一个通用扩展点，允许业务方将父 agent 的状态（如评估结果）传递给子 agent。
+	 *
+	 * @param toolContext 工具上下文，包含父 agent 的 OverAllState
+	 * @param inputs 子 agent 的输入 Map，将被追加父 agent 的状态
+	 */
+	private void propagateParentStateKeys(ToolContext toolContext, Map<String, Object> inputs) {
+		if (stateKeysToPropagate.isEmpty()) {
+			return;
+		}
+
+		if (toolContext == null || toolContext.getContext() == null) {
+			logger.debug("BaseAgentTaskTool#propagateParentStateKeys - toolContext 为空，跳过状态传递");
+			return;
+		}
+
+		Object stateObj = toolContext.getContext().get(ToolContextConstants.AGENT_STATE_CONTEXT_KEY);
+		if (!(stateObj instanceof OverAllState)) {
+			logger.debug("BaseAgentTaskTool#propagateParentStateKeys - 父 agent state 不存在或类型不匹配，跳过状态传递");
+			return;
+		}
+
+		OverAllState parentState = (OverAllState) stateObj;
+		int propagatedCount = 0;
+
+		for (String key : stateKeysToPropagate) {
+			Optional<Object> valueOpt = parentState.value(key);
+			if (valueOpt.isPresent()) {
+				Object value = valueOpt.get();
+				inputs.put(key, value);
+				propagatedCount++;
+				logger.debug("BaseAgentTaskTool#propagateParentStateKeys - 传递状态: key={}, valueType={}",
+						key, value.getClass().getSimpleName());
+			} else {
+				logger.debug("BaseAgentTaskTool#propagateParentStateKeys - 状态 key={} 在父 agent 中不存在，跳过", key);
+			}
+		}
+
+		if (propagatedCount > 0) {
+			logger.info("BaseAgentTaskTool#propagateParentStateKeys - 完成状态传递: propagatedCount={}, keys={}",
+					propagatedCount, stateKeysToPropagate);
 		}
 	}
 

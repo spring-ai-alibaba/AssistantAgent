@@ -195,6 +195,12 @@ public class CodeactAgent extends ReactAgent {
 		// Keep reference to ChatModel for code generation
 		private ChatModel chatModel;
 
+		// SubAgent system prompt (for Codeact phase code generation)
+		private String subAgentSystemPrompt;
+
+		// state keys to propagate from parent agent (react phase) to child agent (codeact phase)
+		private List<String> stateKeysToPropagate = new ArrayList<>();
+
 		// GraphLifecycleListeners (用于可观测性)
 		private List<com.alibaba.cloud.ai.graph.GraphLifecycleListener> lifecycleListeners = new ArrayList<>();
 
@@ -245,6 +251,22 @@ public class CodeactAgent extends ReactAgent {
 			return this;
 		}
 
+		/**
+		 * Set state keys to propagate from parent agent (react phase) to child agent (codeact phase)
+		 */
+		public CodeactAgentBuilder stateKeysToPropagate(List<String> keys) {
+			this.stateKeysToPropagate = keys != null ? new ArrayList<>(keys) : new ArrayList<>();
+			return this;
+		}
+
+		/**
+		 * Set state keys to propagate from parent agent (react phase) to child agent (codeact phase), in variable argument form
+		 */
+		public CodeactAgentBuilder stateKeysToPropagate(String... keys) {
+			this.stateKeysToPropagate = new ArrayList<>(Arrays.asList(keys));
+			return this;
+		}
+
 		public CodeactAgentBuilder experienceProvider(ExperienceProvider experienceProvider) {
 			this.experienceProvider = experienceProvider;
 			return this;
@@ -257,6 +279,14 @@ public class CodeactAgent extends ReactAgent {
 
 		public CodeactAgentBuilder fastIntentService(FastIntentService fastIntentService) {
 			this.fastIntentService = fastIntentService;
+			return this;
+		}
+
+		/**
+		 * Set custom system prompt for the Codeact sub-agent (code generation phase).
+		 */
+		public CodeactAgentBuilder subAgentSystemPrompt(String systemPrompt) {
+			this.subAgentSystemPrompt = systemPrompt;
 			return this;
 		}
 
@@ -337,8 +367,8 @@ public class CodeactAgent extends ReactAgent {
 		/**
 		 * Set the ToolRegistryBridgeFactory for customizing ToolRegistryBridge creation.
 		 *
-		 * <p>可用于添加可观测性、任务记录等功能。
-		 * 如果不设置，将使用默认的 ToolRegistryBridge。
+		 * <p>If not set, the default factory will be used which creates standard
+		 * ToolRegistryBridge instances.
 		 *
 		 * @param factory the ToolRegistryBridgeFactory to use
 		 * @return CodeactAgentBuilder instance for chaining
@@ -613,7 +643,7 @@ public class CodeactAgent extends ReactAgent {
 				null, // Will be set by ReactAgent
 				new OverAllState(), // Placeholder
 				this.codeactToolRegistry,  // Pass CodeactTool registry
-				this.toolRegistryBridgeFactory,  // Pass ToolRegistryBridgeFactory for observability
+				this.toolRegistryBridgeFactory,  // Pass custom factory (null will use default)
 				this.allowIO,
 				this.allowNativeAccess,
 				this.executionTimeoutMs
@@ -1005,8 +1035,9 @@ public class CodeactAgent extends ReactAgent {
 				.fastIntentService(this.fastIntentService)
 				.includeDefaultCodeGenerator(true)  // 使用默认代码生成器
 				.hooks(this.subAgentHooks) // Pass sub-agent hooks
-				.returnSchemaRegistry(this.codeactToolRegistry != null ?
-					this.codeactToolRegistry.getReturnSchemaRegistry() : null)
+				.returnSchemaRegistry(this.codeactToolRegistry != null ? this.codeactToolRegistry.getReturnSchemaRegistry() : null)
+				.stateKeysToPropagate(this.stateKeysToPropagate) // 传递需要跨 agent 传递的 state keys
+				.subAgentSystemPrompt(this.subAgentSystemPrompt)
 				.build();
 		}
 	}
