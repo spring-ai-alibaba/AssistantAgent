@@ -30,7 +30,10 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * LLM-based evaluator that uses ChatModel to evaluate criteria
@@ -145,6 +148,9 @@ public class LLMBasedEvaluator implements Evaluator {
 				break;
 			case JSON:
 				prompt.append("(a valid JSON object)\n");
+				break;
+			case LIST:
+				prompt.append("(a JSON array, e.g., [\"item1\", \"item2\"] or [0, 1, 2])\n");
 				break;
 			default:
 				prompt.append("(your evaluation result)\n");
@@ -291,8 +297,11 @@ public class LLMBasedEvaluator implements Evaluator {
 	 * Interpolate template with context values
 	 */
 	protected String interpolateTemplate(String template, CriterionExecutionContext executionContext) {
-		String result = template;
+		if (template == null || template.isEmpty()) {
+			return template;
+		}
 
+		// Build context map only once
 		Map<String, Object> allValues = new HashMap<>();
 		EvaluationContext inputContext = executionContext.getInputContext();
 		if (inputContext != null) {
@@ -316,14 +325,21 @@ public class LLMBasedEvaluator implements Evaluator {
 			}
 		}
 
-		for (Map.Entry<String, Object> entry : allValues.entrySet()) {
-			String placeholder = "{{" + entry.getKey() + "}}";
-			if (result.contains(placeholder)) {
-				result = result.replace(placeholder, formatValue(entry.getValue()));
-			}
-		}
+		// Use regex for single-pass replacement
+		Pattern pattern = Pattern.compile("\\{\\{([^}]+)\\}\\}");
+		Matcher matcher = pattern.matcher(template);
+		StringBuilder sb = new StringBuilder();
 
-		return result;
+		while (matcher.find()) {
+			String key = matcher.group(1);
+			Object value = allValues.get(key);
+			String replacement = formatValue(value);
+			// Escape special characters in replacement string
+			matcher.appendReplacement(sb, Matcher.quoteReplacement(replacement));
+		}
+		matcher.appendTail(sb);
+
+		return sb.toString();
 	}
 
 	/**
@@ -391,9 +407,40 @@ public class LLMBasedEvaluator implements Evaluator {
 					logger.warn("Failed to parse JSON from response: {}", trimmed);
 					return trimmed;
 				}
+			case LIST:
+				try {
+					// Extract JSON array from response if it contains extra text
+					String jsonArray = extractJsonArray(trimmed);
+					return objectMapper.readValue(jsonArray, List.class);
+				} catch (Exception e) {
+					logger.warn("Failed to parse LIST from response: {}", trimmed);
+					// Return empty list on parse failure
+					return java.util.Collections.emptyList();
+				}
 			default:
 				return trimmed;
 		}
+	}
+
+	/**
+	 * Extract JSON array from response text.
+	 * Handles cases where the response contains extra text around the JSON array.
+	 */
+	private String extractJsonArray(String text) {
+		if (text == null || text.isEmpty()) {
+			return "[]";
+		}
+
+		// Find the first '[' and last ']' to extract the JSON array
+		int start = text.indexOf('[');
+		int end = text.lastIndexOf(']');
+
+		if (start != -1 && end != -1 && end > start) {
+			return text.substring(start, end + 1);
+		}
+
+		// If no brackets found, return the original text (let objectMapper handle the error)
+		return text;
 	}
 
 	/**

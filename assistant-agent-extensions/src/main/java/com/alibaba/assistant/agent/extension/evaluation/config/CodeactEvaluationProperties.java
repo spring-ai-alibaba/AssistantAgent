@@ -44,7 +44,7 @@ public class CodeactEvaluationProperties {
 	/**
 	 * 输入路由评估配置
 	 */
-	private EvaluationPointConfig inputRouting = new EvaluationPointConfig(true, "input_routing_suite");
+	private EvaluationPointConfig inputRouting = new EvaluationPointConfig(true, "react-phase-suite");
 
 	/**
 	 * 模型输出评估配置
@@ -54,7 +54,7 @@ public class CodeactEvaluationProperties {
 	/**
 	 * 代码生成输入评估配置（新增）
 	 */
-	private EvaluationPointConfig codeGenerationInput = new EvaluationPointConfig(false, "code_generation_input_suite");
+	private EvaluationPointConfig codeGenerationInput = new EvaluationPointConfig(false, "codeact-phase-suite");
 
 	/**
 	 * 代码执行评估配置

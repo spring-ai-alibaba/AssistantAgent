@@ -16,16 +16,16 @@
 package com.alibaba.assistant.agent.start.config;
 
 import com.alibaba.assistant.agent.autoconfigure.CodeactAgent;
+import com.alibaba.assistant.agent.common.hook.AgentPhase;
+import com.alibaba.assistant.agent.common.hook.HookPhaseUtils;
 import com.alibaba.assistant.agent.common.tools.CodeactTool;
 import com.alibaba.assistant.agent.common.tools.ReplyCodeactTool;
 import com.alibaba.assistant.agent.common.tools.SearchCodeactTool;
 import com.alibaba.assistant.agent.common.tools.TriggerCodeactTool;
 import com.alibaba.assistant.agent.extension.dynamic.mcp.McpDynamicToolFactory;
 import com.alibaba.assistant.agent.extension.dynamic.spi.DynamicToolFactoryContext;
-import com.alibaba.assistant.agent.extension.learning.hook.AfterAgentLearningHook;
 import com.alibaba.assistant.agent.extension.experience.config.ExperienceExtensionProperties;
 import com.alibaba.assistant.agent.extension.experience.fastintent.FastIntentService;
-import com.alibaba.assistant.agent.extension.experience.hook.FastIntentReactHook;
 import com.alibaba.assistant.agent.extension.experience.spi.ExperienceProvider;
 import com.alibaba.assistant.agent.extension.search.tools.SearchCodeactToolFactory;
 import com.alibaba.assistant.agent.extension.search.tools.UnifiedSearchCodeactTool;
@@ -43,6 +43,7 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Codeact Agent 配置类
@@ -224,16 +225,22 @@ public class CodeactAgentConfig {
 
 
 
+	/**
+	 * 注入所有 Hook Bean，通过 @HookPhases 注解自动分类到不同阶段
+	 * 
+	 * <p>Spring 会自动收集所有实现了 Hook 接口的 Bean，包括：
+	 * <ul>
+	 *   <li>评估模块 Hooks（ReactBeforeModelEvaluationHook, CodeactBeforeModelEvaluationHook 等）</li>
+	 *   <li>Prompt 贡献者 Hooks（ReactPromptContributorModelHook, CodeactPromptContributorModelHook 等）</li>
+	 *   <li>学习模块 Hook（AfterAgentLearningHook）</li>
+	 *   <li>快速意图 Hook（FastIntentReactHook）</li>
+	 * </ul>
+	 * 
+	 * <p>每个 Hook 通过 @HookPhases 注解声明自己适用的阶段，
+	 * 在构建 Agent 时使用 HookPhaseUtils.groupByPhase() 自动分类。
+	 */
 	@Autowired(required = false)
-	private AfterAgentLearningHook afterAgentLearningHook;
-
-	@Autowired(required = false)
-	@org.springframework.beans.factory.annotation.Qualifier("reactPhaseEvaluationHooks")
-	private List<Hook> reactPhaseEvaluationHooks;
-
-	@Autowired(required = false)
-	@org.springframework.beans.factory.annotation.Qualifier("codeactPhaseEvaluationHooks")
-	private List<Hook> codeactPhaseEvaluationHooks;
+	private List<Hook> allHooks;
 
 
 	/**
@@ -265,7 +272,6 @@ public class CodeactAgentConfig {
 			@Autowired(required = false) List<TriggerCodeactTool> triggerCodeactTools,
 			@Autowired(required = false) UnifiedSearchCodeactTool unifiedSearchCodeactTool,
 			@Autowired(required = false) ToolCallbackProvider mcpToolCallbackProvider,
-            @Autowired(required = false) FastIntentReactHook fastIntentReactHook,
             @Autowired(required = false) ExperienceProvider experienceProvider,
             @Autowired(required = false) ExperienceExtensionProperties experienceExtensionProperties,
             @Autowired(required = false) FastIntentService fastIntentService) {
@@ -331,35 +337,22 @@ public class CodeactAgentConfig {
 
 
         /*---------------------准备hooks-------------------*/
-        List<Hook> reactHooks = new ArrayList<>();
-        List<Hook> codeactHooks = new ArrayList<>();
+        // 使用 HookPhaseUtils.groupByPhase() 根据 @HookPhases 注解自动分类
+        // 这样 Hook 的阶段由注解自己声明，而不是配置类手动指定
+        Map<AgentPhase, List<Hook>> hooksByPhase = HookPhaseUtils.groupByPhase(allHooks);
+        List<Hook> reactHooks = hooksByPhase.get(AgentPhase.REACT);
+        List<Hook> codeactHooks = hooksByPhase.get(AgentPhase.CODEACT);
 
-        // 注入评估模块 Hooks（由 DefaultEvaluationSuiteConfig 提供）
-        if (reactPhaseEvaluationHooks != null && !reactPhaseEvaluationHooks.isEmpty()) {
-            reactHooks.addAll(reactPhaseEvaluationHooks);
-            logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=注入 React Phase 评估 Hooks, count={}", reactPhaseEvaluationHooks.size());
+        logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=按 @HookPhases 注解自动分类 Hooks, " +
+                "total={}, reactPhase={}, codeactPhase={}",
+                allHooks != null ? allHooks.size() : 0,
+                reactHooks.size(),
+                codeactHooks.size());
+
+        // 打印各阶段 Hook 详情（调试用）
+        if (logger.isDebugEnabled()) {
+            HookPhaseUtils.logHookPhases(allHooks);
         }
-
-        if (codeactPhaseEvaluationHooks != null && !codeactPhaseEvaluationHooks.isEmpty()) {
-            codeactHooks.addAll(codeactPhaseEvaluationHooks);
-            logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=注入 CodeAct Phase 评估 Hooks, count={}", codeactPhaseEvaluationHooks.size());
-        }
-
-
-
-
-
-        // 注入学习模块Hook
-        if (afterAgentLearningHook != null) {
-            reactHooks.add(afterAgentLearningHook);
-            logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=已准备注入AfterAgentLearningHook");
-        }
-
-		// 注入 FastIntent Hook（只在命中时才会跳过LLM；未命中时不做“经验注入”，避免与评估注入重复）
-		if (fastIntentReactHook != null) {
-			reactHooks.add(fastIntentReactHook);
-			logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=已准备注入FastIntentReactHook");
-		}
 
 		CodeactAgent.CodeactAgentBuilder builder = CodeactAgent.builder()
 				.name("CodeactAgent")

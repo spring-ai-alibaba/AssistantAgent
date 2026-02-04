@@ -72,7 +72,7 @@ public class ExperienceEvaluationCriterionProvider implements EvaluationCriterio
             .reasoningPolicy(ReasoningPolicy.NONE)
             .evaluatorType(EvaluatorType.LLM_BASED)
             .evaluatorRef("llm-based")
-            .contextBindings("context.input.userInput")
+            .contextBindings("context.userInput")
             .build();
 
         // 2. 模糊程度判断 Criterion
@@ -97,7 +97,7 @@ public class ExperienceEvaluationCriterionProvider implements EvaluationCriterio
             .reasoningPolicy(ReasoningPolicy.NONE)
             .evaluatorType(EvaluatorType.LLM_BASED)
             .evaluatorRef("llm-based")
-            .contextBindings("context.input.userInput")
+            .contextBindings("userInput")
             .build();
 
         EvaluationCriterion reactExperienceRetrieval = EvaluationCriterionBuilder
@@ -107,7 +107,7 @@ public class ExperienceEvaluationCriterionProvider implements EvaluationCriterio
             .evaluatorType(EvaluatorType.RULE_BASED)
             .evaluatorRef("react_experience_evaluator")
             .dependsOn("enhanced_user_input")
-            .contextBindings("context.input.userInput")
+            .contextBindings("userInput")
             .build();
 
         return List.of(enhancedUserInput, isFuzzy, reactExperienceRetrieval);
@@ -133,7 +133,7 @@ public class ExperienceEvaluationCriterionProvider implements EvaluationCriterio
             .reasoningPolicy(ReasoningPolicy.NONE)
             .evaluatorType(EvaluatorType.LLM_BASED)
             .evaluatorRef("llm-based")
-            .contextBindings("context.input.userInput")
+            .contextBindings("userInput")
             .build();
 
         // 2. purpose 判断 Criterion
@@ -159,7 +159,7 @@ public class ExperienceEvaluationCriterionProvider implements EvaluationCriterio
             .reasoningPolicy(ReasoningPolicy.NONE)
             .evaluatorType(EvaluatorType.LLM_BASED)
             .evaluatorRef("llm-based")
-            .contextBindings("context.input.userInput")
+            .contextBindings("userInput")
             .build();
 
         EvaluationCriterion codeactExperienceRetrieval = EvaluationCriterionBuilder
@@ -169,7 +169,7 @@ public class ExperienceEvaluationCriterionProvider implements EvaluationCriterio
             .evaluatorType(EvaluatorType.RULE_BASED)
             .evaluatorRef("codeact_experience_evaluator")
             .dependsOn("enhanced_user_input")
-            .contextBindings("context.input.userInput")
+            .contextBindings("userInput")
             .build();
 
         return List.of(enhancedUserInput, purpose, codeactExperienceRetrieval);

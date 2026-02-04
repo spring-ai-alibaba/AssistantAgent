@@ -24,6 +24,7 @@ import com.alibaba.assistant.agent.common.tools.definition.DefaultCodeactToolDef
 import com.alibaba.assistant.agent.common.tools.definition.ParameterTree;
 import com.alibaba.assistant.agent.common.tools.definition.ParameterNode;
 import com.alibaba.assistant.agent.common.tools.definition.ParameterType;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -53,6 +54,7 @@ public abstract class AbstractDynamicCodeactTool implements CodeactTool {
 
 	private static final Logger logger = LoggerFactory.getLogger(AbstractDynamicCodeactTool.class);
 
+	@JsonIgnore
 	protected final ObjectMapper objectMapper;
 
 	protected final ToolDefinition toolDefinition;

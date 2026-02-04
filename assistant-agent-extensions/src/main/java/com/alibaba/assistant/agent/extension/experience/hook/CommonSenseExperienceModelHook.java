@@ -1,11 +1,12 @@
 package com.alibaba.assistant.agent.extension.experience.hook;
 
+import com.alibaba.assistant.agent.common.hook.AgentPhase;
+import com.alibaba.assistant.agent.common.hook.HookPhases;
 import com.alibaba.assistant.agent.extension.experience.config.ExperienceExtensionProperties;
 import com.alibaba.assistant.agent.extension.experience.model.Experience;
 import com.alibaba.assistant.agent.extension.experience.model.ExperienceQuery;
 import com.alibaba.assistant.agent.extension.experience.model.ExperienceQueryContext;
 import com.alibaba.assistant.agent.extension.experience.model.ExperienceType;
-import com.alibaba.assistant.agent.extension.experience.model.*;
 import com.alibaba.assistant.agent.extension.experience.spi.ExperienceProvider;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
@@ -16,13 +17,16 @@ import com.alibaba.cloud.ai.graph.agent.hook.ModelHook;
 import com.alibaba.fastjson.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -37,6 +41,7 @@ import java.util.concurrent.CompletableFuture;
  *
  * @author Assistant Agent Team
  */
+@HookPhases(AgentPhase.REACT)
 @HookPositions(HookPosition.BEFORE_MODEL)
 public class CommonSenseExperienceModelHook extends ModelHook {
 

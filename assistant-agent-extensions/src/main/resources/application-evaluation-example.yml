@@ -19,12 +19,12 @@ spring:
             # 输入路由评估配置
             input-routing:
               enabled: true
-              suite-id: input_routing_suite
+              suite-id: react-phase-suite
 
             # 代码生成输入评估配置（新增）
             code-generation-input:
               enabled: false
-              suite-id: code_generation_input_suite
+              suite-id: codeact-phase-suite
 
             # 模型输出评估配置
             model-output:

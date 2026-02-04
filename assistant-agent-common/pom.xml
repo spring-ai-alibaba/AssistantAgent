@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.alibaba.agent.assistant</groupId>
         <artifactId>assistant-agent</artifactId>
-        <version>0.1.2</version>
+        <version>0.1.3-SNAPSHOT</version>
     </parent>
 
     <artifactId>assistant-agent-common</artifactId>

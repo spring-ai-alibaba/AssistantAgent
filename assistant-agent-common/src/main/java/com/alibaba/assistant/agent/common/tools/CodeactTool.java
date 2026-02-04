@@ -18,7 +18,11 @@ package com.alibaba.assistant.agent.common.tools;
 import com.alibaba.assistant.agent.common.tools.definition.CodeactToolDefinition;
 import com.alibaba.assistant.agent.common.tools.definition.ParameterTree;
 import com.alibaba.assistant.agent.common.tools.definition.ReturnSchema;
+import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.lang.Nullable;
+
+import java.util.Optional;
 
 /**
  * CodeAct 工具接口 - 扩展 Spring AI 的 ToolCallback。
@@ -110,6 +114,33 @@ public interface CodeactTool extends ToolCallback {
 			return definition.declaredReturnSchema();
 		}
 		return null;
+	}
+
+	// ============ ToolContext 便捷方法 ============
+
+	/**
+	 * 从 ToolContext 中获取 threadId。
+	 *
+	 * <p>threadId 来自 RunnableConfig.threadId()。
+	 *
+	 * @param toolContext 工具上下文
+	 * @return threadId，不存在时返回 empty
+	 */
+	default Optional<String> getThreadId(@Nullable ToolContext toolContext) {
+		return ToolContextHelper.getThreadId(toolContext);
+	}
+
+	/**
+	 * 从 ToolContext 的 metadata 中获取指定值。
+	 *
+	 * <p>从 RunnableConfig.metadata(key) 获取。
+	 *
+	 * @param toolContext 工具上下文
+	 * @param key metadata key
+	 * @return 值，不存在时返回 empty
+	 */
+	default Optional<String> getFromMetadata(@Nullable ToolContext toolContext, String key) {
+		return ToolContextHelper.getFromMetadata(toolContext, key);
 	}
 
 }

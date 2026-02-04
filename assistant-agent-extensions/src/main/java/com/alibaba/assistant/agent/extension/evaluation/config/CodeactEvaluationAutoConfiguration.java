@@ -15,7 +15,7 @@
  */
 package com.alibaba.assistant.agent.extension.evaluation.config;
 
-import com.alibaba.assistant.agent.extension.evaluation.hook.InputRoutingEvaluationHook;
+import com.alibaba.assistant.agent.extension.evaluation.hook.BeforeAgentEvaluationHook;
 import com.alibaba.assistant.agent.evaluation.DefaultEvaluationService;
 import com.alibaba.assistant.agent.evaluation.EvaluationService;
 import org.slf4j.Logger;
@@ -28,7 +28,7 @@ import org.springframework.context.annotation.Configuration;
 
 /**
  * Codeact Evaluation 自动配置类
- * 负责创建 EvaluationService、ContextFactory、ResultAttacher 以及各个 Hook
+ * 负责创建 EvaluationService、ContextFactory 以及各个 Hook
  *
  * @author Assistant Agent Team
  */
@@ -60,16 +60,6 @@ public class CodeactEvaluationAutoConfiguration {
 	}
 
 	/**
-	 * 提供 CodeactEvaluationResultAttacher Bean
-	 */
-	@Bean
-	@ConditionalOnMissingBean
-	public CodeactEvaluationResultAttacher codeactEvaluationResultAttacher() {
-		log.info("CodeactEvaluationAutoConfiguration#codeactEvaluationResultAttacher - reason=创建 EvaluationResultAttacher");
-		return new CodeactEvaluationResultAttacher();
-	}
-
-	/**
 	 * 输入路由评估 Hook
 	 */
 	@Bean
@@ -78,12 +68,20 @@ public class CodeactEvaluationAutoConfiguration {
 			name = "enabled",
 			havingValue = "true"
 	)
-	public InputRoutingEvaluationHook inputRoutingEvaluationHook(
+	public BeforeAgentEvaluationHook inputRoutingEvaluationHook(
 			EvaluationService evaluationService,
 			CodeactEvaluationContextFactory contextFactory,
-			CodeactEvaluationResultAttacher resultAttacher,
 			CodeactEvaluationProperties properties) {
 		log.info("CodeactEvaluationAutoConfiguration#inputRoutingEvaluationHook - reason=创建输入路由评估 Hook");
-		return new InputRoutingEvaluationHook(evaluationService, contextFactory, resultAttacher, properties);
+
+		return BeforeAgentEvaluationHook.builder(
+						evaluationService,
+						properties.getInputRouting().getSuiteId())
+				.contextBuilder((state, config) -> contextFactory.createInputRoutingContext(state, config))
+				.enabled(properties.getInputRouting().isEnabled())
+				.async(properties.isAsync())
+				.timeoutMs(properties.getTimeoutMs())
+				.order(100)
+				.build();
 	}
 }

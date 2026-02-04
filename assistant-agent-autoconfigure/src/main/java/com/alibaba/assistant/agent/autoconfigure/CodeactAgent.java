@@ -23,6 +23,7 @@ import com.alibaba.assistant.agent.core.executor.RuntimeEnvironmentManager;
 import com.alibaba.assistant.agent.core.executor.python.PythonEnvironmentManager;
 import com.alibaba.assistant.agent.core.tool.CodeactToolRegistry;
 import com.alibaba.assistant.agent.core.tool.DefaultCodeactToolRegistry;
+import com.alibaba.assistant.agent.core.tool.ToolRegistryBridgeFactory;
 import com.alibaba.assistant.agent.core.tool.schema.ReturnSchemaRegistry;
 import com.alibaba.assistant.agent.extension.experience.config.ExperienceExtensionProperties;
 import com.alibaba.assistant.agent.extension.experience.fastintent.FastIntentService;
@@ -174,6 +175,9 @@ public class CodeactAgent extends ReactAgent {
 		// ReturnSchemaRegistry (进程内单例)
 		private ReturnSchemaRegistry returnSchemaRegistry;
 
+		// ToolRegistryBridgeFactory (用于自定义 ToolRegistryBridge)
+		private ToolRegistryBridgeFactory toolRegistryBridgeFactory;
+
 		// CodeactTool support (新机制)
 		private List<CodeactTool> codeactTools = new ArrayList<>();
 
@@ -190,6 +194,12 @@ public class CodeactAgent extends ReactAgent {
 
 		// Keep reference to ChatModel for code generation
 		private ChatModel chatModel;
+
+		// SubAgent system prompt (for Codeact phase code generation)
+		private String subAgentSystemPrompt;
+
+		// state keys to propagate from parent agent (react phase) to child agent (codeact phase)
+		private List<String> stateKeysToPropagate = new ArrayList<>();
 
 		public CodeactAgentBuilder() {
 			super();
@@ -238,6 +248,22 @@ public class CodeactAgent extends ReactAgent {
 			return this;
 		}
 
+		/**
+		 * Set state keys to propagate from parent agent (react phase) to child agent (codeact phase)
+		 */
+		public CodeactAgentBuilder stateKeysToPropagate(List<String> keys) {
+			this.stateKeysToPropagate = keys != null ? new ArrayList<>(keys) : new ArrayList<>();
+			return this;
+		}
+
+		/**
+		 * Set state keys to propagate from parent agent (react phase) to child agent (codeact phase), in variable argument form
+		 */
+		public CodeactAgentBuilder stateKeysToPropagate(String... keys) {
+			this.stateKeysToPropagate = new ArrayList<>(Arrays.asList(keys));
+			return this;
+		}
+
 		public CodeactAgentBuilder experienceProvider(ExperienceProvider experienceProvider) {
 			this.experienceProvider = experienceProvider;
 			return this;
@@ -250,6 +276,14 @@ public class CodeactAgent extends ReactAgent {
 
 		public CodeactAgentBuilder fastIntentService(FastIntentService fastIntentService) {
 			this.fastIntentService = fastIntentService;
+			return this;
+		}
+
+		/**
+		 * Set custom system prompt for the Codeact sub-agent (code generation phase).
+		 */
+		public CodeactAgentBuilder subAgentSystemPrompt(String systemPrompt) {
+			this.subAgentSystemPrompt = systemPrompt;
 			return this;
 		}
 
@@ -324,6 +358,20 @@ public class CodeactAgent extends ReactAgent {
 		 */
 		public CodeactAgentBuilder returnSchemaRegistry(ReturnSchemaRegistry registry) {
 			this.returnSchemaRegistry = registry;
+			return this;
+		}
+
+		/**
+		 * Set the ToolRegistryBridgeFactory for customizing ToolRegistryBridge creation.
+		 *
+		 * <p>If not set, the default factory will be used which creates standard
+		 * ToolRegistryBridge instances.
+		 *
+		 * @param factory the ToolRegistryBridgeFactory to use
+		 * @return CodeactAgentBuilder instance for chaining
+		 */
+		public CodeactAgentBuilder toolRegistryBridgeFactory(ToolRegistryBridgeFactory factory) {
+			this.toolRegistryBridgeFactory = factory;
 			return this;
 		}
 
@@ -478,6 +526,11 @@ public class CodeactAgent extends ReactAgent {
 				}
 			}
 
+			if (this.toolRegistryBridgeFactory != null) {
+				logger.info("CodeactAgentBuilder#build 使用自定义ToolRegistryBridgeFactory: {}",
+						this.toolRegistryBridgeFactory.getClass().getSimpleName());
+			}
+
 			// 处理 CodeactTool (新机制)
 			if (!this.codeactTools.isEmpty()) {
 				logger.info("CodeactAgentBuilder#build - reason=开始注册CodeactTool, count={}", this.codeactTools.size());
@@ -509,6 +562,7 @@ public class CodeactAgent extends ReactAgent {
 				null, // Will be set by ReactAgent
 				new OverAllState(), // Placeholder
 				this.codeactToolRegistry,  // Pass CodeactTool registry
+				this.toolRegistryBridgeFactory,  // Pass custom factory (null will use default)
 				this.allowIO,
 				this.allowNativeAccess,
 				this.executionTimeoutMs
@@ -869,19 +923,21 @@ public class CodeactAgent extends ReactAgent {
 			}
 
 			return CodeactSubAgentInterceptor.builder()
-				.defaultModel(codeGenModel)
-				.defaultCodeactTools(this.codeactTools)
-				.defaultLanguage(language)
-				.codeContext(this.codeContext)
-				.environmentManager(this.environmentManager)
-				.experienceProvider(this.experienceProvider)
-				.experienceExtensionProperties(this.experienceExtensionProperties)
-				.fastIntentService(this.fastIntentService)
-				.includeDefaultCodeGenerator(true)  // 使用默认代码生成器
-				.hooks(this.subAgentHooks) // Pass sub-agent hooks
-				.returnSchemaRegistry(this.codeactToolRegistry != null ?
-					this.codeactToolRegistry.getReturnSchemaRegistry() : null)
-				.build();
+					.defaultModel(codeGenModel)
+					.defaultCodeactTools(this.codeactTools)
+					.defaultLanguage(language)
+					.codeContext(this.codeContext)
+					.environmentManager(this.environmentManager)
+					.experienceProvider(this.experienceProvider)
+					.experienceExtensionProperties(this.experienceExtensionProperties)
+					.fastIntentService(this.fastIntentService)
+					.includeDefaultCodeGenerator(true)  // 使用默认代码生成器
+					.hooks(this.subAgentHooks) // Pass sub-agent hooks
+					.stateKeysToPropagate(this.stateKeysToPropagate) // 传递需要跨 agent 传递的 state keys
+					.returnSchemaRegistry(this.codeactToolRegistry != null ?
+							this.codeactToolRegistry.getReturnSchemaRegistry() : null)
+					.subAgentSystemPrompt(this.subAgentSystemPrompt)
+					.build();
 		}
 	}
 }

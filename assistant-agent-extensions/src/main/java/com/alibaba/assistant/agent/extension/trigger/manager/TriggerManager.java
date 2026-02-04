@@ -23,6 +23,7 @@ import com.alibaba.assistant.agent.extension.trigger.model.TriggerExecutionRecor
 import com.alibaba.assistant.agent.extension.trigger.model.TriggerStatus;
 import com.alibaba.assistant.agent.extension.trigger.repository.TriggerExecutionLogRepository;
 import com.alibaba.assistant.agent.extension.trigger.repository.TriggerRepository;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,15 +45,19 @@ public class TriggerManager {
 
 	private static final Logger log = LoggerFactory.getLogger(TriggerManager.class);
 
+	@JsonIgnore
 	private final TriggerRepository triggerRepository;
 
+	@JsonIgnore
 	private final TriggerExecutionLogRepository executionLogRepository;
 
+	@JsonIgnore
 	private final ExecutionBackend executionBackend;
 
 	/**
 	 * 触发器ID到后端任务ID的映射
 	 */
+	@JsonIgnore
 	private final Map<String, String> triggerToBackendTaskMapping = new ConcurrentHashMap<>();
 
 	public TriggerManager(TriggerRepository triggerRepository, TriggerExecutionLogRepository executionLogRepository,

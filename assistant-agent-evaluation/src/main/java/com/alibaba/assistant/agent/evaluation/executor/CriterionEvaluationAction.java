@@ -19,6 +19,7 @@ import com.alibaba.assistant.agent.evaluation.aggregation.BatchAggregationStrate
 import com.alibaba.assistant.agent.evaluation.aggregation.BatchAggregationStrategyRegistry;
 import com.alibaba.assistant.agent.evaluation.evaluator.Evaluator;
 import com.alibaba.assistant.agent.evaluation.evaluator.EvaluatorRegistry;
+import com.alibaba.assistant.agent.evaluation.model.ConditionalExecutionConfig;
 import com.alibaba.assistant.agent.evaluation.model.CriterionBatchingConfig;
 import com.alibaba.assistant.agent.evaluation.model.CriterionExecutionContext;
 import com.alibaba.assistant.agent.evaluation.model.CriterionResult;
@@ -92,6 +93,18 @@ public class CriterionEvaluationAction implements Function<OverAllState, Map<Str
 
             // Build dependency results map from individual state keys
             Map<String, CriterionResult> dependencyResults = buildDependencyResults(state);
+
+            // Check conditional execution configuration
+            ConditionalExecutionConfig conditionalConfig = criterion.getConditionalExecution();
+            if (conditionalConfig != null) {
+                CriterionResult skipResult = checkConditionalExecution(conditionalConfig, dependencyResults);
+                if (skipResult != null) {
+                    // Condition not met, return skipped result
+                    logger.info("Criterion '{}' skipped: {}", criterion.getName(), conditionalConfig.getSkipReason());
+                    return buildSkippedResultUpdates(skipResult);
+                }
+                logger.debug("Conditional execution check passed for criterion: {}", criterion.getName());
+            }
 
             // Check if batching is enabled
             CriterionBatchingConfig batchingConfig = criterion.getBatchingConfig();
@@ -447,5 +460,109 @@ public class CriterionEvaluationAction implements Function<OverAllState, Map<Str
 
         // No evaluator found
         return null;
+    }
+
+    // ========== Conditional Execution Support ==========
+
+    /**
+     * Check if the conditional execution condition is satisfied.
+     * 
+     * @param config the conditional execution configuration
+     * @param dependencyResults results from dependent criteria
+     * @return null if condition is satisfied (should continue execution),
+     *         or a CriterionResult with SKIPPED status if condition is not met
+     */
+    private CriterionResult checkConditionalExecution(ConditionalExecutionConfig config,
+                                                       Map<String, CriterionResult> dependencyResults) {
+        String depCriterion = config.getDependsOnCriterion();
+        
+        if (depCriterion == null || depCriterion.isEmpty()) {
+            logger.warn("Conditional execution configured for '{}' but dependsOnCriterion is not set",
+                criterion.getName());
+            return null; // Proceed with execution if misconfigured
+        }
+
+        CriterionResult depResult = dependencyResults.get(depCriterion);
+        
+        if (depResult == null) {
+            logger.warn("Dependency criterion '{}' not found for conditional execution of '{}'",
+                depCriterion, criterion.getName());
+            // Dependency not found - return skipped result
+            return buildSkippedResult(config, "Dependency criterion not found: " + depCriterion);
+        }
+
+        // Check if dependency completed successfully
+        if (depResult.getStatus() == CriterionStatus.ERROR || 
+            depResult.getStatus() == CriterionStatus.TIMEOUT) {
+            logger.warn("Dependency criterion '{}' did not complete successfully (status: {}), skipping '{}'",
+                depCriterion, depResult.getStatus(), criterion.getName());
+            return buildSkippedResult(config, 
+                "Dependency criterion " + depCriterion + " did not complete successfully");
+        }
+
+        // Get the actual value from dependency result
+        Object actualValue = depResult.getValue();
+        
+        // Check if condition is satisfied
+        if (config.matches(actualValue)) {
+            // Condition satisfied, return null to continue execution
+            logger.debug("Conditional execution satisfied for '{}': {} (actual: {})",
+                criterion.getName(), config.getConditionDescription(), actualValue);
+            return null;
+        }
+
+        // Condition not satisfied, return skipped result
+        String skipReason = config.getSkipReason();
+        if (skipReason == null || skipReason.isEmpty()) {
+            skipReason = String.format("Condition not met: %s (actual value: %s)",
+                config.getConditionDescription(), actualValue);
+        }
+        
+        logger.debug("Conditional execution not satisfied for '{}': expected {}, actual: {}",
+            criterion.getName(), config.getConditionDescription(), actualValue);
+        
+        return buildSkippedResult(config, skipReason);
+    }
+
+    /**
+     * Build a skipped result with the configured default value
+     */
+    private CriterionResult buildSkippedResult(ConditionalExecutionConfig config, String reason) {
+        CriterionResult result = new CriterionResult();
+        result.setCriterionName(criterion.getName());
+        result.setStatus(CriterionStatus.SKIPPED);
+        result.setValue(config.getDefaultValue());
+        result.setReason(reason);
+        result.setStartTimeMillis(System.currentTimeMillis());
+        result.setEndTimeMillis(System.currentTimeMillis());
+        
+        // Add metadata about the skip
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("skippedByCondition", true);
+        metadata.put("conditionCriterion", config.getDependsOnCriterion());
+        metadata.put("conditionDescription", config.getConditionDescription());
+        result.setMetadata(metadata);
+        
+        return result;
+    }
+
+    /**
+     * Build state updates map for a skipped result
+     */
+    private Map<String, Object> buildSkippedResultUpdates(CriterionResult result) {
+        Map<String, Object> updates = new HashMap<>();
+        
+        updates.put(criterion.getName() + "_result", result);
+        updates.put(criterion.getName() + "_status", result.getStatus().toString());
+        updates.put(criterion.getName() + "_completed", true);
+        updates.put(criterion.getName() + "_skipped", true);
+        updates.put("lastExecuted", criterion.getName());
+        updates.put("timestamp", System.currentTimeMillis());
+        
+        if (result.getValue() != null) {
+            updates.put(criterion.getName() + "_value", result.getValue());
+        }
+        
+        return updates;
     }
 }

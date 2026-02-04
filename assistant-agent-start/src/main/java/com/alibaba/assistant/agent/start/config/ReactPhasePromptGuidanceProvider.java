@@ -15,12 +15,14 @@
  */
 package com.alibaba.assistant.agent.start.config;
 
-import com.alibaba.assistant.agent.extension.evaluation.promptbuilder.EvaluationPromptGuidanceProvider;
+import com.alibaba.assistant.agent.evaluation.model.EvaluationResult;
+import com.alibaba.assistant.agent.extension.prompt.EvaluationBasedPromptContributor;
+import com.alibaba.assistant.agent.prompt.PromptContribution;
+import com.alibaba.assistant.agent.prompt.PromptContributorContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.stereotype.Component;
-
-import java.util.Map;
 
 /**
  * React 阶段 Prompt 指导提供者
@@ -31,34 +33,39 @@ import java.util.Map;
  *   <li>is_fuzzy=清晰：按照用户的要求进行操作</li>
  * </ul>
  *
+ * <p><b>实现说明</b>：由于当前 Hook 机制的限制（{@code PromptContributorModelHook}，
+ * 返回的 updates 只能更新 OverAllState，而 {@code AgentLlmNode} 的 systemMessage 来自构建时的固定值，
+ * 无法通过 {@code systemTextToAppend} 修改 systemMessage。
+ * <p>因此，本实现采用 {@code messagesToAppend} 方式，将指导内容作为 Message 追加到对话历史中。
+ * Hook 会将其转换为 AssistantMessage + ToolResponseMessage 的形式注入，LLM 会将其作为上下文信息理解。
+ *
  * @author Assistant Agent Team
  * @since 1.0.0
  */
 @Component
-public class ReactPhasePromptGuidanceProvider implements EvaluationPromptGuidanceProvider {
+public class ReactPhasePromptGuidanceProvider extends EvaluationBasedPromptContributor {
 
     private static final Logger log = LoggerFactory.getLogger(ReactPhasePromptGuidanceProvider.class);
 
-    @Override
-    public String getPhase() {
-        return "REACT";
+    private static final String CRITERION_IS_FUZZY = "is_fuzzy";
+    private static final String SUITE_ID = "react-phase-suite";
+
+    public ReactPhasePromptGuidanceProvider() {
+        super("ReactPhasePromptGuidanceProvider", SUITE_ID, 10);
     }
 
     @Override
-    public int getPriority() {
-        return 10;
-    }
-
-    @Override
-    public boolean shouldHandle(Map<String, String> evaluationResults) {
+    protected boolean shouldContributeBasedOnResult(EvaluationResult result, PromptContributorContext context) {
         // 只要有 is_fuzzy 评估结果就处理
-        return evaluationResults.containsKey("is_fuzzy");
+        return result.getCriterionResult(CRITERION_IS_FUZZY) != null;
     }
 
     @Override
-    public String generateGuidance(Map<String, String> evaluationResults) {
-        String isFuzzy = evaluationResults.get("is_fuzzy");
-        log.info("ReactPhasePromptGuidanceProvider#generateGuidance - reason=生成React阶段指导, is_fuzzy={}", isFuzzy);
+    protected PromptContribution generatePrompt(EvaluationResult result, PromptContributorContext context) {
+        Object isFuzzyValue = getCriterionValue(result, CRITERION_IS_FUZZY).orElse(null);
+        String isFuzzy = isFuzzyValue != null ? isFuzzyValue.toString() : null;
+
+        log.info("ReactPhasePromptGuidanceProvider#generatePrompt - reason=生成React阶段指导, is_fuzzy={}", isFuzzy);
 
         StringBuilder sb = new StringBuilder();
         sb.append("\n【React阶段执行指导】\n\n");
@@ -78,11 +85,16 @@ public class ReactPhasePromptGuidanceProvider implements EvaluationPromptGuidanc
             sb.append("2. 无需额外澄清，直接执行\n");
             sb.append("3. 高效完成任务，给出清晰的结果反馈\n");
         } else {
-            // 未知值，返回 null 表示不生成指导
-            return null;
+            // 未知值，返回空
+            return PromptContribution.empty();
         }
 
         sb.append("\n【React阶段指导结束】\n");
-        return sb.toString();
+
+        // 由于当前 Hook 机制限制，无法通过 systemTextToAppend 修改 systemMessage
+        // 改为使用 messagesToAppend，Hook 会将其转换为 AssistantMessage + ToolResponseMessage 注入
+        return PromptContribution.builder()
+                .append(new UserMessage(sb.toString()))
+                .build();
     }
 }

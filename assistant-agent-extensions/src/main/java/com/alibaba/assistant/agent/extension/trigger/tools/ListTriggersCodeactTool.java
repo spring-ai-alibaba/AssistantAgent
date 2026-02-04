@@ -25,6 +25,7 @@ import com.alibaba.assistant.agent.common.tools.definition.DefaultCodeactToolDef
 import com.alibaba.assistant.agent.common.tools.definition.ParameterTree;
 import com.alibaba.assistant.agent.extension.trigger.manager.TriggerManager;
 import com.alibaba.assistant.agent.extension.trigger.model.TriggerDefinition;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +47,7 @@ public class ListTriggersCodeactTool implements TriggerCodeactTool {
 
 	private static final Logger log = LoggerFactory.getLogger(ListTriggersCodeactTool.class);
 
+	@JsonIgnore
 	private final TriggerManager triggerManager;
 
 	private final CodeactToolMetadata codeactMetadata;
@@ -54,6 +56,7 @@ public class ListTriggersCodeactTool implements TriggerCodeactTool {
 
 	private final CodeactToolDefinition codeactDefinition;
 
+	@JsonIgnore
 	private final ObjectMapper objectMapper;
 
 	public ListTriggersCodeactTool(TriggerManager triggerManager) {

@@ -56,8 +56,10 @@ public class ToolRegistryBridge {
 	 * @return 工具执行结果（JSON 字符串）
 	 */
 	public String callTool(String toolName, String argsJson) {
-		logger.info("ToolRegistryBridge#callTool - reason=Python调用工具开始, toolName={}, argsJsonLength={}",
-				toolName, argsJson != null ? argsJson.length() : 0);
+		logger.info("ToolRegistryBridge#callTool - reason=Python调用工具开始, toolName={}, argsJsonLength={}, hasToolContext={}, toolContextKeys={}",
+				toolName, argsJson != null ? argsJson.length() : 0,
+				toolContext != null,
+				toolContext != null && toolContext.getContext() != null ? toolContext.getContext().keySet() : "null");
 
 		try {
 			// 从注册表获取工具

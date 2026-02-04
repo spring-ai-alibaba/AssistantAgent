@@ -15,12 +15,14 @@
  */
 package com.alibaba.assistant.agent.autoconfigure.subagent.node;
 
+import com.alibaba.assistant.agent.common.constant.CodeactStateKeys;
 import com.alibaba.assistant.agent.common.enums.Language;
 import com.alibaba.assistant.agent.common.tools.CodeactTool;
 import com.alibaba.assistant.agent.common.tools.CodeactToolMetadata;
 import com.alibaba.assistant.agent.common.tools.definition.ParameterNode;
 import com.alibaba.assistant.agent.common.tools.definition.ParameterTree;
 import com.alibaba.assistant.agent.common.tools.definition.ReturnSchema;
+import com.alibaba.assistant.agent.autoconfigure.subagent.filter.CodeactToolFilter;
 import com.alibaba.assistant.agent.core.tool.schema.ReturnSchemaRegistry;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
@@ -119,15 +121,18 @@ public class CodeGeneratorNode implements NodeActionWithConfig {
 			logger.debug("CodeGeneratorNode#apply 提取输入: functionName={}, requirement={}, parameters={}, historyCodeCount={}",
 					functionName, requirement, parameters, historyCode.size());
 
-			// 2. 构建系统提示（包含语言规范、可用CodeactTool和历史代码）
-			String systemPrompt = buildSystemPrompt(language, codeactTools, isCondition, customSystemPrompt, historyCode);
+			// 2. 【新增】根据 state 中的白名单配置筛选工具
+			List<CodeactTool> effectiveTools = filterTools(state);
 
-			// 3. 构建用户消息
+			// 3. 构建系统提示（使用筛选后的工具）
+			String systemPrompt = buildSystemPrompt(language, effectiveTools, isCondition, customSystemPrompt, historyCode);
+
+			// 4. 构建用户消息
 			String userMessage = buildUserMessage(requirement, functionName, parameters, isCondition);
 
             logger.info("CodeGeneratorNode#apply 构建消息: systemPrompt={}, userMessage={}",
                     systemPrompt, userMessage);
-			// 4. 构造ModelRequest
+			// 5. 构造ModelRequest
 			List<Message> messages = List.of(
 					new SystemMessage(systemPrompt),
 					new UserMessage(userMessage)
@@ -137,18 +142,20 @@ public class CodeGeneratorNode implements NodeActionWithConfig {
 					.messages(messages)
 					.build();
 
-			// 5. 通过拦截器链调用模型
+			// 6. 通过拦截器链调用模型
 			ModelResponse modelResponse = executeWithInterceptors(modelRequest);
 
-			// 6. 提取生成的代码
+			// 7. 提取生成的代码
 			String generatedCode = extractCodeFromResponse(modelResponse);
 
 			logger.info("CodeGeneratorNode#apply 代码生成成功: functionName={}, codeLength={}",
 					functionName, generatedCode.length());
 
-			// 7. 返回结果（放入outputKey）
+			// 8. 返回结果（放入outputKey）
 			Map<String, Object> result = new HashMap<>();
 			result.put(outputKey, generatedCode);
+			// 可选：将筛选后的工具列表写回 state，用于调试和审计
+			result.put(CodeactStateKeys.FILTERED_CODEACT_TOOLS, effectiveTools);
 			return result;
 
 		} catch (Exception e) {
@@ -157,6 +164,24 @@ public class CodeGeneratorNode implements NodeActionWithConfig {
 			errorResult.put(outputKey, "Error: " + e.getMessage());
 			return errorResult;
 		}
+	}
+
+	/**
+	 * 根据 state 中的白名单配置筛选工具
+	 * 
+	 * <p>使用 {@link CodeactToolFilter} 根据 state 中配置的白名单筛选可用工具。
+	 * 如果没有配置白名单，则返回全部工具（保持向后兼容）。
+	 * 
+	 * @param state OverAllState 实例
+	 * @return 筛选后的工具列表
+	 */
+	private List<CodeactTool> filterTools(OverAllState state) {
+		List<CodeactTool> filtered = CodeactToolFilter.filter(codeactTools, state, language);
+		
+		logger.info("CodeGeneratorNode#filterTools - 工具筛选完成: total={}, filtered={}",
+				codeactTools != null ? codeactTools.size() : 0, filtered.size());
+		
+		return filtered;
 	}
 
 	/**
@@ -195,6 +220,21 @@ public class CodeGeneratorNode implements NodeActionWithConfig {
 				.or(() -> state.value("generated_functions", List.class))
 				.or(() -> state.value("code_history", List.class))
 				.orElse(new ArrayList<>());
+	}
+
+	/**
+	 * 获取 codeactTools（供 CodeGeneratorSubAgent 在 init_context 节点中注入到 state）
+	 */
+	public List<CodeactTool> getCodeactTools() {
+		return codeactTools;
+	}
+
+
+	/**
+	 * 获取 language（供 CodeGeneratorSubAgent 在 init_context 节点中注入到 state）
+	 */
+	public Language getLanguage() {
+		return language;
 	}
 
 	/**

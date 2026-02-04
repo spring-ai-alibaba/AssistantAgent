@@ -93,10 +93,20 @@ spring.ai.alibaba.codeact.extension.evaluation:
   enabled: true
   input-routing:
     enabled: true
-    suite-id: input_routing_suite
+    suite-id: react-phase-suite
   code-generation-input:
     enabled: true
-    suite-id: code_generation_input_suite
+    suite-id: codeact-phase-suite
+
+# ============================================================================
+# Prompt Contributor Module - 启用基于评估的 Prompt 贡献
+# ============================================================================
+spring.ai.alibaba.codeact.extension.prompt:
+  enabled: true
+  react:
+    enabled: true
+  codeact:
+    enabled: true
 
 # ============================================================================
 # Logging - Debug level for development

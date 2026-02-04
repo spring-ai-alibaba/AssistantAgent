@@ -19,6 +19,7 @@ import com.alibaba.assistant.agent.common.tools.CodeactToolMetadata;
 import com.alibaba.assistant.agent.extension.dynamic.tool.AbstractDynamicCodeactTool;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,6 +45,7 @@ public class McpToolCallbackAdapter extends AbstractDynamicCodeactTool {
 	/**
 	 * 被适配的原始 ToolCallback。
 	 */
+	@JsonIgnore
 	private final ToolCallback delegate;
 
 	/**

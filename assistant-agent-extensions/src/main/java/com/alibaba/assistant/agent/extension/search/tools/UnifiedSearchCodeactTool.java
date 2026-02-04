@@ -30,13 +30,20 @@ import com.alibaba.assistant.agent.extension.search.model.SearchResultItem;
 import com.alibaba.assistant.agent.extension.search.model.SearchResultSet;
 import com.alibaba.assistant.agent.extension.search.model.SearchSourceType;
 import com.alibaba.assistant.agent.extension.search.spi.SearchProvider;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.definition.ToolDefinition;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -55,6 +62,7 @@ public class UnifiedSearchCodeactTool implements SearchCodeactTool {
 
 	private static final String DESCRIPTION = "统一搜索工具，可同时搜索项目、知识库、Web等多个数据源";
 
+	@JsonIgnore
 	private final List<SearchProvider> searchProviders;
 
 	private final CodeactToolMetadata codeactMetadata;
@@ -63,6 +71,7 @@ public class UnifiedSearchCodeactTool implements SearchCodeactTool {
 
 	private final CodeactToolDefinition codeactDefinition;
 
+	@JsonIgnore
 	private final ObjectMapper objectMapper;
 
 	/**

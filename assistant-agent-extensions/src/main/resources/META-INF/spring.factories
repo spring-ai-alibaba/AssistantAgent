@@ -4,7 +4,8 @@ com.alibaba.assistant.agent.extension.learning.config.LearningExtensionAutoConfi
 com.alibaba.assistant.agent.extension.search.config.SearchExtensionAutoConfiguration, \
 com.alibaba.assistant.agent.extension.reply.config.ReplyExtensionAutoConfiguration, \
 com.alibaba.assistant.agent.extension.trigger.config.TriggerAutoConfiguration, \
-com.alibaba.assistant.agent.extension.evaluation.config.CodeactEvaluationAutoConfiguration
+com.alibaba.assistant.agent.extension.evaluation.config.CodeactEvaluationAutoConfiguration, \
+com.alibaba.assistant.agent.extension.prompt.config.PromptContributorAutoConfiguration
 
 
 

@@ -38,6 +38,7 @@ public class BatchAggregationStrategyRegistry {
 		// Register built-in strategies
 		registerStrategy(new AnyTrueAggregationStrategy());
 		registerStrategy(new AllTrueAggregationStrategy());
+		registerStrategy(new MergeListsAggregationStrategy());
 	}
 
 	/**

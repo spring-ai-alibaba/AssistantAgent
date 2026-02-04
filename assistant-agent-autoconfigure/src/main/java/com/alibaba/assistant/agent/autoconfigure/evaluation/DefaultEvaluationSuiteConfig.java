@@ -26,12 +26,13 @@ import com.alibaba.assistant.agent.evaluation.model.CriterionStatus;
 import com.alibaba.assistant.agent.evaluation.model.EvaluationCriterion;
 import com.alibaba.assistant.agent.evaluation.model.EvaluationSuite;
 import com.alibaba.assistant.agent.extension.evaluation.config.CodeactEvaluationContextFactory;
-import com.alibaba.assistant.agent.extension.evaluation.config.CodeactEvaluationResultAttacher;
 import com.alibaba.assistant.agent.extension.evaluation.experience.ExperienceRetrievalEvaluatorFactory;
-import com.alibaba.assistant.agent.extension.evaluation.hook.ModelInputEvaluationHook;
-import com.alibaba.assistant.agent.extension.evaluation.promptbuilder.EvaluationPromptGuidanceProvider;
-import com.alibaba.assistant.agent.extension.evaluation.promptbuilder.EvaluationPromptInjectionHook;
+import com.alibaba.assistant.agent.extension.evaluation.hook.CodeactBeforeModelEvaluationHook;
+import com.alibaba.assistant.agent.extension.evaluation.hook.ReactBeforeModelEvaluationHook;
 import com.alibaba.assistant.agent.extension.experience.spi.ExperienceProvider;
+import com.alibaba.assistant.agent.extension.prompt.CodeactPromptContributorModelHook;
+import com.alibaba.assistant.agent.extension.prompt.ReactPromptContributorModelHook;
+import com.alibaba.assistant.agent.prompt.PromptContributorManager;
 import com.alibaba.cloud.ai.graph.agent.hook.Hook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -119,38 +120,32 @@ public class DefaultEvaluationSuiteConfig {
     }
 
     /**
-     * 默认的 EvaluationResultAttacher Bean
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public CodeactEvaluationResultAttacher codeactEvaluationResultAttacher() {
-        log.info("DefaultEvaluationSuiteConfig#codeactEvaluationResultAttacher - reason=创建 EvaluationResultAttacher");
-        return new CodeactEvaluationResultAttacher();
-    }
-
-    /**
      * React 阶段评估 Hooks
+     * 
+     * <p>所有返回的 Hook 都通过 {@code @HookPhases(AgentPhase.REACT)} 注解声明，
+     * 会被 HookPhaseUtils 自动分配到 React Agent。
      */
     @Bean
     public List<Hook> reactPhaseEvaluationHooks(
             EvaluationService evaluationService,
             CodeactEvaluationContextFactory contextFactory,
-            CodeactEvaluationResultAttacher resultAttacher,
-            @Autowired(required = false) List<EvaluationPromptGuidanceProvider> guidanceProviders) {
+            @Autowired(required = false) PromptContributorManager promptContributorManager) {
 
         List<Hook> hooks = new ArrayList<>();
 
-        if (properties.getReactPhase().isEnabled()) {
-            ModelInputEvaluationHook evaluationHook = new ModelInputEvaluationHook(
-                    evaluationService, contextFactory, resultAttacher, "REACT", REACT_PHASE_SUITE_ID);
+		if (properties.getReactPhase().isEnabled()) {
+            // 评估 Hook（使用 @HookPhases 注解声明阶段）
+            ReactBeforeModelEvaluationHook evaluationHook = new ReactBeforeModelEvaluationHook(
+                    evaluationService, contextFactory, REACT_PHASE_SUITE_ID);
             hooks.add(evaluationHook);
-            log.info("DefaultEvaluationSuiteConfig#reactPhaseEvaluationHooks - reason=创建 React Phase ModelInputEvaluationHook");
+            log.info("DefaultEvaluationSuiteConfig#reactPhaseEvaluationHooks - reason=创建 React Phase BeforeModelEvaluationHook");
 
-            // 传入 guidanceProviders，Hook 会自动过滤出 REACT 阶段的 providers
-            List<EvaluationPromptGuidanceProvider> providers = guidanceProviders != null ? guidanceProviders : List.of();
-            EvaluationPromptInjectionHook promptHook = new EvaluationPromptInjectionHook("REACT", providers);
-            hooks.add(promptHook);
-            log.info("DefaultEvaluationSuiteConfig#reactPhaseEvaluationHooks - reason=创建 React Phase EvaluationPromptInjectionHook, providersCount={}", providers.size());
+            // Prompt 贡献者 Hook - 共享同一个 Manager，Contributor 在 shouldContribute() 中通过 context.getPhase() 判断
+            if (promptContributorManager != null) {
+                ReactPromptContributorModelHook promptHook = new ReactPromptContributorModelHook(promptContributorManager);
+                hooks.add(promptHook);
+                log.info("DefaultEvaluationSuiteConfig#reactPhaseEvaluationHooks - reason=创建 React Phase PromptContributorModelHook");
+            }
         }
 
         return hooks;
@@ -158,27 +153,31 @@ public class DefaultEvaluationSuiteConfig {
 
     /**
      * CodeAct 阶段评估 Hooks
+     * 
+     * <p>所有返回的 Hook 都通过 {@code @HookPhases(AgentPhase.CODEACT)} 注解声明，
+     * 会被 HookPhaseUtils 自动分配到 CodeAct Agent。
      */
     @Bean
     public List<Hook> codeactPhaseEvaluationHooks(
             EvaluationService evaluationService,
             CodeactEvaluationContextFactory contextFactory,
-            CodeactEvaluationResultAttacher resultAttacher,
-            @Autowired(required = false) List<EvaluationPromptGuidanceProvider> guidanceProviders) {
+            @Autowired(required = false) PromptContributorManager promptContributorManager) {
 
         List<Hook> hooks = new ArrayList<>();
 
-        if (properties.getCodeactPhase().isEnabled()) {
-            ModelInputEvaluationHook evaluationHook = new ModelInputEvaluationHook(
-                    evaluationService, contextFactory, resultAttacher, "CODEACT", CODEACT_PHASE_SUITE_ID);
+		if (properties.getCodeactPhase().isEnabled()) {
+            // 评估 Hook（使用 @HookPhases 注解声明阶段）
+            CodeactBeforeModelEvaluationHook evaluationHook = new CodeactBeforeModelEvaluationHook(
+                    evaluationService, contextFactory, CODEACT_PHASE_SUITE_ID);
             hooks.add(evaluationHook);
-            log.info("DefaultEvaluationSuiteConfig#codeactPhaseEvaluationHooks - reason=创建 CodeAct Phase ModelInputEvaluationHook");
+            log.info("DefaultEvaluationSuiteConfig#codeactPhaseEvaluationHooks - reason=创建 CodeAct Phase BeforeModelEvaluationHook");
 
-            // 传入 guidanceProviders，Hook 会自动过滤出 CODEACT 阶段的 providers
-            List<EvaluationPromptGuidanceProvider> providers = guidanceProviders != null ? guidanceProviders : List.of();
-            EvaluationPromptInjectionHook promptHook = new EvaluationPromptInjectionHook("CODEACT", providers);
-            hooks.add(promptHook);
-            log.info("DefaultEvaluationSuiteConfig#codeactPhaseEvaluationHooks - reason=创建 CodeAct Phase EvaluationPromptInjectionHook, providersCount={}", providers.size());
+            // Prompt 贡献者 Hook - 共享同一个 Manager，Contributor 在 shouldContribute() 中通过 context.getPhase() 判断
+            if (promptContributorManager != null) {
+                CodeactPromptContributorModelHook promptHook = new CodeactPromptContributorModelHook(promptContributorManager);
+                hooks.add(promptHook);
+                log.info("DefaultEvaluationSuiteConfig#codeactPhaseEvaluationHooks - reason=创建 CodeAct Phase PromptContributorModelHook");
+            }
         }
 
         return hooks;

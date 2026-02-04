@@ -111,8 +111,8 @@ public class ExecuteCodeTool implements BiFunction<ExecuteCodeTool.Request, Tool
 				}
 			}
 
-			// Execute code
-			ExecutionRecord record = executor.execute(request.functionName, request.args);
+			// Execute code with toolContext for CodeactTools
+			ExecutionRecord record = executor.execute(request.functionName, request.args, toolContext);
 
 			// Update state
 			updateState(state, record);

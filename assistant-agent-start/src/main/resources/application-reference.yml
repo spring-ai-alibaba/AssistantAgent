@@ -128,13 +128,13 @@ spring.ai.alibaba.codeact.extension.evaluation:
 
   input-routing:
     enabled: true
-    suite-id: input_routing_suite
+    suite-id: react-phase-suite
   model-output:
     enabled: false
     suite-id: model_output_quality_suite
   code-generation-input:
     enabled: false
-    suite-id: code_generation_input_suite
+    suite-id: codeact-phase-suite
   code-execution:
     enabled: false
     suite-id: code_execution_suite

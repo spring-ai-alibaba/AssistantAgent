@@ -45,6 +45,12 @@ public enum ResultType {
 	/**
 	 * Structured JSON result
 	 */
-	JSON
+	JSON,
+
+	/**
+	 * List/Array result (e.g., list of tool names, list of indices)
+	 * The result will be parsed as a JSON array
+	 */
+	LIST
 }
 

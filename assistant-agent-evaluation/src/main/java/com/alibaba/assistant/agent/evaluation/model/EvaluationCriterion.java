@@ -95,6 +95,13 @@ public class EvaluationCriterion {
 	 */
 	private CriterionBatchingConfig batchingConfig;
 
+	/**
+	 * Conditional execution configuration.
+	 * When set, the criterion will only execute if the condition is satisfied.
+	 * Otherwise, it returns the configured default value and is marked as SKIPPED.
+	 */
+	private ConditionalExecutionConfig conditionalExecution;
+
 	public String getName() {
 		return name;
 	}
@@ -205,6 +212,14 @@ public class EvaluationCriterion {
 
 	public void setBatchingConfig(CriterionBatchingConfig batchingConfig) {
 		this.batchingConfig = batchingConfig;
+	}
+
+	public ConditionalExecutionConfig getConditionalExecution() {
+		return conditionalExecution;
+	}
+
+	public void setConditionalExecution(ConditionalExecutionConfig conditionalExecution) {
+		this.conditionalExecution = conditionalExecution;
 	}
 
 	/**

@@ -30,6 +30,7 @@ import com.alibaba.assistant.agent.extension.search.model.SearchResultItem;
 import com.alibaba.assistant.agent.extension.search.model.SearchResultSet;
 import com.alibaba.assistant.agent.extension.search.model.SearchSourceType;
 import com.alibaba.assistant.agent.extension.search.spi.SearchProvider;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,6 +55,7 @@ public class BaseSearchCodeactTool implements SearchCodeactTool {
 
 	private final String description;
 
+	@JsonIgnore
 	private final SearchProvider searchProvider;
 
 	private final SearchSourceType sourceType;
@@ -66,6 +68,7 @@ public class BaseSearchCodeactTool implements SearchCodeactTool {
 
 	private final CodeactToolDefinition codeactDefinition;
 
+	@JsonIgnore
 	private final ObjectMapper objectMapper;
 
 	/**

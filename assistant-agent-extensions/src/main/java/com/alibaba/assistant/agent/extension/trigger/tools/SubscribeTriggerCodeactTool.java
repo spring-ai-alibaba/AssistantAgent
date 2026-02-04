@@ -29,6 +29,7 @@ import com.alibaba.assistant.agent.extension.trigger.manager.TriggerManager;
 import com.alibaba.assistant.agent.extension.trigger.model.ScheduleMode;
 import com.alibaba.assistant.agent.extension.trigger.model.SourceType;
 import com.alibaba.assistant.agent.extension.trigger.model.TriggerDefinition;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +54,7 @@ public class SubscribeTriggerCodeactTool implements TriggerCodeactTool {
 
 	private static final Logger log = LoggerFactory.getLogger(SubscribeTriggerCodeactTool.class);
 
+	@JsonIgnore
 	private final TriggerManager triggerManager;
 
 	private final CodeactToolMetadata codeactMetadata;
@@ -61,6 +63,7 @@ public class SubscribeTriggerCodeactTool implements TriggerCodeactTool {
 
 	private final CodeactToolDefinition codeactDefinition;
 
+	@JsonIgnore
 	private final ObjectMapper objectMapper;
 
 	/**

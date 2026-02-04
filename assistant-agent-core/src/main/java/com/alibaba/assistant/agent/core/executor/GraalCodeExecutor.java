@@ -153,9 +153,24 @@ public class GraalCodeExecutor {
 	}
 
 	/**
-	 * Execute a function by name
+	 * Execute a function by name (uses empty ToolContext)
 	 */
 	public ExecutionRecord execute(String functionName, Map<String, Object> args) {
+		return execute(functionName, args, new ToolContext(Map.of()));
+	}
+
+	/**
+	 * Execute a function by name with ToolContext.
+	 *
+	 * <p>The ToolContext is passed to ToolRegistryBridgeFactory when creating
+	 * ToolRegistryBridge for CodeactTools.
+	 *
+	 * @param functionName the function name to execute
+	 * @param args the function arguments
+	 * @param toolContext the tool context
+	 * @return execution record
+	 */
+	public ExecutionRecord execute(String functionName, Map<String, Object> args, ToolContext toolContext) {
 		logger.info("GraalCodeExecutor#execute 执行函数: functionName={}, args={}", functionName, args);
 
 		ExecutionRecord record = new ExecutionRecord(functionName, codeContext.getLanguage());
@@ -223,7 +238,7 @@ public class GraalCodeExecutor {
 			logger.debug("GraalCodeExecutor#execute 代码长度: {} 字符", finalCode.length());
 
 			// Execute with GraalVM
-			Object result = executeWithGraal(finalCode);
+			Object result = executeWithGraal(finalCode, toolContext);
 
 			record.setSuccess(true);
 			record.setResult(result != null ? String.valueOf(result) : "null");
@@ -245,9 +260,20 @@ public class GraalCodeExecutor {
 	}
 
 	/**
-	 * Execute code directly (for testing or one-off execution)
+	 * Execute code directly (for testing or one-off execution, uses empty ToolContext)
 	 */
 	public ExecutionRecord executeDirect(String code) {
+		return executeDirect(code, new ToolContext(Map.of()));
+	}
+
+	/**
+	 * Execute code directly with ToolContext (for testing or one-off execution)
+	 *
+	 * @param code the code to execute
+	 * @param toolContext the tool context
+	 * @return execution record
+	 */
+	public ExecutionRecord executeDirect(String code, ToolContext toolContext) {
 		logger.info("GraalCodeExecutor#executeDirect 直接执行代码");
 
 		ExecutionRecord record = new ExecutionRecord("__direct__", codeContext.getLanguage());
@@ -258,7 +284,7 @@ public class GraalCodeExecutor {
 			String completeCode = environmentManager.generateImports(codeContext) + "\n" + code;
 
 			// Execute with GraalVM
-			Object result = executeWithGraal(completeCode);
+			Object result = executeWithGraal(completeCode, toolContext);
 
 			record.setSuccess(true);
 			record.setResult(String.valueOf(result));
@@ -281,9 +307,13 @@ public class GraalCodeExecutor {
 
 	/**
 	 * Execute code using GraalVM Polyglot API
+	 *
+	 * @param code the code to execute
+	 * @param toolContext the tool context to pass to ToolRegistryBridgeFactory
+	 * @return execution result
 	 */
-	private Object executeWithGraal(String code) {
-		logger.debug("GraalCodeExecutor#executeWithGraal 创建GraalVM Context");
+	private Object executeWithGraal(String code, ToolContext toolContext) {
+		logger.debug("GraalCodeExecutor#executeWithGraal 创建GraalVM Context, hasToolContext={}", toolContext != null);
 
 		// Capture output
 		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -304,9 +334,9 @@ public class GraalCodeExecutor {
 
 			logger.debug("GraalCodeExecutor#executeWithGraal - reason=Bridge对象注入完成");
 
-			// Inject CodeactTools into Python environment
+			// Inject CodeactTools into Python environment with toolContext
 			if (codeactToolRegistry != null) {
-				injectCodeactTools(context, codeactToolRegistry, codeContext.getLanguage());
+				injectCodeactTools(context, codeactToolRegistry, codeContext.getLanguage(), toolContext);
 			}
 
 			// Execute code
@@ -596,18 +626,25 @@ public class GraalCodeExecutor {
 	 * @param context GraalVM Context
 	 * @param registry CodeactTool 注册表
 	 * @param language 编程语言
+	 * @param toolContext 工具上下文
 	 */
 	private void injectCodeactTools(Context context,
                                     CodeactToolRegistry registry,
-                                    Language language) {
+                                    Language language,
+                                    ToolContext toolContext) {
 
-		logger.info("GraalCodeExecutor#injectCodeactTools - reason=开始注入CodeactTool到Python环境");
+		logger.info("GraalCodeExecutor#injectCodeactTools - reason=开始注入CodeactTool到Python环境, hasToolContext={}, toolContextKeys={}",
+				toolContext != null,
+				toolContext != null && toolContext.getContext() != null ? toolContext.getContext().keySet() : "null");
 
-		// Create tool context for all tools
-		ToolContext toolContext = new ToolContext(Map.of());
+		// Use provided toolContext or create an empty one
+		ToolContext effectiveToolContext = toolContext != null ? toolContext : new ToolContext(Map.of());
+
+		logger.info("GraalCodeExecutor#injectCodeactTools - reason=effectiveToolContext构建完成, keys={}",
+				effectiveToolContext.getContext() != null ? effectiveToolContext.getContext().keySet() : "null");
 
 		// Create and inject ToolRegistryBridge using factory
-		ToolRegistryBridge bridge = toolRegistryBridgeFactory.create(registry, toolContext);
+		ToolRegistryBridge bridge = toolRegistryBridgeFactory.create(registry, effectiveToolContext);
 		context.getBindings("python").putMember("__tool_registry__", bridge);
 		logger.debug("GraalCodeExecutor#injectCodeactTools - reason=ToolRegistryBridge注入完成, bridgeClass={}",
 				bridge.getClass().getSimpleName());
@@ -634,7 +671,7 @@ public class GraalCodeExecutor {
 		}
 
 		// Generate and execute Python code
-		String pythonCode = generatePythonToolCode(toolsByClass, globalTools, toolContext);
+		String pythonCode = generatePythonToolCode(toolsByClass, globalTools, effectiveToolContext);
 		if (pythonCode != null && !pythonCode.isEmpty()) {
 			logger.debug("GraalCodeExecutor#injectCodeactTools - reason=生成Python工具代码, length={}", pythonCode.length());
 			context.eval("python", pythonCode);

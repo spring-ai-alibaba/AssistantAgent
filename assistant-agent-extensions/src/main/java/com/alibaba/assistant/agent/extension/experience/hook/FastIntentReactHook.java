@@ -69,7 +69,10 @@ public class FastIntentReactHook extends AgentHook {
 
     @Override
     public List<JumpTo> canJumpTo() {
-        return List.of(JumpTo.tool);
+        // 必须声明所有可能的跳转目标：
+        // - JumpTo.tool: 当快速意图命中时，跳过 model 直接执行 tool
+        // - JumpTo.model: 当没有匹配到经验时，继续正常流程进入 model 调用
+        return List.of(JumpTo.tool, JumpTo.model);
     }
 
     @Override
