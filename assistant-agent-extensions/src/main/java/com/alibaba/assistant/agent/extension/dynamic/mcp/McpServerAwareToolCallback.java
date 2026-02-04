@@ -38,7 +38,7 @@ public interface McpServerAwareToolCallback extends ToolCallback {
 	 * 获取 MCP Server 名称。
 	 *
 	 * <p>此名称将用于生成 Python 类名（经过归一化处理）。
-	 * 例如 "aone-app-center" 会被转换为 "AoneAppCenter" 类。
+	 * 例如 "server-center" 会被转换为 "ServerCenter" 类。
 	 *
 	 * @return MCP Server 名称，不能为 null
 	 */

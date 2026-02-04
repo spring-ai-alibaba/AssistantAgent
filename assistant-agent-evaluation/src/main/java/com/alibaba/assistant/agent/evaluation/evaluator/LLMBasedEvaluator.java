@@ -65,6 +65,9 @@ public class LLMBasedEvaluator implements Evaluator {
 			// Build prompt
 			String promptText = buildPrompt(executionContext);
 
+			// Store prompt for observability
+			result.setRawPrompt(promptText);
+
 			logger.debug("Evaluating criterion {} with LLM, prompt: {}",
 				executionContext.getCriterion().getName(), promptText);
 

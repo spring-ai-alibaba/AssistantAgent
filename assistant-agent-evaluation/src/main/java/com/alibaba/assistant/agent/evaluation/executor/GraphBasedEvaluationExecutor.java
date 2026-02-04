@@ -20,10 +20,12 @@ import com.alibaba.assistant.agent.evaluation.model.EvaluationContext;
 import com.alibaba.assistant.agent.evaluation.model.EvaluationResult;
 import com.alibaba.assistant.agent.evaluation.model.EvaluationCriterion;
 import com.alibaba.assistant.agent.evaluation.model.EvaluationSuite;
+import com.alibaba.assistant.agent.evaluation.observation.EvaluationObservationLifecycleListener;
 import com.alibaba.cloud.ai.graph.CompiledGraph;
 import com.alibaba.cloud.ai.graph.NodeOutput;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.StateGraph;
+import io.opentelemetry.api.trace.Span;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,6 +75,19 @@ public class GraphBasedEvaluationExecutor {
 	 * Execute evaluation for a suite using its compiled graph.
 	 */
 	public EvaluationResult execute(EvaluationSuite suite, EvaluationContext context) {
+		return execute(suite, context, null);
+	}
+
+	/**
+	 * Execute evaluation for a suite using its compiled graph with parent Span.
+	 *
+	 * @param suite Evaluation suite to execute
+	 * @param context Evaluation context
+	 * @param parentSpan Parent span for establishing span hierarchy
+	 * @return Evaluation result
+	 */
+	public EvaluationResult execute(EvaluationSuite suite, EvaluationContext context,
+									Span parentSpan) {
 		EvaluationResult result = new EvaluationResult();
 		result.setSuiteId(suite.getId());
 		result.setSuiteName(suite.getName());
@@ -90,6 +105,13 @@ public class GraphBasedEvaluationExecutor {
 			initialData.put("suite", suite);
 			initialData.put("evaluationContext", context);
 
+			// 将 parent Span 存入 ThreadLocal，而不是 initialData
+			// 因为 Span 对象不能被序列化
+			if (parentSpan != null) {
+				EvaluationObservationLifecycleListener.setParentSpan(parentSpan);
+				logger.debug("GraphBasedEvaluationExecutor#execute - reason=设置parentSpan到ThreadLocal");
+			}
+
 			// Use CompiledGraph.invokeAndGetOutput to execute the graph
 			// This follows graph-core best practices and ensures we get the final state
 			// Important: graph-core uses ParallelNode for fan-out edges (e.g. multiple START children,
@@ -102,6 +124,7 @@ public class GraphBasedEvaluationExecutor {
 			for (String nodeId : parallelNodeIds) {
 				configBuilder.addParallelNodeExecutor(nodeId, executorService);
 			}
+
 			RunnableConfig config = configBuilder.build();
 			Optional<NodeOutput> outputOpt = compiledGraph.invokeAndGetOutput(initialData, config);
 
@@ -136,6 +159,8 @@ public class GraphBasedEvaluationExecutor {
 		}
 		finally {
 			result.setEndTimeMillis(System.currentTimeMillis());
+			// 清理 ThreadLocal，避免内存泄漏
+			EvaluationObservationLifecycleListener.clearParentSpan();
 		}
 
 		return result;
@@ -218,7 +243,7 @@ public class GraphBasedEvaluationExecutor {
 	 */
 	public void shutdown() {
 		if (shouldShutdownExecutor && executorService != null) {
-			logger.info("Shutting down ExecutorService");
+			logger.info("GraphBasedEvaluationExecutor#shutdown - reason=关闭ExecutorService");
 			executorService.shutdown();
 		}
 	}

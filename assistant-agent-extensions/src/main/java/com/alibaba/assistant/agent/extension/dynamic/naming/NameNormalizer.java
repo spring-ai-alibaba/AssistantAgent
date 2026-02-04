@@ -120,15 +120,15 @@ public class NameNormalizer {
 				// 常见分隔符转为下划线
 				sb.append('_');
 			}
+			else if (Pinyin.isChinese(c)) {
+				// 中文字符转为拼音（优先使用 Pinyin 库的判断，更准确）
+				String pinyin = Pinyin.toPinyin(c).toLowerCase();
+				sb.append(pinyin);
+				logger.debug("NameNormalizer#normalizeToIdentifier - reason=中文转拼音, char={}, pinyin={}", c, pinyin);
+			}
 			else if (isChinese(c)) {
-				// 中文字符转为拼音
-				String pinyin = toPinyin(c);
-				if (pinyin != null && !pinyin.isEmpty()) {
-					sb.append(pinyin);
-				}
-				else {
-					sb.append('_');
-				}
+				// 其他 CJK 相关字符（标点等）转为下划线
+				sb.append('_');
 			}
 			else {
 				// 其他特殊字符转为下划线
@@ -171,15 +171,6 @@ public class NameNormalizer {
 				|| ub == Character.UnicodeBlock.GENERAL_PUNCTUATION;
 	}
 
-	/**
-	 * 将单个中文字符转换为拼音。
-	 */
-	private String toPinyin(char c) {
-		if (Pinyin.isChinese(c)) {
-			return Pinyin.toPinyin(c).toLowerCase();
-		}
-		return null;
-	}
 
 	/**
 	 * 确保名称唯一。

@@ -124,31 +124,8 @@ public class PythonToolViewRenderer implements ToolViewRenderer {
 	private String renderMethodStub(CodeactTool tool, ReturnSchema returnSchema) {
 		StringBuilder sb = new StringBuilder();
 
-		// 获取工具名 - 从 ToolDefinition 获取原始名称
-		String methodName = null;
-
-		// 调试：检查 ToolDefinition
-		if (tool.getToolDefinition() != null) {
-			methodName = tool.getToolDefinition().name();
-			logger.debug("PythonToolViewRenderer#renderMethodStub - reason=从ToolDefinition获取名称, name={}, toolClass={}",
-					methodName, tool.getClass().getSimpleName());
-		} else {
-			logger.warn("PythonToolViewRenderer#renderMethodStub - reason=ToolDefinition为null, toolClass={}",
-					tool.getClass().getSimpleName());
-		}
-
-		// 如果还是空，尝试其他方式
-		if (methodName == null || methodName.isEmpty()) {
-			methodName = tool.getName();
-			logger.debug("PythonToolViewRenderer#renderMethodStub - reason=尝试getName, name={}", methodName);
-		}
-
-		// 最后的保底
-		if (methodName == null || methodName.isEmpty()) {
-			methodName = "unknown_method";
-			logger.warn("PythonToolViewRenderer#renderMethodStub - reason=工具名为空使用默认名称, toolClass={}",
-					tool.getClass().getSimpleName());
-		}
+		// 获取方法名 - 优先从 codeInvocationTemplate 提取，与 GraalCodeExecutor 保持一致
+		String methodName = extractMethodName(tool);
 
 		String description = tool.getDescription();
 		ParameterTree parameterTree = tool.getParameterTree();
@@ -448,6 +425,61 @@ public class PythonToolViewRenderer implements ToolViewRenderer {
 			}
 		}
 		return sb.toString();
+	}
+
+	/**
+	 * 提取工具的方法名。
+	 *
+	 * <p>优先从 codeInvocationTemplate 中提取，与 GraalCodeExecutor.generatePythonMethod 保持一致。
+	 * 这确保了 LLM 生成的代码中的方法名与实际注入到 Python 环境中的方法名一致。
+	 *
+	 * @param tool CodeactTool 实例
+	 * @return 方法名
+	 */
+	private String extractMethodName(CodeactTool tool) {
+		// 获取 ParameterTree 判断是否有结构化参数
+		ParameterTree parameterTree = tool.getParameterTree();
+
+		// 如果没有结构化参数，尝试从 codeInvocationTemplate 提取方法名
+		// 这与 GraalCodeExecutor.generatePythonMethod 的逻辑一致
+		if (parameterTree == null || !parameterTree.hasParameters()) {
+			String invocationTemplate = tool.getCodeactMetadata() != null
+					? tool.getCodeactMetadata().codeInvocationTemplate()
+					: null;
+
+			if (invocationTemplate != null && invocationTemplate.contains("(")) {
+				int parenIndex = invocationTemplate.indexOf('(');
+				String extractedName = invocationTemplate.substring(0, parenIndex).trim();
+				if (!extractedName.isEmpty()) {
+					logger.debug("PythonToolViewRenderer#extractMethodName - reason=从codeInvocationTemplate提取方法名, " +
+							"methodName={}, toolClass={}", extractedName, tool.getClass().getSimpleName());
+					return extractedName;
+				}
+			}
+		}
+
+		// 回退到 ToolDefinition.name()
+		String methodName = null;
+		if (tool.getToolDefinition() != null) {
+			methodName = tool.getToolDefinition().name();
+			logger.debug("PythonToolViewRenderer#extractMethodName - reason=从ToolDefinition获取名称, name={}, toolClass={}",
+					methodName, tool.getClass().getSimpleName());
+		}
+
+		// 如果还是空，尝试 getName()
+		if (methodName == null || methodName.isEmpty()) {
+			methodName = tool.getName();
+			logger.debug("PythonToolViewRenderer#extractMethodName - reason=尝试getName, name={}", methodName);
+		}
+
+		// 最后的保底
+		if (methodName == null || methodName.isEmpty()) {
+			methodName = "unknown_method";
+			logger.warn("PythonToolViewRenderer#extractMethodName - reason=工具名为空使用默认名称, toolClass={}",
+					tool.getClass().getSimpleName());
+		}
+
+		return methodName;
 	}
 
 }

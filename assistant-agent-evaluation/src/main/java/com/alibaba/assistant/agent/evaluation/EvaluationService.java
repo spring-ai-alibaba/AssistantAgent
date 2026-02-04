@@ -18,6 +18,7 @@ package com.alibaba.assistant.agent.evaluation;
 import com.alibaba.assistant.agent.evaluation.model.EvaluationContext;
 import com.alibaba.assistant.agent.evaluation.model.EvaluationResult;
 import com.alibaba.assistant.agent.evaluation.model.EvaluationSuite;
+import io.opentelemetry.api.trace.Span;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -39,6 +40,20 @@ public interface EvaluationService {
 	EvaluationResult evaluate(EvaluationSuite suite, EvaluationContext context);
 
 	/**
+	 * Execute evaluation synchronously with parent Span for tracing
+	 *
+	 * @param suite Evaluation suite to execute
+	 * @param context Evaluation context
+	 * @param parentSpan Parent span for establishing span hierarchy
+	 * @return Evaluation result
+	 */
+	default EvaluationResult evaluate(EvaluationSuite suite, EvaluationContext context,
+									  Span parentSpan) {
+		// Default implementation ignores parentSpan for backward compatibility
+		return evaluate(suite, context);
+	}
+
+	/**
 	 * Execute evaluation asynchronously
 	 *
 	 * @param suite Evaluation suite to execute
@@ -46,6 +61,20 @@ public interface EvaluationService {
 	 * @return CompletableFuture of evaluation result
 	 */
 	CompletableFuture<EvaluationResult> evaluateAsync(EvaluationSuite suite, EvaluationContext context);
+
+	/**
+	 * Execute evaluation asynchronously with parent Span for tracing
+	 *
+	 * @param suite Evaluation suite to execute
+	 * @param context Evaluation context
+	 * @param parentSpan Parent span for establishing span hierarchy
+	 * @return CompletableFuture of evaluation result
+	 */
+	default CompletableFuture<EvaluationResult> evaluateAsync(EvaluationSuite suite, EvaluationContext context,
+															  Span parentSpan) {
+		// Default implementation ignores parentSpan for backward compatibility
+		return evaluateAsync(suite, context);
+	}
 
 	/**
 	 * Load a pre-configured evaluation suite by ID

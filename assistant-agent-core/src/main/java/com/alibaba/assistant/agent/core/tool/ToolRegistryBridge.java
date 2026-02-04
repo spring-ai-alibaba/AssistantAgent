@@ -16,10 +16,14 @@
 package com.alibaba.assistant.agent.core.tool;
 
 import com.alibaba.assistant.agent.common.tools.CodeactTool;
+import com.alibaba.assistant.agent.core.model.ToolCallRecord;
 import com.alibaba.assistant.agent.core.tool.schema.ReturnSchemaRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ToolContext;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * ToolRegistry Bridge - 供 Python 调用的 Java 对象。
@@ -37,6 +41,11 @@ public class ToolRegistryBridge {
 	private final CodeactToolRegistry registry;
 
 	private final ToolContext toolContext;
+
+	/**
+	 * 工具调用追踪记录
+	 */
+	private final List<ToolCallRecord> callTrace = new ArrayList<>();
 
 	/**
 	 * 构造函数。
@@ -60,6 +69,9 @@ public class ToolRegistryBridge {
 				toolName, argsJson != null ? argsJson.length() : 0,
 				toolContext != null,
 				toolContext != null && toolContext.getContext() != null ? toolContext.getContext().keySet() : "null");
+
+		// 记录工具调用到追踪列表
+		recordToolCall(toolName);
 
 		try {
 			// 从注册表获取工具
@@ -116,6 +128,46 @@ public class ToolRegistryBridge {
 			logger.warn("ToolRegistryBridge#observeReturnSchema - reason=观测返回值结构失败, toolName={}, error={}", toolName,
 					e.getMessage(), e);
 		}
+	}
+
+	/**
+	 * 记录工具调用。
+	 * @param toolName 工具名称
+	 */
+	private void recordToolCall(String toolName) {
+		// 获取工具的targetClassName来构建完整的工具标识
+		String toolIdentifier = toolName;
+		try {
+			CodeactTool tool = registry.getTool(toolName).orElse(null);
+			if (tool != null && tool.getCodeactMetadata() != null) {
+				String targetClassName = tool.getCodeactMetadata().targetClassName();
+				if (targetClassName != null && !targetClassName.isEmpty()) {
+					toolIdentifier = targetClassName + "." + toolName;
+				}
+			}
+		} catch (Exception e) {
+			logger.warn("ToolRegistryBridge#recordToolCall - reason=获取工具元数据失败, toolName={}", toolName);
+		}
+
+		ToolCallRecord record = new ToolCallRecord(callTrace.size() + 1, toolIdentifier);
+		callTrace.add(record);
+		logger.info("ToolRegistryBridge#recordToolCall - reason=记录工具调用, order={}, tool={}", record.getOrder(), record.getTool());
+	}
+
+	/**
+	 * 获取工具调用追踪记录。
+	 * @return 工具调用记录列表
+	 */
+	public List<ToolCallRecord> getCallTrace() {
+		return new ArrayList<>(callTrace);
+	}
+
+	/**
+	 * 清空工具调用追踪记录。
+	 */
+	public void clearCallTrace() {
+		callTrace.clear();
+		logger.debug("ToolRegistryBridge#clearCallTrace - reason=清空调用追踪记录");
 	}
 
 }

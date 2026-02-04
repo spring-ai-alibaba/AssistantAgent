@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.alibaba.agent.assistant</groupId>
         <artifactId>assistant-agent</artifactId>
-        <version>0.1.3-SNAPSHOT</version>
+        <version>0.1.3</version>
     </parent>
 
     <artifactId>assistant-agent-evaluation</artifactId>
@@ -48,6 +48,16 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
+        </dependency>
+
+        <!-- OpenTelemetry API for observability -->
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-context</artifactId>
         </dependency>
 
         <dependency>

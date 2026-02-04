@@ -25,6 +25,7 @@ import com.alibaba.assistant.agent.core.executor.bridge.LoggerBridge;
 import com.alibaba.assistant.agent.core.executor.bridge.StateBridge;
 import com.alibaba.assistant.agent.core.model.ExecutionRecord;
 import com.alibaba.assistant.agent.core.model.GeneratedCode;
+import com.alibaba.assistant.agent.core.model.ToolCallRecord;
 import com.alibaba.assistant.agent.core.tool.CodeactToolRegistry;
 import com.alibaba.assistant.agent.core.tool.DefaultToolRegistryBridgeFactory;
 import com.alibaba.assistant.agent.core.tool.ToolRegistryBridge;
@@ -59,6 +60,27 @@ import java.util.regex.Pattern;
 public class GraalCodeExecutor {
 
 	private static final Logger logger = LoggerFactory.getLogger(GraalCodeExecutor.class);
+
+	/**
+	 * 执行结果包装类，包含执行结果和工具调用追踪
+	 */
+	private static class ExecutionResultWrapper {
+		private final Object result;
+		private final List<ToolCallRecord> callTrace;
+
+		public ExecutionResultWrapper(Object result, List<ToolCallRecord> callTrace) {
+			this.result = result;
+			this.callTrace = callTrace != null ? callTrace : new ArrayList<>();
+		}
+
+		public Object getResult() {
+			return result;
+		}
+
+		public List<ToolCallRecord> getCallTrace() {
+			return callTrace;
+		}
+	}
 
 	private final RuntimeEnvironmentManager environmentManager;
 	private final CodeContext codeContext;
@@ -238,12 +260,14 @@ public class GraalCodeExecutor {
 			logger.debug("GraalCodeExecutor#execute 代码长度: {} 字符", finalCode.length());
 
 			// Execute with GraalVM
-			Object result = executeWithGraal(finalCode, toolContext);
+			ExecutionResultWrapper resultWrapper = executeWithGraal(finalCode, toolContext);
 
 			record.setSuccess(true);
-			record.setResult(result != null ? String.valueOf(result) : "null");
+			record.setResult(resultWrapper.getResult() != null ? String.valueOf(resultWrapper.getResult()) : "null");
+			record.setCallTrace(resultWrapper.getCallTrace());
 
-			logger.info("GraalCodeExecutor#execute 执行成功: result={}", result);
+			logger.info("GraalCodeExecutor#execute 执行成功: result={}, callTraceSize={}",
+					resultWrapper.getResult(), resultWrapper.getCallTrace().size());
 
 		} catch (Exception e) {
 			record.setSuccess(false);
@@ -284,12 +308,13 @@ public class GraalCodeExecutor {
 			String completeCode = environmentManager.generateImports(codeContext) + "\n" + code;
 
 			// Execute with GraalVM
-			Object result = executeWithGraal(completeCode, toolContext);
+			ExecutionResultWrapper resultWrapper = executeWithGraal(completeCode, toolContext);
 
 			record.setSuccess(true);
-			record.setResult(String.valueOf(result));
+			record.setResult(String.valueOf(resultWrapper.getResult()));
+			record.setCallTrace(resultWrapper.getCallTrace());
 
-			logger.info("GraalCodeExecutor#executeDirect 执行成功");
+			logger.info("GraalCodeExecutor#executeDirect 执行成功, callTraceSize={}", resultWrapper.getCallTrace().size());
 
 		} catch (Exception e) {
 			record.setSuccess(false);
@@ -312,12 +337,15 @@ public class GraalCodeExecutor {
 	 * @param toolContext the tool context to pass to ToolRegistryBridgeFactory
 	 * @return execution result
 	 */
-	private Object executeWithGraal(String code, ToolContext toolContext) {
+	private ExecutionResultWrapper executeWithGraal(String code, ToolContext toolContext) {
 		logger.debug("GraalCodeExecutor#executeWithGraal 创建GraalVM Context, hasToolContext={}", toolContext != null);
 
 		// Capture output
 		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 		ByteArrayOutputStream errorStream = new ByteArrayOutputStream();
+
+		// 用于保存ToolRegistryBridge以便获取callTrace
+		ToolRegistryBridge toolRegistryBridge = null;
 
 		try (Context context = Context.newBuilder("python")
 				.allowHostAccess(HostAccess.ALL)
@@ -336,7 +364,7 @@ public class GraalCodeExecutor {
 
 			// Inject CodeactTools into Python environment with toolContext
 			if (codeactToolRegistry != null) {
-				injectCodeactTools(context, codeactToolRegistry, codeContext.getLanguage(), toolContext);
+				toolRegistryBridge = injectCodeactTools(context, codeactToolRegistry, codeContext.getLanguage(), toolContext);
 			}
 
 			// Execute code
@@ -469,7 +497,11 @@ public class GraalCodeExecutor {
 				javaResult = result.toString();
 			}
 
-			return javaResult;
+			// 获取工具调用追踪记录
+			List<ToolCallRecord> callTrace = toolRegistryBridge != null ? toolRegistryBridge.getCallTrace() : new ArrayList<>();
+			logger.info("GraalCodeExecutor#executeWithGraal - reason=获取callTrace完成, callTraceSize={}", callTrace.size());
+
+			return new ExecutionResultWrapper(javaResult, callTrace);
 
 		} catch (Exception e) {
 			String errors = errorStream.toString(StandardCharsets.UTF_8);
@@ -628,7 +660,7 @@ public class GraalCodeExecutor {
 	 * @param language 编程语言
 	 * @param toolContext 工具上下文
 	 */
-	private void injectCodeactTools(Context context,
+	private ToolRegistryBridge injectCodeactTools(Context context,
                                     CodeactToolRegistry registry,
                                     Language language,
                                     ToolContext toolContext) {
@@ -654,7 +686,7 @@ public class GraalCodeExecutor {
 
 		if (tools.isEmpty()) {
 			logger.debug("GraalCodeExecutor#injectCodeactTools - reason=没有支持该语言的工具, language={}", language);
-			return;
+			return bridge;
 		}
 
 		// Group tools by targetClassName
@@ -673,12 +705,173 @@ public class GraalCodeExecutor {
 		// Generate and execute Python code
 		String pythonCode = generatePythonToolCode(toolsByClass, globalTools, effectiveToolContext);
 		if (pythonCode != null && !pythonCode.isEmpty()) {
-			logger.debug("GraalCodeExecutor#injectCodeactTools - reason=生成Python工具代码, length={}", pythonCode.length());
-			context.eval("python", pythonCode);
+			logger.info("GraalCodeExecutor#injectCodeactTools - reason=生成Python工具代码, code={}", pythonCode);
+			try {
+				context.eval("python", pythonCode);
+			} catch (Exception e) {
+				// 执行失败时记录生成的代码以便调试
+				// 添加行号便于定位问题
+				String[] lines = pythonCode.split("\n");
+				StringBuilder numberedCode = new StringBuilder();
+				for (int i = 0; i < lines.length; i++) {
+					numberedCode.append(String.format("%4d: %s\n", i + 1, lines[i]));
+				}
+				logger.error("GraalCodeExecutor#injectCodeactTools - reason=Python工具代码执行失败, totalLines={}, 生成的代码:\n{}",
+						lines.length, numberedCode);
+				throw new RuntimeException("Python工具代码语法错误，代码行数=" + lines.length + "，请查看日志获取完整代码", e);
+			}
 		}
 
 		logger.info("GraalCodeExecutor#injectCodeactTools - reason=CodeactTool注入完成, classCount={}, globalToolCount={}",
 			toolsByClass.size(), globalTools.size());
+
+		return bridge;
+	}
+
+	/**
+	 * 清理描述字符串，使其在 Python 三引号字符串中安全使用。
+	 *
+	 * <p>主要处理以下问题：
+	 * <ul>
+	 *   <li>将三引号 """ 替换为转义形式</li>
+	 *   <li>确保反斜杠正确转义</li>
+	 *   <li>移除可能导致问题的控制字符</li>
+	 * </ul>
+	 *
+	 * @param description 原始描述
+	 * @return 清理后的描述
+	 */
+	private String sanitizeDescriptionForPython(String description) {
+		if (description == null || description.isEmpty()) {
+			return "";
+		}
+
+		// 1. 处理三引号 - 将 """ 替换为 \"\"\" (在三引号字符串内转义)
+		String sanitized = description.replace("\"\"\"", "\\\"\\\"\\\"");
+
+		// 2. 处理单独的反斜杠（但不影响已有的转义序列）
+		// 只有当反斜杠后面不是常见转义字符时才转义
+		// 这里使用简单策略：先不处理，因为三引号字符串中反斜杠问题较少
+
+		// 3. 移除可能导致问题的控制字符（除了换行和制表符）
+		StringBuilder sb = new StringBuilder();
+		for (char c : sanitized.toCharArray()) {
+			if (c == '\n' || c == '\r' || c == '\t' || c >= 32) {
+				sb.append(c);
+			}
+		}
+
+		return sb.toString();
+	}
+
+	private String formatDocstring(String description, String indent) {
+		if (description == null) {
+			return indent;
+		}
+		String normalized = description.replace("\r\n", "\n").replace("\r", "\n");
+		String[] lines = normalized.split("\n", -1);
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < lines.length; i++) {
+			sb.append(indent).append(lines[i]);
+			if (i < lines.length - 1) {
+				sb.append("\n");
+			}
+		}
+		return sb.toString();
+	}
+
+	private boolean isPythonKeyword(String name) {
+		if (name == null || name.isEmpty()) {
+			return false;
+		}
+		switch (name) {
+			case "False":
+			case "None":
+			case "True":
+			case "and":
+			case "as":
+			case "assert":
+			case "async":
+			case "await":
+			case "break":
+			case "class":
+			case "continue":
+			case "def":
+			case "del":
+			case "elif":
+			case "else":
+			case "except":
+			case "finally":
+			case "for":
+			case "from":
+			case "global":
+			case "if":
+			case "import":
+			case "in":
+			case "is":
+			case "lambda":
+			case "nonlocal":
+			case "not":
+			case "or":
+			case "pass":
+			case "raise":
+			case "return":
+			case "try":
+			case "while":
+			case "with":
+			case "yield":
+				return true;
+			default:
+				return false;
+		}
+	}
+
+	private boolean isValidPythonIdentifier(String name) {
+		if (name == null || name.isEmpty()) {
+			return false;
+		}
+		if (isPythonKeyword(name)) {
+			return false;
+		}
+		char first = name.charAt(0);
+		if (!(Character.isLetter(first) || first == '_')) {
+			return false;
+		}
+		for (int i = 1; i < name.length(); i++) {
+			char c = name.charAt(i);
+			if (!(Character.isLetterOrDigit(c) || c == '_')) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private String toSafePythonIdentifier(String name, String fallbackPrefix) {
+		if (isValidPythonIdentifier(name)) {
+			return name;
+		}
+		String safeSource = name == null ? "" : name;
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < safeSource.length(); i++) {
+			char c = safeSource.charAt(i);
+			if (Character.isLetterOrDigit(c) || c == '_') {
+				sb.append(c);
+			} else {
+				sb.append('_');
+			}
+		}
+		if (sb.length() == 0) {
+			sb.append('_');
+		}
+		char first = sb.charAt(0);
+		if (!(Character.isLetter(first) || first == '_')) {
+			sb.insert(0, '_');
+		}
+		String candidate = sb.toString();
+		if (isPythonKeyword(candidate)) {
+			candidate = fallbackPrefix + Math.abs(safeSource.hashCode());
+		}
+		return candidate;
 	}
 
 	/**
@@ -740,7 +933,9 @@ public class GraalCodeExecutor {
 			boolean isClassMethod) {
 
 		String toolName = tool.getToolDefinition().name();
-		String description = tool.getToolDefinition().description();
+		String rawDescription = tool.getToolDefinition().description();
+		// 处理描述中可能导致 Python 语法错误的字符
+		String description = sanitizeDescriptionForPython(rawDescription);
 
 		// 优先使用 ParameterTree 获取参数信息
 		ParameterTree parameterTree = tool.getParameterTree();
@@ -750,6 +945,7 @@ public class GraalCodeExecutor {
 		List<String> requiredParams = new ArrayList<>();
 		List<String> optionalParams = new ArrayList<>();
 		List<String> allParamNames = new ArrayList<>();
+		boolean forceKwargs = false;
 
 		if (parameterTree != null && parameterTree.hasParameters()) {
 			// 使用 ParameterTree 生成参数签名
@@ -759,6 +955,9 @@ public class GraalCodeExecutor {
 			for (ParameterNode param : parameterTree.getParameters()) {
 				String paramName = param.getName();
 				allParamNames.add(paramName);
+				if (!isValidPythonIdentifier(paramName)) {
+					forceKwargs = true;
+				}
 				if (param.isRequired()) {
 					requiredParams.add(paramName);
 				} else {
@@ -780,8 +979,27 @@ public class GraalCodeExecutor {
 						parameters = "**kwargs";
 					}
 				}
+				if (!parameters.equals("**kwargs")) {
+					String[] params = parameters.split(",");
+					for (String param : params) {
+						String paramName = param.trim().split(":")[0].split("=")[0].trim();
+						if (!paramName.isEmpty() && !paramName.equals("self") && !isValidPythonIdentifier(paramName)) {
+							forceKwargs = true;
+							break;
+						}
+					}
+				}
 			}
 		}
+
+		if (forceKwargs) {
+			parameters = "**kwargs";
+			requiredParams.clear();
+			optionalParams.clear();
+			allParamNames.clear();
+		}
+
+		String pythonFunctionName = toSafePythonIdentifier(functionName, "tool_");
 
 		// Generate method/function
 		String indent = isClassMethod ? "    " : "";
@@ -792,8 +1010,10 @@ public class GraalCodeExecutor {
 		}
 
 		// Function definition
-		code.append(String.format("%sdef %s(%s):\n", indent, functionName, parameters));
-		code.append(String.format("%s    \"\"\"%s\"\"\"\n", indent, description != null ? description : toolName));
+		code.append(String.format("%sdef %s(%s):\n", indent, pythonFunctionName, parameters));
+		String docIndent = indent + "    ";
+		String docBody = formatDocstring(description != null ? description : toolName, docIndent);
+		code.append(String.format("%s    \"\"\"\n%s\n%s    \"\"\"\n", indent, docBody, indent));
 
 		// Function body - call Java tool through proxy
 		code.append(String.format("%s    # Call Java CodeactTool\n", indent));

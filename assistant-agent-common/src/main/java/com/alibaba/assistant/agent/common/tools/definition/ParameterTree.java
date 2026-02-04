@@ -155,12 +155,54 @@ public class ParameterTree {
 			return "None";
 		}
 		if (defaultValue instanceof String) {
-			return "\"" + defaultValue + "\"";
+			// 转义字符串中的特殊字符
+			String escaped = escapeStringForPython((String) defaultValue);
+			return "\"" + escaped + "\"";
 		}
 		if (defaultValue instanceof Boolean) {
 			return (Boolean) defaultValue ? "True" : "False";
 		}
 		return String.valueOf(defaultValue);
+	}
+
+	/**
+	 * 转义字符串以便在 Python 代码中安全使用。
+	 *
+	 * @param str 原始字符串
+	 * @return 转义后的字符串
+	 */
+	private String escapeStringForPython(String str) {
+		if (str == null) {
+			return "";
+		}
+		StringBuilder sb = new StringBuilder();
+		for (char c : str.toCharArray()) {
+			switch (c) {
+				case '\\':
+					sb.append("\\\\");
+					break;
+				case '"':
+					sb.append("\\\"");
+					break;
+				case '\n':
+					sb.append("\\n");
+					break;
+				case '\r':
+					sb.append("\\r");
+					break;
+				case '\t':
+					sb.append("\\t");
+					break;
+				default:
+					if (c < 32) {
+						// 控制字符用 Unicode 转义
+						sb.append(String.format("\\u%04x", (int) c));
+					} else {
+						sb.append(c);
+					}
+			}
+		}
+		return sb.toString();
 	}
 
 	/**

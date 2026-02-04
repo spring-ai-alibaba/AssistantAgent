@@ -19,6 +19,10 @@ import com.alibaba.assistant.agent.evaluation.executor.GraphBasedEvaluationExecu
 import com.alibaba.assistant.agent.evaluation.model.EvaluationContext;
 import com.alibaba.assistant.agent.evaluation.model.EvaluationResult;
 import com.alibaba.assistant.agent.evaluation.model.EvaluationSuite;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.Scope;
+
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -58,24 +62,69 @@ public class DefaultEvaluationService implements EvaluationService {
 
 	@Override
 	public EvaluationResult evaluate(EvaluationSuite suite, EvaluationContext context) {
-		logger.info("Starting evaluation for suite: {}", suite.getName());
+		return evaluate(suite, context, null);
+	}
+
+	@Override
+	public EvaluationResult evaluate(EvaluationSuite suite, EvaluationContext context,
+									 Span parentSpan) {
+		logger.info("DefaultEvaluationService#evaluate - reason=开始评估, suite={}, hasParent={}",
+				suite.getName(), parentSpan != null);
+
+		// 设置 parent Span 到 ThreadLocal
+		if (parentSpan != null) {
+			com.alibaba.assistant.agent.evaluation.observation.EvaluationObservationLifecycleListener
+					.setParentSpan(parentSpan);
+		}
 
 		try {
-			// Execute evaluation
-			EvaluationResult result = executor.execute(suite, context);
+			// Execute evaluation with parent span
+			EvaluationResult result = executor.execute(suite, context, parentSpan);
 
-			logger.info("Evaluation completed for suite: {}", suite.getName());
+			logger.info("DefaultEvaluationService#evaluate - reason=评估完成, suite={}", suite.getName());
 
 			return result;
 		} catch (Exception e) {
-			logger.error("Error executing evaluation for suite: {}", suite.getName(), e);
+			logger.error("DefaultEvaluationService#evaluate - reason=评估失败, suite={}", suite.getName(), e);
 			throw new RuntimeException("Evaluation execution failed", e);
+		} finally {
+			// 清理 ThreadLocal
+			if (parentSpan != null) {
+				com.alibaba.assistant.agent.evaluation.observation.EvaluationObservationLifecycleListener
+						.clearParentSpan();
+			}
 		}
 	}
 
 	@Override
 	public CompletableFuture<EvaluationResult> evaluateAsync(EvaluationSuite suite, EvaluationContext context) {
-		return CompletableFuture.supplyAsync(() -> evaluate(suite, context), asyncExecutor);
+		return evaluateAsync(suite, context, null);
+	}
+
+	@Override
+	public CompletableFuture<EvaluationResult> evaluateAsync(EvaluationSuite suite, EvaluationContext context,
+															 Span parentSpan) {
+		// 捕获当前的 parent Span 和 Context，在异步执行时传递
+		final Span capturedParent = parentSpan;
+		final Context capturedContext = parentSpan != null ? Context.current().with(parentSpan) : Context.current();
+
+		return CompletableFuture.supplyAsync(() -> {
+			// 在异步线程中恢复 trace context
+			try (Scope ignored = capturedContext.makeCurrent()) {
+				// 设置 parent Span 到 ThreadLocal，供 EvaluationObservationLifecycleListener 使用
+				if (capturedParent != null) {
+					com.alibaba.assistant.agent.evaluation.observation.EvaluationObservationLifecycleListener
+							.setParentSpan(capturedParent);
+				}
+				try {
+					return executor.execute(suite, context, capturedParent);
+				} finally {
+					// 清理 ThreadLocal
+					com.alibaba.assistant.agent.evaluation.observation.EvaluationObservationLifecycleListener
+							.clearParentSpan();
+				}
+			}
+		}, asyncExecutor);
 	}
 
 	@Override
@@ -93,7 +142,7 @@ public class DefaultEvaluationService implements EvaluationService {
 			throw new IllegalArgumentException("Suite ID cannot be null or empty");
 		}
 		suiteRegistry.put(suite.getId(), suite);
-		logger.info("Registered evaluation suite: {}", suite.getId());
+		logger.info("DefaultEvaluationService#registerSuite - reason=注册评估套件, suiteId={}", suite.getId());
 	}
 
 	/**

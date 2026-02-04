@@ -175,7 +175,7 @@ public class CodeactAgent extends ReactAgent {
 		// ReturnSchemaRegistry (进程内单例)
 		private ReturnSchemaRegistry returnSchemaRegistry;
 
-		// ToolRegistryBridgeFactory (用于自定义 ToolRegistryBridge)
+		// ToolRegistryBridgeFactory (用于自定义工具调用桥接，如可观测性)
 		private ToolRegistryBridgeFactory toolRegistryBridgeFactory;
 
 		// CodeactTool support (新机制)
@@ -195,11 +195,8 @@ public class CodeactAgent extends ReactAgent {
 		// Keep reference to ChatModel for code generation
 		private ChatModel chatModel;
 
-		// SubAgent system prompt (for Codeact phase code generation)
-		private String subAgentSystemPrompt;
-
-		// state keys to propagate from parent agent (react phase) to child agent (codeact phase)
-		private List<String> stateKeysToPropagate = new ArrayList<>();
+		// GraphLifecycleListeners (用于可观测性)
+		private List<com.alibaba.cloud.ai.graph.GraphLifecycleListener> lifecycleListeners = new ArrayList<>();
 
 		public CodeactAgentBuilder() {
 			super();
@@ -248,22 +245,6 @@ public class CodeactAgent extends ReactAgent {
 			return this;
 		}
 
-		/**
-		 * Set state keys to propagate from parent agent (react phase) to child agent (codeact phase)
-		 */
-		public CodeactAgentBuilder stateKeysToPropagate(List<String> keys) {
-			this.stateKeysToPropagate = keys != null ? new ArrayList<>(keys) : new ArrayList<>();
-			return this;
-		}
-
-		/**
-		 * Set state keys to propagate from parent agent (react phase) to child agent (codeact phase), in variable argument form
-		 */
-		public CodeactAgentBuilder stateKeysToPropagate(String... keys) {
-			this.stateKeysToPropagate = new ArrayList<>(Arrays.asList(keys));
-			return this;
-		}
-
 		public CodeactAgentBuilder experienceProvider(ExperienceProvider experienceProvider) {
 			this.experienceProvider = experienceProvider;
 			return this;
@@ -276,14 +257,6 @@ public class CodeactAgent extends ReactAgent {
 
 		public CodeactAgentBuilder fastIntentService(FastIntentService fastIntentService) {
 			this.fastIntentService = fastIntentService;
-			return this;
-		}
-
-		/**
-		 * Set custom system prompt for the Codeact sub-agent (code generation phase).
-		 */
-		public CodeactAgentBuilder subAgentSystemPrompt(String systemPrompt) {
-			this.subAgentSystemPrompt = systemPrompt;
 			return this;
 		}
 
@@ -364,14 +337,43 @@ public class CodeactAgent extends ReactAgent {
 		/**
 		 * Set the ToolRegistryBridgeFactory for customizing ToolRegistryBridge creation.
 		 *
-		 * <p>If not set, the default factory will be used which creates standard
-		 * ToolRegistryBridge instances.
+		 * <p>可用于添加可观测性、任务记录等功能。
+		 * 如果不设置，将使用默认的 ToolRegistryBridge。
 		 *
 		 * @param factory the ToolRegistryBridgeFactory to use
 		 * @return CodeactAgentBuilder instance for chaining
 		 */
 		public CodeactAgentBuilder toolRegistryBridgeFactory(ToolRegistryBridgeFactory factory) {
 			this.toolRegistryBridgeFactory = factory;
+			return this;
+		}
+
+		/**
+		 * Add a GraphLifecycleListener for observability.
+		 *
+		 * <p>用于监听 Agent Graph 执行的关键阶段，如 React 阶段开始/结束、节点执行前后等。
+		 * 可以通过此接口实现日志记录、指标收集、分布式追踪等可观测性功能。
+		 *
+		 * @param listener the GraphLifecycleListener to add
+		 * @return CodeactAgentBuilder instance for chaining
+		 */
+		public CodeactAgentBuilder lifecycleListener(com.alibaba.cloud.ai.graph.GraphLifecycleListener listener) {
+			if (listener != null) {
+				this.lifecycleListeners.add(listener);
+			}
+			return this;
+		}
+
+		/**
+		 * Add multiple GraphLifecycleListeners for observability.
+		 *
+		 * @param listeners the list of GraphLifecycleListeners to add
+		 * @return CodeactAgentBuilder instance for chaining
+		 */
+		public CodeactAgentBuilder lifecycleListeners(List<? extends com.alibaba.cloud.ai.graph.GraphLifecycleListener> listeners) {
+			if (listeners != null) {
+				this.lifecycleListeners.addAll(listeners);
+			}
 			return this;
 		}
 
@@ -508,6 +510,55 @@ public class CodeactAgent extends ReactAgent {
 		}
 
 		/**
+		 * Override buildConfig to include lifecycleListeners for observability.
+		 *
+		 * @return CompileConfig with lifecycleListeners included
+		 */
+		@Override
+		protected CompileConfig buildConfig() {
+			// If compileConfig is already set, use it
+			if (compileConfig != null) {
+				// Add additional lifecycleListeners to existing config
+				if (!lifecycleListeners.isEmpty()) {
+					for (com.alibaba.cloud.ai.graph.GraphLifecycleListener listener : lifecycleListeners) {
+						compileConfig.lifecycleListeners().offer(listener);
+					}
+					logger.info("CodeactAgentBuilder#buildConfig - reason=添加LifecycleListeners到已有CompileConfig, count={}",
+							lifecycleListeners.size());
+				}
+				return compileConfig;
+			}
+
+			// Build new CompileConfig with saver and lifecycleListeners
+			com.alibaba.cloud.ai.graph.checkpoint.config.SaverConfig saverConfig =
+					com.alibaba.cloud.ai.graph.checkpoint.config.SaverConfig.builder()
+							.register(saver)
+							.build();
+
+			CompileConfig.Builder builder = CompileConfig.builder()
+					.saverConfig(saverConfig)
+					.recursionLimit(Integer.MAX_VALUE)
+					.releaseThread(releaseThread);
+
+			// Add ObservationRegistry if available
+			if (observationRegistry != null) {
+				builder.observationRegistry(observationRegistry);
+			}
+
+			// Add all lifecycleListeners
+			for (com.alibaba.cloud.ai.graph.GraphLifecycleListener listener : lifecycleListeners) {
+				builder.withLifecycleListener(listener);
+			}
+
+			if (!lifecycleListeners.isEmpty()) {
+				logger.info("CodeactAgentBuilder#buildConfig - reason=创建带有LifecycleListeners的CompileConfig, count={}",
+						lifecycleListeners.size());
+			}
+
+			return builder.build();
+		}
+
+		/**
 		 * Build the CodeactAgent
 		 */
 		@Override
@@ -562,7 +613,7 @@ public class CodeactAgent extends ReactAgent {
 				null, // Will be set by ReactAgent
 				new OverAllState(), // Placeholder
 				this.codeactToolRegistry,  // Pass CodeactTool registry
-				this.toolRegistryBridgeFactory,  // Pass custom factory (null will use default)
+				this.toolRegistryBridgeFactory,  // Pass ToolRegistryBridgeFactory for observability
 				this.allowIO,
 				this.allowNativeAccess,
 				this.executionTimeoutMs
@@ -684,6 +735,27 @@ public class CodeactAgent extends ReactAgent {
 			if (!allTools.isEmpty()) {
 				toolBuilder.toolCallbacks(allTools);
 			}
+
+			// Set toolContext if available (like DefaultBuilder does)
+			if (toolContext != null && !toolContext.isEmpty()) {
+				toolBuilder.toolContext(toolContext);
+			}
+
+			// Enable logging if enabled
+			if (enableLogging) {
+				toolBuilder.enableActingLog(true);
+			}
+
+			// Set exception processor (like DefaultBuilder does)
+			if (toolExecutionExceptionProcessor == null) {
+				toolBuilder.toolExecutionExceptionProcessor(
+					org.springframework.ai.tool.execution.DefaultToolExecutionExceptionProcessor.builder()
+						.alwaysThrow(false)
+						.build());
+			} else {
+				toolBuilder.toolExecutionExceptionProcessor(toolExecutionExceptionProcessor);
+			}
+
         llmNode.setInstruction(instruction);
 		AgentToolNode toolNode = toolBuilder.build();
 
@@ -923,21 +995,19 @@ public class CodeactAgent extends ReactAgent {
 			}
 
 			return CodeactSubAgentInterceptor.builder()
-					.defaultModel(codeGenModel)
-					.defaultCodeactTools(this.codeactTools)
-					.defaultLanguage(language)
-					.codeContext(this.codeContext)
-					.environmentManager(this.environmentManager)
-					.experienceProvider(this.experienceProvider)
-					.experienceExtensionProperties(this.experienceExtensionProperties)
-					.fastIntentService(this.fastIntentService)
-					.includeDefaultCodeGenerator(true)  // 使用默认代码生成器
-					.hooks(this.subAgentHooks) // Pass sub-agent hooks
-					.stateKeysToPropagate(this.stateKeysToPropagate) // 传递需要跨 agent 传递的 state keys
-					.returnSchemaRegistry(this.codeactToolRegistry != null ?
-							this.codeactToolRegistry.getReturnSchemaRegistry() : null)
-					.subAgentSystemPrompt(this.subAgentSystemPrompt)
-					.build();
+				.defaultModel(codeGenModel)
+				.defaultCodeactTools(this.codeactTools)
+				.defaultLanguage(language)
+				.codeContext(this.codeContext)
+				.environmentManager(this.environmentManager)
+				.experienceProvider(this.experienceProvider)
+				.experienceExtensionProperties(this.experienceExtensionProperties)
+				.fastIntentService(this.fastIntentService)
+				.includeDefaultCodeGenerator(true)  // 使用默认代码生成器
+				.hooks(this.subAgentHooks) // Pass sub-agent hooks
+				.returnSchemaRegistry(this.codeactToolRegistry != null ?
+					this.codeactToolRegistry.getReturnSchemaRegistry() : null)
+				.build();
 		}
 	}
 }

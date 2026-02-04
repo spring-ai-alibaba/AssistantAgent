@@ -124,9 +124,8 @@ public class FastIntentReactHook extends AgentHook {
             Optional<Experience> bestOpt = fastIntentService.selectBestMatch(experiences, ctx);
             if (bestOpt.isEmpty()) {
                 log.debug("FastIntentReactHook#beforeAgent - reason=no matched experience");
-                return CompletableFuture.completedFuture(Map.of(
-                        "jump_to", JumpTo.model
-                ));
+                // 不设置 jump_to，让正常流程继续（否则会导致无限循环到 model）
+                return CompletableFuture.completedFuture(Map.of());
             }
 
             Experience best = bestOpt.get();

@@ -81,7 +81,12 @@ public interface CodeactTool extends ToolCallback {
 	 * @return 工具名
 	 */
 	default String getName() {
-		return getCodeactDefinition().name();
+		CodeactToolDefinition definition = getCodeactDefinition();
+		if (definition != null) {
+			return definition.name();
+		}
+		// 回退到 ToolDefinition
+		return getToolDefinition().name();
 	}
 
 	/**
@@ -89,7 +94,12 @@ public interface CodeactTool extends ToolCallback {
 	 * @return 工具描述
 	 */
 	default String getDescription() {
-		return getCodeactDefinition().description();
+		CodeactToolDefinition definition = getCodeactDefinition();
+		if (definition != null) {
+			return definition.description();
+		}
+		// 回退到 ToolDefinition
+		return getToolDefinition().description();
 	}
 
 	/**

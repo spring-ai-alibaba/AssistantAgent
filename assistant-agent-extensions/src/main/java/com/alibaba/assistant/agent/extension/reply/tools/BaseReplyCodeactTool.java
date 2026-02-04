@@ -106,13 +106,14 @@ public class BaseReplyCodeactTool implements ReplyCodeactTool {
 
 	@Override
 	public String call(String toolInput) {
+		log.debug("BaseReplyCodeactTool#call(单参数) - reason=框架调用了单参数版本, toolName={}", toolName);
 		return call(toolInput, null);
 	}
 
 	@Override
 	public String call(String toolInput, ToolContext toolContext) {
-		log.debug("BaseReplyCodeactTool#call - reason=开始执行回复工具, toolName={}, toolInput={}", toolName,
-				toolInput);
+		log.debug("BaseReplyCodeactTool#call - reason=开始执行回复工具, toolName={}, hasToolContext={}",
+				toolName, toolContext != null);
 
 		try {
 			// 解析 JSON 输入参数
@@ -479,15 +480,6 @@ public class BaseReplyCodeactTool implements ReplyCodeactTool {
 		// 从 metadata 获取 userId 和 traceId
 		ToolContextHelper.getFromMetadata(toolContext, "user_id").ifPresent(builder::userId);
 		ToolContextHelper.getFromMetadata(toolContext, "trace_id").ifPresent(builder::traceId);
-
-		// 从 metadata 获取所有扩展字段，放入 extensions
-		// 这样业务方可以通过 extensions 传递自定义数据
-		ToolContextHelper.getAllMetadata(toolContext).ifPresent(metadata -> {
-			for (Map.Entry<String, Object> entry : metadata.entrySet()) {
-				String key = entry.getKey();
-				builder.extension(key, entry.getValue());
-			}
-		});
 
 		return builder.build();
 	}

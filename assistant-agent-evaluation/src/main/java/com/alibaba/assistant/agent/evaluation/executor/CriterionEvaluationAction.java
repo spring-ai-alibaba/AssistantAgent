@@ -132,6 +132,11 @@ public class CriterionEvaluationAction implements Function<OverAllState, Map<Str
                 updates.put(criterion.getName() + "_value", result.getValue());
             }
 
+            // 注册结果到静态存储，供 EvaluationObservationLifecycleListener 读取
+            // 因为 after() 回调中的 state 可能是快照，不包含刚写入的数据
+            com.alibaba.assistant.agent.evaluation.observation.EvaluationObservationLifecycleListener
+                    .registerCriterionResult(criterion.getName(), result);
+
             logger.info("Criterion {} completed with result: {}", criterion.getName(), result.getValue());
 
         } catch (Exception e) {

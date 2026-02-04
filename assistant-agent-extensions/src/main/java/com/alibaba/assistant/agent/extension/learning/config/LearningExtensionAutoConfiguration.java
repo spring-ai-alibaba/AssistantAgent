@@ -41,6 +41,8 @@ import com.alibaba.cloud.ai.graph.store.Store;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -48,6 +50,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 /**
  * 学习模块自动配置类
@@ -69,13 +72,30 @@ public class LearningExtensionAutoConfiguration {
 
 	/**
 	 * 配置异步学习处理器
+	 * <p>
+	 * 如果提供了名为 "learningAsyncExecutor" 的 ExecutorService Bean，
+	 * 则使用该自定义 ExecutorService（支持 trace 上下文传递等特性）。
+	 * 否则使用默认的线程池配置。
+	 *
+	 * @param properties 学习扩展配置
+	 * @param customExecutor 可选的自定义 ExecutorService（名为 "learningAsyncExecutor"）
+	 * @return AsyncLearningHandler
 	 */
 	@Bean
 	@ConditionalOnMissingBean
-	public AsyncLearningHandler asyncLearningHandler(LearningExtensionProperties properties) {
+	public AsyncLearningHandler asyncLearningHandler(
+			LearningExtensionProperties properties,
+			@Autowired(required = false) @Qualifier("learningAsyncExecutor") ExecutorService customExecutor) {
+		if (customExecutor != null) {
+			log.info(
+					"LearningExtensionAutoConfiguration#asyncLearningHandler - reason=creating async learning handler with custom executor, executorType={}",
+					customExecutor.getClass().getSimpleName());
+			return new AsyncLearningHandler(customExecutor);
+		}
+
 		LearningExtensionProperties.AsyncConfig asyncConfig = properties.getAsync();
 		log.info(
-				"LearningExtensionAutoConfiguration#asyncLearningHandler - reason=creating async learning handler, threadPoolSize={}, queueCapacity={}",
+				"LearningExtensionAutoConfiguration#asyncLearningHandler - reason=creating async learning handler with default executor, threadPoolSize={}, queueCapacity={}",
 				asyncConfig.getThreadPoolSize(), asyncConfig.getQueueCapacity());
 		return new AsyncLearningHandler(asyncConfig.getThreadPoolSize(), asyncConfig.getQueueCapacity());
 	}

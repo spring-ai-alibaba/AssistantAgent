@@ -24,6 +24,8 @@ import java.util.concurrent.*;
 /**
  * 异步学习处理器
  * 管理异步学习任务的执行，包括线程池管理和任务拒绝策略
+ * <p>
+ * 支持自定义 ExecutorService 注入，允许调用方传入支持 trace 上下文传递的线程池。
  *
  * @author Assistant Agent Team
  * @since 1.0.0
@@ -33,7 +35,14 @@ public class AsyncLearningHandler {
 	private static final Logger log = LoggerFactory.getLogger(AsyncLearningHandler.class);
 
 	private final ExecutorService executorService;
+	private final boolean externalExecutor;
 
+	/**
+	 * 使用默认线程池配置创建 AsyncLearningHandler
+	 *
+	 * @param threadPoolSize 线程池大小
+	 * @param queueCapacity 队列容量
+	 */
 	public AsyncLearningHandler(int threadPoolSize, int queueCapacity) {
 		this.executorService = new ThreadPoolExecutor(threadPoolSize, threadPoolSize, 60L, TimeUnit.SECONDS,
 				new LinkedBlockingQueue<>(queueCapacity), new ThreadFactory() {
@@ -44,10 +53,28 @@ public class AsyncLearningHandler {
 						return new Thread(r, "learning-async-" + (count++));
 					}
 				}, new ThreadPoolExecutor.CallerRunsPolicy());
+		this.externalExecutor = false;
 
 		log.info(
-				"AsyncLearningHandler#constructor - reason=async learning handler initialized, threadPoolSize={}, queueCapacity={}",
+				"AsyncLearningHandler#constructor - reason=async learning handler initialized with default executor, threadPoolSize={}, queueCapacity={}",
 				threadPoolSize, queueCapacity);
+	}
+
+	/**
+	 * 使用自定义 ExecutorService 创建 AsyncLearningHandler
+	 * <p>
+	 * 允许调用方传入支持 trace 上下文传递的线程池（如 TraceAwareExecutorService），
+	 * 确保异步任务的 traceId 与父线程保持一致。
+	 *
+	 * @param executorService 自定义的 ExecutorService
+	 */
+	public AsyncLearningHandler(ExecutorService executorService) {
+		this.executorService = executorService;
+		this.externalExecutor = true;
+
+		log.info(
+				"AsyncLearningHandler#constructor - reason=async learning handler initialized with custom executor, executorType={}",
+				executorService.getClass().getSimpleName());
 	}
 
 	/**
@@ -70,8 +97,16 @@ public class AsyncLearningHandler {
 
 	/**
 	 * 关闭线程池
+	 * <p>
+	 * 注意：如果使用的是外部传入的 ExecutorService，则不会关闭它，
+	 * 由外部调用方负责管理其生命周期。
 	 */
 	public void shutdown() {
+		if (externalExecutor) {
+			log.info("AsyncLearningHandler#shutdown - reason=skipping shutdown for external executor");
+			return;
+		}
+
 		log.info("AsyncLearningHandler#shutdown - reason=shutting down async learning handler");
 		executorService.shutdown();
 		try {

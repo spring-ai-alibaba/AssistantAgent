@@ -18,6 +18,10 @@ package com.alibaba.assistant.agent.extension.learning.hook;
 
 import com.alibaba.assistant.agent.common.hook.AgentPhase;
 import com.alibaba.assistant.agent.common.hook.HookPhases;
+import com.alibaba.assistant.agent.common.hook.AgentPhase;
+import com.alibaba.assistant.agent.common.hook.HookPhases;
+import com.alibaba.assistant.agent.core.observation.HookObservationHelper;
+import com.alibaba.assistant.agent.core.observation.ObservationState;
 import com.alibaba.assistant.agent.extension.learning.internal.DefaultLearningContext;
 import com.alibaba.assistant.agent.extension.learning.internal.DefaultLearningTask;
 import com.alibaba.assistant.agent.extension.learning.model.LearningContext;
@@ -71,8 +75,13 @@ public class AfterAgentLearningHook extends AgentHook {
 		try {
 			log.info("AfterAgentLearningHook#afterAgent - reason=agent execution completed, starting learning process");
 
+			// 注册自定义观测数据到 ObservationState
+			registerObservationData(state, "hook.input.learningType", learningType);
+			registerObservationData(state, "hook.input.triggerSource", LearningTriggerSource.AFTER_AGENT.name());
+
 			// 1. 从state中提取对话历史
 			List<Object> conversationHistory = extractConversationHistory(state);
+			registerObservationData(state, "hook.input.conversationHistorySize", conversationHistory.size());
 
 			// 2. 构建学习上下文
 			LearningContext context = DefaultLearningContext.builder()
@@ -92,36 +101,52 @@ public class AfterAgentLearningHook extends AgentHook {
 			// 4. 判断是否应该触发学习
 			if (!learningStrategy.shouldTriggerLearning(triggerContext)) {
 				log.info("AfterAgentLearningHook#afterAgent - reason=strategy decided not to trigger learning");
+				registerObservationData(state, "hook.output.status", "NOT_TRIGGERED");
+				registerObservationData(state, "hook.output.triggered", false);
 				return CompletableFuture.completedFuture(Map.of());
 			}
 
-			// 4. 构建学习任务
+			// 注册学习触发信息
+			registerObservationData(state, "hook.output.triggered", true);
+
+			// 5. 构建学习任务
 			LearningTask task = DefaultLearningTask.builder()
 				.learningType(learningType)
 				.triggerSource(LearningTriggerSource.AFTER_AGENT)
 				.context(context)
 				.build();
 
-			// 5. 执行学习（异步或同步）
+			registerObservationData(state, "hook.output.taskId", task.getId());
+
+			// 6. 执行学习（异步或同步）
 			if (learningStrategy.shouldExecuteAsync(task)) {
 				log.info(
 						"AfterAgentLearningHook#afterAgent - reason=executing learning asynchronously, taskId={}",
 						task.getId());
+				registerObservationData(state, "hook.output.executionMode", "ASYNC");
+
 				learningExecutor.executeAsync(task).exceptionally(ex -> {
 					log.error(
 							"AfterAgentLearningHook#afterAgent - reason=async learning execution failed, taskId={}",
 							task.getId(), ex);
 					return null;
 				});
+				registerObservationData(state, "hook.output.status", "ASYNC_SUBMITTED");
 			}
 			else {
 				log.debug("AfterAgentLearningHook#afterAgent - reason=executing learning synchronously, taskId={}",
 						task.getId());
+				registerObservationData(state, "hook.output.executionMode", "SYNC");
+
 				LearningResult result = learningExecutor.execute(task);
 				if (!result.isSuccess()) {
 					log.warn(
 							"AfterAgentLearningHook#afterAgent - reason=learning execution failed, taskId={}, failureReason={}",
 							task.getId(), result.getFailureReason());
+					registerObservationData(state, "hook.output.status", "FAILED");
+					registerObservationData(state, "hook.output.failureReason", truncate(result.getFailureReason(), 200));
+				} else {
+					registerObservationData(state, "hook.output.status", "SUCCESS");
 				}
 			}
 
@@ -129,6 +154,8 @@ public class AfterAgentLearningHook extends AgentHook {
 		catch (Exception e) {
 			// 学习失败不影响主流程
 			log.error("AfterAgentLearningHook#afterAgent - reason=learning hook failed", e);
+			registerObservationData(state, "hook.output.status", "ERROR");
+			registerObservationData(state, "hook.output.errorType", e.getClass().getSimpleName());
 		}
 
 		return CompletableFuture.completedFuture(Map.of());
@@ -154,5 +181,42 @@ public class AfterAgentLearningHook extends AgentHook {
 		}
 	}
 
-}
+	/**
+	 * 注册自定义观测数据到 ObservationState
+	 * <p>
+	 * 这些数据会被 CodeactAgentObservationLifecycleListener 收集并记录到 Observation 中。
+	 *
+	 * @param state OverAllState
+	 * @param key   数据键，建议使用 "hook." 前缀
+	 * @param value 数据值
+	 */
+	private void registerObservationData(OverAllState state, String key, Object value) {
+		try {
+			// 尝试获取 ObservationState
+			Object obsStateObj = state.value("_observation_state_").orElse(null);
+			if (obsStateObj != null) {
+				// 使用反射调用 put 方法，避免直接依赖 ObservationState 类
+				java.lang.reflect.Method putMethod = obsStateObj.getClass().getMethod("put", String.class, Object.class);
+				putMethod.invoke(obsStateObj, key, value);
+				log.debug("AfterAgentLearningHook#registerObservationData - reason=注册观测数据成功, key={}", key);
+			}
+		} catch (Exception e) {
+			// 静默失败，不影响主流程
+			log.debug("AfterAgentLearningHook#registerObservationData - reason=注册观测数据失败, key={}, error={}", key, e.getMessage());
+		}
+	}
 
+	/**
+	 * 截断字符串
+	 */
+	private String truncate(String str, int maxLength) {
+		if (str == null) {
+			return "null";
+		}
+		if (str.length() <= maxLength) {
+			return str;
+		}
+		return str.substring(0, maxLength) + "...";
+	}
+
+}

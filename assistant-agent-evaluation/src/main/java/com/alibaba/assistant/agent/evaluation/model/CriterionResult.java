@@ -50,6 +50,11 @@ public class CriterionResult {
 	private String rawResponse;
 
 	/**
+	 * Raw prompt sent to LLM (for observability)
+	 */
+	private String rawPrompt;
+
+	/**
 	 * Error message if status is ERROR
 	 */
 	private String errorMessage;
@@ -109,6 +114,14 @@ public class CriterionResult {
 
 	public void setRawResponse(String rawResponse) {
 		this.rawResponse = rawResponse;
+	}
+
+	public String getRawPrompt() {
+		return rawPrompt;
+	}
+
+	public void setRawPrompt(String rawPrompt) {
+		this.rawPrompt = rawPrompt;
 	}
 
 	public String getErrorMessage() {

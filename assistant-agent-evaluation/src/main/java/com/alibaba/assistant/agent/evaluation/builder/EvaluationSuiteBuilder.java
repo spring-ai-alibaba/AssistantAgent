@@ -21,10 +21,14 @@ import com.alibaba.assistant.agent.evaluation.executor.CriterionEvaluationAction
 import com.alibaba.assistant.agent.evaluation.model.EvaluationCriterion;
 import com.alibaba.assistant.agent.evaluation.model.EvaluationSuite;
 import com.alibaba.cloud.ai.graph.CompiledGraph;
+import com.alibaba.cloud.ai.graph.CompileConfig;
+import com.alibaba.cloud.ai.graph.GraphLifecycleListener;
 import com.alibaba.cloud.ai.graph.KeyStrategy;
 import com.alibaba.cloud.ai.graph.StateGraph;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.Tracer;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -47,6 +51,9 @@ public class EvaluationSuiteBuilder {
     private final EvaluatorRegistry evaluatorRegistry;
     private final BatchAggregationStrategyRegistry aggregationStrategyRegistry;
     private ExecutorService executorService;
+    private final List<GraphLifecycleListener> lifecycleListeners = new ArrayList<>();
+    private Tracer tracer;
+    private Span parentSpan;
 
     public EvaluationSuiteBuilder(String id, EvaluatorRegistry evaluatorRegistry) {
         this(id, evaluatorRegistry, new BatchAggregationStrategyRegistry(), null);
@@ -77,6 +84,54 @@ public class EvaluationSuiteBuilder {
 
     public EvaluationSuiteBuilder executorService(ExecutorService executorService) {
         this.executorService = executorService;
+        return this;
+    }
+
+    /**
+     * 添加 GraphLifecycleListener 用于可观测性
+     *
+     * @param listener GraphLifecycleListener
+     * @return this
+     */
+    public EvaluationSuiteBuilder lifecycleListener(GraphLifecycleListener listener) {
+        if (listener != null) {
+            this.lifecycleListeners.add(listener);
+        }
+        return this;
+    }
+
+    /**
+     * 添加多个 GraphLifecycleListeners
+     *
+     * @param listeners GraphLifecycleListeners
+     * @return this
+     */
+    public EvaluationSuiteBuilder lifecycleListeners(List<? extends GraphLifecycleListener> listeners) {
+        if (listeners != null) {
+            this.lifecycleListeners.addAll(listeners);
+        }
+        return this;
+    }
+
+    /**
+     * 设置 Tracer 用于可观测性
+     *
+     * @param tracer Tracer
+     * @return this
+     */
+    public EvaluationSuiteBuilder tracer(Tracer tracer) {
+        this.tracer = tracer;
+        return this;
+    }
+
+    /**
+     * 设置 parent Span，所有评估项的 span 都会继承此父 span
+     *
+     * @param parentSpan 父 Span
+     * @return this
+     */
+    public EvaluationSuiteBuilder parentSpan(Span parentSpan) {
+        this.parentSpan = parentSpan;
         return this;
     }
 
@@ -237,8 +292,20 @@ public class EvaluationSuiteBuilder {
                 stateGraph.addEdge(previousJoinNode, StateGraph.END);
             }
 
-            // Compile graph; keep representation inside suite
-            CompiledGraph compiled = stateGraph.compile();
+            // Build CompileConfig with lifecycleListeners for observability
+            CompileConfig.Builder configBuilder = CompileConfig.builder();
+
+            // Add ObservationRegistry if available
+
+            // Add all lifecycleListeners
+            for (GraphLifecycleListener listener : lifecycleListeners) {
+                configBuilder.withLifecycleListener(listener);
+            }
+
+            CompileConfig compileConfig = configBuilder.build();
+
+            // Compile graph with config
+            CompiledGraph compiled = stateGraph.compile(compileConfig);
             suite.setCompiledGraph(compiled);
         }
         catch (GraphStateException e) {

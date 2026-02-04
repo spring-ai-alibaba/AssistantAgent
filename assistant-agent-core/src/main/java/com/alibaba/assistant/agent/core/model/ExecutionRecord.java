@@ -19,6 +19,8 @@ import com.alibaba.assistant.agent.common.enums.Language;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -77,8 +79,14 @@ public class ExecutionRecord implements Serializable {
 	 */
 	private Map<String, Object> metadata;
 
+	/**
+	 * 工具调用追踪记录，记录代码执行过程中调用的工具列表
+	 */
+	private List<ToolCallRecord> callTrace;
+
 	public ExecutionRecord() {
 		this.executedAt = LocalDateTime.now();
+		this.callTrace = new ArrayList<>();
 	}
 
 	public ExecutionRecord(String functionName, Language language) {
@@ -161,6 +169,25 @@ public class ExecutionRecord implements Serializable {
 		this.metadata = metadata;
 	}
 
+	public List<ToolCallRecord> getCallTrace() {
+		return callTrace;
+	}
+
+	public void setCallTrace(List<ToolCallRecord> callTrace) {
+		this.callTrace = callTrace;
+	}
+
+	/**
+	 * 添加一条工具调用记录
+	 * @param toolName 工具名称
+	 */
+	public void addToolCall(String toolName) {
+		if (this.callTrace == null) {
+			this.callTrace = new ArrayList<>();
+		}
+		this.callTrace.add(new ToolCallRecord(this.callTrace.size() + 1, toolName));
+	}
+
 	@Override
 	public String toString() {
 		return "ExecutionRecord{" +
@@ -171,6 +198,7 @@ public class ExecutionRecord implements Serializable {
 				", errorMessage='" + errorMessage + '\'' +
 				", executedAt=" + executedAt +
 				", durationMs=" + durationMs +
+				", callTrace=" + callTrace +
 				'}';
 	}
 }

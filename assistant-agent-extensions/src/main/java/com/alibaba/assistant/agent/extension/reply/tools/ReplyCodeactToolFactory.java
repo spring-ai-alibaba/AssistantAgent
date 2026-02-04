@@ -110,12 +110,69 @@ public class ReplyCodeactToolFactory {
 
 	/**
 	 * 构建参数模式。
+	 * <p>优先使用配置中的参数定义，如果配置中没有，则从渠道定义中获取。
 	 */
 	private ParameterSchema buildParameterSchema(ReplyToolConfig config, ReplyChannelDefinition channel) {
-		// 从配置和渠道定义中构建参数模式
-		return ParameterSchema.builder()
-                .parameter("message", ParameterSchema.ParameterType.STRING, true, "要发送的消息内容")
-                .build();
+		// 1. 优先使用配置中的参数定义
+		if (config.getParameters() != null && !config.getParameters().isEmpty()) {
+			ParameterSchema.Builder builder = ParameterSchema.builder();
+			for (ReplyToolConfig.ParameterConfig paramConfig : config.getParameters()) {
+				ParameterSchema.ParameterType type = convertToParameterType(paramConfig.getType());
+				ParameterSchema.ParameterDef def = new ParameterSchema.ParameterDef(
+						paramConfig.getName(),
+						type,
+						paramConfig.isRequired(),
+						paramConfig.getDescription()
+				);
+				def.setDefaultValue(paramConfig.getDefaultValue());
+				def.setEnumValues(paramConfig.getEnumValues());
+				builder.parameter(def);
+			}
+			log.debug("ReplyCodeactToolFactory#buildParameterSchema - reason=使用配置中的参数定义, toolName={}, paramCount={}",
+					config.getToolName(), config.getParameters().size());
+			return builder.build();
+		}
+
+		// 2. 如果配置中没有参数定义，从渠道定义中获取
+		ParameterSchema channelSchema = channel.getSupportedParameters();
+		if (channelSchema != null) {
+			log.debug("ReplyCodeactToolFactory#buildParameterSchema - reason=使用渠道定义的参数, toolName={}, channelCode={}",
+					config.getToolName(), config.getChannelCode());
+			return channelSchema;
+		}
+
+		// 3. 如果都没有，返回空的参数模式
+		log.warn("ReplyCodeactToolFactory#buildParameterSchema - reason=未找到参数定义将使用空参数模式, toolName={}, channelCode={}",
+				config.getToolName(), config.getChannelCode());
+		return ParameterSchema.builder().build();
+	}
+
+	/**
+	 * 将字符串类型转换为 ParameterType。
+	 */
+	private ParameterSchema.ParameterType convertToParameterType(String type) {
+		if (type == null) {
+			return ParameterSchema.ParameterType.STRING;
+		}
+		String lowerType = type.toLowerCase();
+		switch (lowerType) {
+			case "integer":
+			case "int":
+			case "long":
+				return ParameterSchema.ParameterType.INTEGER;
+			case "boolean":
+			case "bool":
+				return ParameterSchema.ParameterType.BOOLEAN;
+			case "array":
+			case "list":
+				return ParameterSchema.ParameterType.ARRAY;
+			case "object":
+			case "map":
+				return ParameterSchema.ParameterType.OBJECT;
+			case "string":
+			default:
+				return ParameterSchema.ParameterType.STRING;
+		}
 	}
 
 	/**
