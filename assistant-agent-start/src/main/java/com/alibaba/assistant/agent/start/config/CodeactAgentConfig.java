@@ -267,6 +267,7 @@ public class CodeactAgentConfig {
 	@Bean
 	public CodeactAgent grayscaleCodeactAgent(
 			ChatModel chatModel,
+			@Autowired(required = false) List<CodeactTool> codeactTools,
 			@Autowired(required = false) List<ReplyCodeactTool> replyCodeactTools,
 			@Autowired(required = false) SearchCodeactToolFactory searchCodeactToolFactory,
 			@Autowired(required = false) List<TriggerCodeactTool> triggerCodeactTools,
@@ -328,6 +329,17 @@ public class CodeactAgentConfig {
 		if (!httpTools.isEmpty()) {
 			allCodeactTools.addAll(httpTools);
 			logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=添加HTTP动态工具, count={}", httpTools.size());
+		}
+
+		// 去重，加入所有其他CodeactTools
+		for (CodeactTool tool : codeactTools) {
+			boolean exists = allCodeactTools.stream()
+					.anyMatch(t -> t.getToolDefinition().name().equals(tool.getToolDefinition().name()));
+			if (!exists) {
+				allCodeactTools.add(tool);
+			} else {
+				logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=跳过重复工具, toolName={}", tool.getToolDefinition().name());
+			}
 		}
 
 		logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=合并后CodeactTool总数, count={}", allCodeactTools.size());
