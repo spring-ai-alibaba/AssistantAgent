@@ -334,7 +334,7 @@ public class CodeactAgentConfig {
 		// 去重，加入所有其他CodeactTools
 		for (CodeactTool tool : codeactTools) {
 			boolean exists = allCodeactTools.stream()
-					.anyMatch(t -> t.getToolDefinition().name().equals(tool.getToolDefinition().name()));
+					.anyMatch(t -> t.getToolDefinition().name().equals(tool.getToolDefinition().name()) || t.getName().equals(tool.getName()));
 			if (!exists) {
 				allCodeactTools.add(tool);
 			} else {
