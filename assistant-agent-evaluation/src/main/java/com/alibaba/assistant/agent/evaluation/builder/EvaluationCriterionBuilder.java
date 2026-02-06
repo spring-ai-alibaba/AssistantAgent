@@ -19,6 +19,7 @@ import com.alibaba.assistant.agent.evaluation.model.ConditionalExecutionConfig;
 import com.alibaba.assistant.agent.evaluation.model.CriterionBatchingConfig;
 import com.alibaba.assistant.agent.evaluation.model.EvaluationCriterion;
 import com.alibaba.assistant.agent.evaluation.model.EvaluatorType;
+import com.alibaba.assistant.agent.evaluation.model.MultimodalConfig;
 import com.alibaba.assistant.agent.evaluation.model.ReasoningPolicy;
 import com.alibaba.assistant.agent.evaluation.model.ResultType;
 
@@ -186,6 +187,41 @@ public class EvaluationCriterionBuilder {
 		return this;
 	}
 
+	/**
+	 * Configure multimodal processing for this criterion.
+	 *
+	 * @param config The multimodal configuration
+	 * @return this builder
+	 */
+	public EvaluationCriterionBuilder multimodal(MultimodalConfig config) {
+		criterion.setMultimodalConfig(config);
+		return this;
+	}
+
+	/**
+	 * Configure multimodal processing for images.
+	 * This is a convenience method that creates a MultimodalConfig for image processing.
+	 *
+	 * @param attachmentsPath Path to the attachments source, e.g., "context.input.attachments".
+	 *                        The path must point to objects implementing the MediaConvertible interface.
+	 * @return this builder
+	 */
+	public EvaluationCriterionBuilder multimodalForImages(String attachmentsPath) {
+		criterion.setMultimodalConfig(MultimodalConfig.forImages(attachmentsPath));
+		return this;
+	}
+
+	/**
+	 * Configure multimodal processing for images with a specific evaluator.
+	 *
+	 * @param attachmentsPath Path to the attachments source
+	 * @param evaluatorRef The evaluator reference to use for multimodal evaluation
+	 * @return this builder
+	 */
+	public EvaluationCriterionBuilder multimodalForImages(String attachmentsPath, String evaluatorRef) {
+		criterion.setMultimodalConfig(MultimodalConfig.forImages(attachmentsPath, evaluatorRef));
+		return this;
+	}
 
 	/**
 	 * Ensure the dependent criterion is in the dependsOn list
