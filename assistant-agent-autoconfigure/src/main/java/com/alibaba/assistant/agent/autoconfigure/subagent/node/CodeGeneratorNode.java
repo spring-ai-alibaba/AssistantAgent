@@ -125,13 +125,17 @@ public class CodeGeneratorNode implements NodeActionWithConfig {
 			// 3. 构建用户消息
 			String userMessage = buildUserMessage(requirement, functionName, parameters, isCondition);
 
+			// 5. 从 state 中提取 Hook 注入的 messages
+			List<Message> hookInjectedMessages = extractHookInjectedMessages(state);
+			logger.info("CodeGeneratorNode#apply 从state提取Hook注入的messages: count={}", hookInjectedMessages.size());
+
             logger.info("CodeGeneratorNode#apply 构建消息: systemPrompt={}, userMessage={}",
                     systemPrompt, userMessage);
-			// 4. 构造ModelRequest
-			List<Message> messages = List.of(
-					new SystemMessage(systemPrompt),
-					new UserMessage(userMessage)
-			);
+			// 6. 构造 messages 列表
+			List<Message> messages = new ArrayList<>();
+			messages.add(new SystemMessage(systemPrompt));
+			messages.add(new UserMessage(userMessage));
+			messages.addAll(hookInjectedMessages);
 
 			ModelRequest modelRequest = ModelRequest.builder()
 					.messages(messages)
@@ -195,6 +199,44 @@ public class CodeGeneratorNode implements NodeActionWithConfig {
 				.or(() -> state.value("generated_functions", List.class))
 				.or(() -> state.value("code_history", List.class))
 				.orElse(new ArrayList<>());
+	}
+
+	/**
+	 * 从 state 中提取 Hook 注入的 messages
+	 *
+	 * <p>Hook 通常将 messages 放入 state 的 "messages" 字段中，这个方法会提取这些 messages，
+	 * 排除掉 SystemMessage（因为我们会自己构建系统提示），保留其他类型的 messages。
+	 *
+	 * @param state OverAllState 实例
+	 * @return Hook 注入的 messages 列表（不包含 SystemMessage）
+	 */
+	@SuppressWarnings("unchecked")
+	private List<Message> extractHookInjectedMessages(OverAllState state) {
+		List<Message> result = new ArrayList<>();
+
+		try {
+			Object messagesObj = state.value("messages").orElse(null);
+			if (messagesObj instanceof List) {
+				List<?> messages = (List<?>) messagesObj;
+				for (Object obj : messages) {
+					if (obj instanceof Message msg) {
+						// 排除 SystemMessage（因为我们会自己构建系统提示）
+						// 保留 AssistantMessage、ToolResponseMessage 等（prompt contributor 注入的内容）
+						if (!(msg instanceof SystemMessage)) {
+							result.add(msg);
+							logger.debug("CodeGeneratorNode#extractHookInjectedMessages 提取到message: type={}, content={}",
+									msg.getClass().getSimpleName(),
+									msg.getText() != null ? msg.getText().substring(0, Math.min(100, msg.getText().length())) : "null");
+						}
+					}
+				}
+			}
+		} catch (Exception e) {
+			logger.warn("CodeGeneratorNode#extractHookInjectedMessages 提取失败", e);
+		}
+
+		logger.info("CodeGeneratorNode#extractHookInjectedMessages 提取完成: count={}", result.size());
+		return result;
 	}
 
 	/**
