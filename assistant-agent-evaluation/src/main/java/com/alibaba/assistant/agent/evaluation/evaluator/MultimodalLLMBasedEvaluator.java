@@ -180,8 +180,9 @@ public class MultimodalLLMBasedEvaluator extends LLMBasedEvaluator {
             String textPrompt = buildPrompt(context);
             result.setRawPrompt(textPrompt);
 
-            logger.debug("Evaluating multimodal criterion {} with {} media items, prompt: {}",
-                    context.getCriterion().getName(), mediaList.size(), textPrompt);
+            logger.debug("Evaluating multimodal criterion {} with {} media items, prompt: {}, chatModel: {} ({})",
+                    context.getCriterion().getName(), mediaList.size(), textPrompt,
+                    multimodalChatModel.getClass().getSimpleName(), multimodalChatModel);
 
             // 构建带媒体的消息
             UserMessage userMessage = UserMessage.builder()
