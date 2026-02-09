@@ -22,6 +22,7 @@ import com.alibaba.assistant.agent.evaluation.model.CriterionStatus;
 import com.alibaba.assistant.agent.evaluation.model.EvaluationCriterion;
 import com.alibaba.assistant.agent.evaluation.model.MediaConvertible;
 import com.alibaba.assistant.agent.evaluation.model.MultimodalConfig;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,7 +69,18 @@ public class MultimodalLLMBasedEvaluator extends LLMBasedEvaluator {
      * @param evaluatorId 评估器ID
      */
     public MultimodalLLMBasedEvaluator(ChatModel textModel, ChatModel multimodalModel, String evaluatorId) {
-        this(textModel, multimodalModel, evaluatorId, new ObjectMapper());
+        this(textModel, multimodalModel, evaluatorId, createDefaultObjectMapper());
+    }
+
+    /**
+     * 创建默认的 ObjectMapper，配置为忽略未知属性
+     * 这是必要的，因为序列化时可能会包含额外的属性（如来自接口默认方法的 getter）
+     */
+    private static ObjectMapper createDefaultObjectMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+        // 忽略未知属性，避免反序列化时因为额外的属性而失败
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        return mapper;
     }
 
     /**
