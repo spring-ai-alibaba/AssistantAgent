@@ -22,6 +22,7 @@ import com.alibaba.assistant.agent.evaluation.model.CriterionStatus;
 import com.alibaba.assistant.agent.evaluation.model.EvaluationCriterion;
 import com.alibaba.assistant.agent.evaluation.model.MediaConvertible;
 import com.alibaba.assistant.agent.evaluation.model.MultimodalConfig;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.messages.UserMessage;
@@ -33,6 +34,8 @@ import org.springframework.ai.content.Media;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 支持多模态输入的LLM评估器
@@ -47,6 +50,17 @@ public class MultimodalLLMBasedEvaluator extends LLMBasedEvaluator {
     private final ChatModel multimodalChatModel;
 
     /**
+     * 用于将 Map 转换为 MediaConvertible 实现类的 ObjectMapper
+     */
+    private final ObjectMapper objectMapper;
+
+    /**
+     * 已注册的 MediaConvertible 实现类类型
+     * 用于将反序列化后的 Map 转换回正确的类型
+     */
+    private static final Map<String, Class<? extends MediaConvertible>> registeredMediaTypes = new ConcurrentHashMap<>();
+
+    /**
      * 构造函数
      *
      * @param textModel 纯文本模型，用于普通评估
@@ -54,8 +68,59 @@ public class MultimodalLLMBasedEvaluator extends LLMBasedEvaluator {
      * @param evaluatorId 评估器ID
      */
     public MultimodalLLMBasedEvaluator(ChatModel textModel, ChatModel multimodalModel, String evaluatorId) {
+        this(textModel, multimodalModel, evaluatorId, new ObjectMapper());
+    }
+
+    /**
+     * 构造函数（带自定义 ObjectMapper）
+     *
+     * @param textModel 纯文本模型，用于普通评估
+     * @param multimodalModel 多模态模型，用于处理图片等多模态输入
+     * @param evaluatorId 评估器ID
+     * @param objectMapper 用于类型转换的 ObjectMapper
+     */
+    public MultimodalLLMBasedEvaluator(ChatModel textModel, ChatModel multimodalModel, 
+                                        String evaluatorId, ObjectMapper objectMapper) {
         super(textModel, evaluatorId);
         this.multimodalChatModel = multimodalModel;
+        this.objectMapper = objectMapper != null ? objectMapper : new ObjectMapper();
+    }
+
+    /**
+     * 注册 MediaConvertible 实现类
+     * 用于支持将序列化后的 Map 转换回正确的类型
+     *
+     * @param typeIdentifier 类型标识符（通常是完整类名或简短别名）
+     * @param clazz MediaConvertible 实现类
+     */
+    public static void registerMediaType(String typeIdentifier, Class<? extends MediaConvertible> clazz) {
+        registeredMediaTypes.put(typeIdentifier, clazz);
+        logger.info("Registered MediaConvertible type: {} -> {}", typeIdentifier, clazz.getName());
+    }
+
+    /**
+     * 注册 MediaConvertible 实现类（使用类的简单名称作为标识符）
+     *
+     * @param clazz MediaConvertible 实现类
+     */
+    public static void registerMediaType(Class<? extends MediaConvertible> clazz) {
+        registerMediaType(clazz.getSimpleName(), clazz);
+        // 同时注册完整类名
+        registerMediaType(clazz.getName(), clazz);
+    }
+
+    /**
+     * 获取已注册的类型数量（用于测试）
+     */
+    public static int getRegisteredTypeCount() {
+        return registeredMediaTypes.size();
+    }
+
+    /**
+     * 清除所有已注册的类型（用于测试）
+     */
+    public static void clearRegisteredTypes() {
+        registeredMediaTypes.clear();
     }
 
     @Override
@@ -125,7 +190,10 @@ public class MultimodalLLMBasedEvaluator extends LLMBasedEvaluator {
 
     /**
      * 将对象转换为Media
-     * 仅支持 MediaConvertible 接口的实现类和 Media 类型
+     * 支持 MediaConvertible 接口的实现类、Media 类型、以及可以转换为 MediaConvertible 的 Map 类型
+     *
+     * 当对象是 Map 类型时（通常是因为序列化/反序列化导致类型信息丢失），
+     * 会尝试使用已注册的 MediaConvertible 实现类进行转换。
      */
     protected Media convertToMedia(Object obj, MultimodalConfig config) {
         // 如果已经是Media类型，直接返回
@@ -140,11 +208,57 @@ public class MultimodalLLMBasedEvaluator extends LLMBasedEvaluator {
             if (media != null) {
                 return filterByMimeType(media, config);
             }
+            return null;
+        }
+
+        // 如果是 Map 类型（通常是因为序列化/反序列化导致类型信息丢失）
+        // 尝试使用已注册的 MediaConvertible 实现类进行转换
+        if (obj instanceof Map) {
+            Media media = tryConvertMapToMedia((Map<?, ?>) obj, config);
+            if (media != null) {
+                return media;
+            }
+            // 如果转换失败，记录更详细的日志
+            logger.debug("Object of type {} could not be converted to MediaConvertible. " +
+                    "Make sure to register the target type using MultimodalLLMBasedEvaluator.registerMediaType()",
+                    obj.getClass().getName());
+            return null;
         }
 
         // 不支持的类型，记录日志并返回null
         logger.debug("Object of type {} does not implement MediaConvertible interface, skipping",
                 obj != null ? obj.getClass().getName() : "null");
+        return null;
+    }
+
+    /**
+     * 尝试将 Map 转换为 MediaConvertible 并获取 Media
+     *
+     * @param map 要转换的 Map
+     * @param config 多模态配置
+     * @return Media 对象，如果转换失败则返回 null
+     */
+    private Media tryConvertMapToMedia(Map<?, ?> map, MultimodalConfig config) {
+        if (registeredMediaTypes.isEmpty()) {
+            logger.debug("No MediaConvertible types registered for Map conversion");
+            return null;
+        }
+
+        // 尝试使用所有已注册的类型进行转换
+        for (Map.Entry<String, Class<? extends MediaConvertible>> entry : registeredMediaTypes.entrySet()) {
+            try {
+                MediaConvertible convertible = objectMapper.convertValue(map, entry.getValue());
+                Media media = convertible.toMedia();
+                if (media != null) {
+                    logger.debug("Successfully converted Map to {} and obtained Media", entry.getValue().getSimpleName());
+                    return filterByMimeType(media, config);
+                }
+            } catch (Exception e) {
+                // 转换失败，尝试下一个类型
+                logger.trace("Failed to convert Map to {}: {}", entry.getValue().getSimpleName(), e.getMessage());
+            }
+        }
+
         return null;
     }
 
