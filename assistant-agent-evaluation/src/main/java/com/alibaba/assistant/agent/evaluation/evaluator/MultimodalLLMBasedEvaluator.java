@@ -251,9 +251,6 @@ public class MultimodalLLMBasedEvaluator extends LLMBasedEvaluator {
      * @return Media 对象，如果转换失败则返回 null
      */
     private Media tryConvertMapToMedia(Map<?, ?> map, MultimodalConfig config) {
-        logger.debug("Attempting to convert Map to MediaConvertible, registeredTypesCount={}, mapKeys={}", 
-                registeredMediaTypes.size(), map.keySet());
-        
         if (registeredMediaTypes.isEmpty()) {
             logger.debug("No MediaConvertible types registered for Map conversion");
             return null;
@@ -262,19 +259,15 @@ public class MultimodalLLMBasedEvaluator extends LLMBasedEvaluator {
         // 尝试使用所有已注册的类型进行转换
         for (Map.Entry<String, Class<? extends MediaConvertible>> entry : registeredMediaTypes.entrySet()) {
             try {
-                logger.debug("Trying to convert Map to type: {}", entry.getValue().getName());
                 MediaConvertible convertible = objectMapper.convertValue(map, entry.getValue());
-                logger.debug("ObjectMapper conversion successful, calling toMedia()");
                 Media media = convertible.toMedia();
                 if (media != null) {
                     logger.debug("Successfully converted Map to {} and obtained Media", entry.getValue().getSimpleName());
                     return filterByMimeType(media, config);
-                } else {
-                    logger.debug("toMedia() returned null for type {}", entry.getValue().getSimpleName());
                 }
             } catch (Exception e) {
                 // 转换失败，尝试下一个类型
-                logger.debug("Failed to convert Map to {}: {}", entry.getValue().getSimpleName(), e.getMessage());
+                logger.trace("Failed to convert Map to {}: {}", entry.getValue().getSimpleName(), e.getMessage());
             }
         }
 
