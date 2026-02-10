@@ -93,12 +93,13 @@ public class ToolRegistryBridge {
 		}
 		catch (Exception e) {
 			logger.error("ToolRegistryBridge#callTool - reason=工具调用失败, toolName=" + toolName, e);
-			String errorResult = "{\"error\": \"" + e.getMessage().replace("\"", "\\\"") + "\"}";
 
 			// 观测错误返回值结构
+			String errorResult = "{\"error\": \"" + e.getMessage().replace("\"", "\\\"") + "\"}";
 			observeReturnSchema(toolName, errorResult, false);
 
-			return errorResult;
+			// 直接抛出异常，让Python层能够捕获并正确处理错误信息
+			throw new RuntimeException(e.getMessage(), e);
 		}
 	}
 
