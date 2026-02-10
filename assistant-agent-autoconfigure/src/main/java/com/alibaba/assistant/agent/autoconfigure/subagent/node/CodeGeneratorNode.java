@@ -249,14 +249,20 @@ public class CodeGeneratorNode implements NodeActionWithConfig {
 	}
 
 	/**
-	 * 根据白名单筛选工具
+	 * 根据白名单筛选工具，并合并始终可用的基础工具
 	 *
-	 * <p>如果白名单为空，返回全部工具（保持向后兼容）。
-	 * 如果白名单非空，仅返回名称在白名单中的工具。
+	 * <p>筛选逻辑：
+	 * <ul>
+	 *   <li>如果白名单为空，返回全部工具（保持向后兼容）</li>
+	 *   <li>如果白名单非空，返回：白名单中的工具 ∪ alwaysAvailable=true 的基础工具</li>
+	 * </ul>
+	 *
+	 * <p>基础工具（如 reply_tools）通过 {@link CodeactToolMetadata#alwaysAvailable()} 标识，
+	 * 无论白名单中是否包含，这些工具都会被包含在最终的可用工具列表中。
 	 *
 	 * @param allTools 全部工具列表
 	 * @param whitelist 工具名称白名单（为空时不筛选）
-	 * @return 筛选后的工具列表
+	 * @return 筛选后的工具列表（包含白名单工具和基础工具）
 	 */
 	private List<CodeactTool> filterToolsByWhitelist(List<CodeactTool> allTools, List<String> whitelist) {
 		// 白名单为空时，返回全部工具
@@ -275,18 +281,35 @@ public class CodeGeneratorNode implements NodeActionWithConfig {
 				.map(String::toLowerCase)
 				.collect(Collectors.toSet());
 
-		// 筛选工具
-		List<CodeactTool> filtered = allTools.stream()
-				.filter(tool -> {
-					String toolName = tool.getName();
-					if (toolName == null) {
-						return false;
-					}
-					return whitelistSet.contains(toolName.toLowerCase());
-				})
-				.collect(Collectors.toList());
+		// 筛选工具：白名单中的工具 + alwaysAvailable=true 的基础工具
+		List<CodeactTool> filtered = new ArrayList<>();
+		List<String> whitelistMatchedNames = new ArrayList<>();
+		List<String> alwaysAvailableNames = new ArrayList<>();
 
-		// 记录筛选结果（包括哪些工具被过滤掉了）
+		for (CodeactTool tool : allTools) {
+			String toolName = tool.getName();
+			if (toolName == null) {
+				continue;
+			}
+
+			boolean inWhitelist = whitelistSet.contains(toolName.toLowerCase());
+			boolean isAlwaysAvailable = tool.getCodeactMetadata() != null
+					&& tool.getCodeactMetadata().alwaysAvailable();
+
+			if (inWhitelist) {
+				filtered.add(tool);
+				whitelistMatchedNames.add(toolName);
+			} else if (isAlwaysAvailable) {
+				filtered.add(tool);
+				alwaysAvailableNames.add(toolName);
+			}
+		}
+
+		// 记录筛选结果
+		logger.info("CodeGeneratorNode#filterToolsByWhitelist 筛选完成: " +
+						"总工具数={}, 白名单匹配={}, 基础工具(alwaysAvailable)={}, 最终工具数={}",
+				allTools.size(), whitelistMatchedNames.size(), alwaysAvailableNames.size(), filtered.size());
+
 		if (logger.isDebugEnabled()) {
 			List<String> allToolNames = allTools.stream()
 					.map(CodeactTool::getName)
@@ -294,13 +317,10 @@ public class CodeGeneratorNode implements NodeActionWithConfig {
 			List<String> filteredToolNames = filtered.stream()
 					.map(CodeactTool::getName)
 					.collect(Collectors.toList());
-			List<String> removedToolNames = allToolNames.stream()
-					.filter(name -> !whitelistSet.contains(name.toLowerCase()))
-					.collect(Collectors.toList());
 
-			logger.debug("CodeGeneratorNode#filterToolsByWhitelist 筛选完成: " +
-							"whitelist={}, allTools={}, filtered={}, removed={}",
-					whitelist, allToolNames, filteredToolNames, removedToolNames);
+			logger.debug("CodeGeneratorNode#filterToolsByWhitelist 详细信息: " +
+							"whitelist={}, allTools={}, whitelistMatched={}, alwaysAvailable={}, filtered={}",
+					whitelist, allToolNames, whitelistMatchedNames, alwaysAvailableNames, filteredToolNames);
 		}
 
 		return filtered;

@@ -90,6 +90,26 @@ public interface CodeactToolMetadata extends ToolMetadata {
 		return Collections.emptyList();
 	}
 
+	// ============ 基础工具标识 ============
+
+	/**
+	 * 工具是否始终可用
+	 *
+	 * <p>标记为 {@code true} 的工具是基础工具，无论前置环节筛选出哪些业务工具，
+	 * 这些基础工具都会被包含在最终的可用工具列表中。
+	 *
+	 * <p>典型的基础工具包括：
+	 * <ul>
+	 *   <li>reply_tools（用户回复工具）- Agent 必须能够回复用户</li>
+	 *   <li>其他交互必需的工具</li>
+	 * </ul>
+	 *
+	 * @return {@code true} 表示始终可用，{@code false} 表示受前置筛选影响（默认）
+	 */
+	default boolean alwaysAvailable() {
+		return false;
+	}
+
 	// ============ 废弃方法（保留兼容性）============
 
 	/**
