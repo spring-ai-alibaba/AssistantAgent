@@ -15,6 +15,7 @@
  */
 package com.alibaba.assistant.agent.autoconfigure.subagent.node;
 
+import com.alibaba.assistant.agent.common.constant.CodeactStateKeys;
 import com.alibaba.assistant.agent.common.enums.Language;
 import com.alibaba.assistant.agent.common.tools.CodeactTool;
 import com.alibaba.assistant.agent.common.tools.CodeactToolMetadata;
@@ -41,10 +42,13 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * CodeGeneratorNode - 代码生成节点（专门用于CodeGeneratorSubAgent）
@@ -119,8 +123,17 @@ public class CodeGeneratorNode implements NodeActionWithConfig {
 			logger.debug("CodeGeneratorNode#apply 提取输入: functionName={}, requirement={}, parameters={}, historyCodeCount={}",
 					functionName, requirement, parameters, historyCode.size());
 
-			// 2. 构建系统提示（包含语言规范、可用CodeactTool和历史代码）
-			String systemPrompt = buildSystemPrompt(language, codeactTools, isCondition, customSystemPrompt, historyCode);
+			// 2. 从state提取工具白名单并筛选工具
+			List<String> availableToolNames = extractAvailableToolNames(state);
+			List<CodeactTool> filteredTools = filterToolsByWhitelist(codeactTools, availableToolNames);
+
+			logger.info("CodeGeneratorNode#apply 工具筛选: 总工具数={}, 白名单数={}, 筛选后工具数={}",
+					codeactTools != null ? codeactTools.size() : 0,
+					availableToolNames.size(),
+					filteredTools.size());
+
+			// 3. 构建系统提示（包含语言规范、可用CodeactTool和历史代码）
+			String systemPrompt = buildSystemPrompt(language, filteredTools, isCondition, customSystemPrompt, historyCode);
 
 			// 3. 构建用户消息
 			String userMessage = buildUserMessage(requirement, functionName, parameters, isCondition);
@@ -199,6 +212,98 @@ public class CodeGeneratorNode implements NodeActionWithConfig {
 				.or(() -> state.value("generated_functions", List.class))
 				.or(() -> state.value("code_history", List.class))
 				.orElse(new ArrayList<>());
+	}
+
+	/**
+	 * 从state提取可用工具名称白名单
+	 *
+	 * <p>从 {@link CodeactStateKeys#AVAILABLE_TOOL_NAMES} 中读取评估阶段筛选出的工具名称列表。
+	 * 如果白名单为空或不存在，返回空列表（表示使用全部工具，不做筛选）。
+	 *
+	 * @param state OverAllState 实例
+	 * @return 可用工具名称白名单，空列表表示不筛选
+	 */
+	@SuppressWarnings("unchecked")
+	private List<String> extractAvailableToolNames(OverAllState state) {
+		try {
+			Object value = state.value(CodeactStateKeys.AVAILABLE_TOOL_NAMES).orElse(null);
+			if (value instanceof List) {
+				List<?> rawList = (List<?>) value;
+				List<String> toolNames = new ArrayList<>();
+				for (Object item : rawList) {
+					if (item instanceof String) {
+						String name = ((String) item).trim();
+						if (!name.isEmpty()) {
+							toolNames.add(name);
+						}
+					}
+				}
+				logger.debug("CodeGeneratorNode#extractAvailableToolNames 从state提取到工具白名单: count={}, names={}",
+						toolNames.size(), toolNames);
+				return toolNames;
+			}
+		} catch (Exception e) {
+			logger.warn("CodeGeneratorNode#extractAvailableToolNames 提取失败", e);
+		}
+		return Collections.emptyList();
+	}
+
+	/**
+	 * 根据白名单筛选工具
+	 *
+	 * <p>如果白名单为空，返回全部工具（保持向后兼容）。
+	 * 如果白名单非空，仅返回名称在白名单中的工具。
+	 *
+	 * @param allTools 全部工具列表
+	 * @param whitelist 工具名称白名单（为空时不筛选）
+	 * @return 筛选后的工具列表
+	 */
+	private List<CodeactTool> filterToolsByWhitelist(List<CodeactTool> allTools, List<String> whitelist) {
+		// 白名单为空时，返回全部工具
+		if (whitelist == null || whitelist.isEmpty()) {
+			logger.debug("CodeGeneratorNode#filterToolsByWhitelist 白名单为空，使用全部工具");
+			return allTools != null ? allTools : Collections.emptyList();
+		}
+
+		if (allTools == null || allTools.isEmpty()) {
+			logger.debug("CodeGeneratorNode#filterToolsByWhitelist 工具列表为空");
+			return Collections.emptyList();
+		}
+
+		// 构建白名单 Set（忽略大小写）
+		Set<String> whitelistSet = whitelist.stream()
+				.map(String::toLowerCase)
+				.collect(Collectors.toSet());
+
+		// 筛选工具
+		List<CodeactTool> filtered = allTools.stream()
+				.filter(tool -> {
+					String toolName = tool.getName();
+					if (toolName == null) {
+						return false;
+					}
+					return whitelistSet.contains(toolName.toLowerCase());
+				})
+				.collect(Collectors.toList());
+
+		// 记录筛选结果（包括哪些工具被过滤掉了）
+		if (logger.isDebugEnabled()) {
+			List<String> allToolNames = allTools.stream()
+					.map(CodeactTool::getName)
+					.collect(Collectors.toList());
+			List<String> filteredToolNames = filtered.stream()
+					.map(CodeactTool::getName)
+					.collect(Collectors.toList());
+			List<String> removedToolNames = allToolNames.stream()
+					.filter(name -> !whitelistSet.contains(name.toLowerCase()))
+					.collect(Collectors.toList());
+
+			logger.debug("CodeGeneratorNode#filterToolsByWhitelist 筛选完成: " +
+							"whitelist={}, allTools={}, filtered={}, removed={}",
+					whitelist, allToolNames, filteredToolNames, removedToolNames);
+		}
+
+		return filtered;
 	}
 
 	/**
