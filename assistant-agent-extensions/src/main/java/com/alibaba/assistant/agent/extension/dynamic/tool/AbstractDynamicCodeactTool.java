@@ -238,7 +238,8 @@ public abstract class AbstractDynamicCodeactTool implements CodeactTool {
 		catch (Exception e) {
 			logger.error("AbstractDynamicCodeactTool#call - reason=动态工具调用失败, toolName={}, error={}",
 					toolName, e.getMessage(), e);
-			return buildErrorResponse(e.getMessage());
+			// 直接抛出异常，让上层（ToolRegistryBridge -> Python）能够捕获并正确处理错误信息
+			throw new RuntimeException(e.getMessage(), e);
 		}
 	}
 
