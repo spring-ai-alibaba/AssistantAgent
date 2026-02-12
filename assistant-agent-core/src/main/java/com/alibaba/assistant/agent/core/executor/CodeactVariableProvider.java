@@ -77,4 +77,43 @@ public interface CodeactVariableProvider {
     default List<VariableMetadata> getVariableMetadata() {
         return Collections.emptyList();
     }
+
+    /**
+     * 格式化变量说明为 Prompt 友好的字符串（便捷方法）
+     * 
+     * <p>根据实际存在的变量和元数据定义，生成用于 Prompt 的变量说明。
+     * 只展示当前实际存在的变量的描述（不展示空值变量）。
+     * 
+     * <h3>输出格式示例</h3>
+     * <pre>
+     * - user_id(str): 用户工号
+     * - session_id(str): 会话ID
+     * </pre>
+     * 
+     * @param actualVariables 当前实际存在的变量（通过 getVariables 获取）
+     * @return 格式化后的变量说明，每行一个变量
+     */
+    default String formatVariablesForPrompt(Map<String, Object> actualVariables) {
+        if (actualVariables == null || actualVariables.isEmpty()) {
+            return "";
+        }
+
+        List<VariableMetadata> allMetadata = getVariableMetadata();
+        Map<String, VariableMetadata> metadataMap = new java.util.HashMap<>();
+        for (VariableMetadata metadata : allMetadata) {
+            metadataMap.put(metadata.getName(), metadata);
+        }
+
+        StringBuilder sb = new StringBuilder();
+        for (String varName : actualVariables.keySet()) {
+            VariableMetadata metadata = metadataMap.get(varName);
+            if (metadata != null) {
+                sb.append("- ").append(metadata.formatForPrompt()).append("\n");
+            } else {
+                sb.append("- ").append(varName).append("\n");
+            }
+        }
+
+        return sb.toString();
+    }
 }
