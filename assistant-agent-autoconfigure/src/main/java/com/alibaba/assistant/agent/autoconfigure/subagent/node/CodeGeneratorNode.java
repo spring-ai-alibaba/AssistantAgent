@@ -142,14 +142,12 @@ public class CodeGeneratorNode implements NodeActionWithConfig {
 			List<Message> hookInjectedMessages = extractHookInjectedMessages(state);
 			logger.info("CodeGeneratorNode#apply 从state提取Hook注入的messages: count={}", hookInjectedMessages.size());
 
-            logger.info("CodeGeneratorNode#apply 构建消息: systemPrompt={}, userMessage={}",
-                    systemPrompt, userMessage);
 			// 6. 构造 messages 列表
 			List<Message> messages = new ArrayList<>();
 			messages.add(new SystemMessage(systemPrompt));
 			messages.add(new UserMessage(userMessage));
 			messages.addAll(hookInjectedMessages);
-
+			logger.info("CodeGeneratorNode#apply 构建消息: systemPrompt={}, userMessage={}, messages={}", systemPrompt.replace("\n", "\\n"), userMessage.replace("\n", "\\n"), hookInjectedMessages.toString().replace("\n", "\\n"));
 			ModelRequest modelRequest = ModelRequest.builder()
 					.messages(messages)
 					.build();
