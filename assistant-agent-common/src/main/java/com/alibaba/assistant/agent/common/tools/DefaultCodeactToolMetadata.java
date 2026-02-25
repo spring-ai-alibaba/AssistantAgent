@@ -45,6 +45,8 @@ public class DefaultCodeactToolMetadata implements CodeactToolMetadata {
 
 	private final List<String> aliases;
 
+	private final boolean alwaysAvailable;
+
 	private DefaultCodeactToolMetadata(Builder builder) {
 		this.supportedLanguages = Collections.unmodifiableList(builder.supportedLanguages);
 		this.targetClassName = builder.targetClassName;
@@ -54,6 +56,7 @@ public class DefaultCodeactToolMetadata implements CodeactToolMetadata {
 		this.returnDirect = builder.returnDirect;
 		this.displayName = builder.displayName;
 		this.aliases = Collections.unmodifiableList(builder.aliases);
+		this.alwaysAvailable = builder.alwaysAvailable;
 	}
 
 	@Override
@@ -97,6 +100,11 @@ public class DefaultCodeactToolMetadata implements CodeactToolMetadata {
 		return aliases;
 	}
 
+	@Override
+	public boolean alwaysAvailable() {
+		return alwaysAvailable;
+	}
+
 	/**
 	 * 创建构建器实例。
 	 *
@@ -126,6 +134,8 @@ public class DefaultCodeactToolMetadata implements CodeactToolMetadata {
 		private String displayName = null;
 
 		private List<String> aliases = new ArrayList<>();
+
+		private boolean alwaysAvailable = false;
 
 		/**
 		 * 设置支持的语言列表。
@@ -247,6 +257,20 @@ public class DefaultCodeactToolMetadata implements CodeactToolMetadata {
 		 */
 		public Builder addAlias(String alias) {
 			this.aliases.add(alias);
+			return this;
+		}
+
+		/**
+		 * 设置工具是否始终可用（不受评估筛选影响）。
+		 *
+		 * <p>基础工具（如 reply_tools）应设置为 true，
+		 * 这样无论评估筛选结果如何，这些工具都会包含在可用工具列表中。
+		 *
+		 * @param alwaysAvailable 是否始终可用
+		 * @return 构建器
+		 */
+		public Builder alwaysAvailable(boolean alwaysAvailable) {
+			this.alwaysAvailable = alwaysAvailable;
 			return this;
 		}
 

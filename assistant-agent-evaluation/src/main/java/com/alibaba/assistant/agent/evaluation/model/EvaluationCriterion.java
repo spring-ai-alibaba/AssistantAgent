@@ -102,6 +102,13 @@ public class EvaluationCriterion {
 	 */
 	private ConditionalExecutionConfig conditionalExecution;
 
+	/**
+	 * Multimodal configuration.
+	 * When set and enabled, the criterion will process multimodal inputs (e.g., images)
+	 * using a multimodal-capable LLM evaluator.
+	 */
+	private MultimodalConfig multimodalConfig;
+
 	public String getName() {
 		return name;
 	}
@@ -220,6 +227,14 @@ public class EvaluationCriterion {
 
 	public void setConditionalExecution(ConditionalExecutionConfig conditionalExecution) {
 		this.conditionalExecution = conditionalExecution;
+	}
+
+	public MultimodalConfig getMultimodalConfig() {
+		return multimodalConfig;
+	}
+
+	public void setMultimodalConfig(MultimodalConfig multimodalConfig) {
+		this.multimodalConfig = multimodalConfig;
 	}
 
 	/**

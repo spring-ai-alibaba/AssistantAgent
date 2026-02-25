@@ -99,23 +99,8 @@ public class SearchCodeactToolFactory {
 	private String deriveToolName(SearchProvider provider) {
 		String name = provider.getName();
 
-		// 从 Provider 名称推导工具名称
-		if (name.contains("ProjectContext")) {
-			return "search_project";
-		}
-		else if (name.contains("Knowledge")) {
-			return "search_knowledge";
-		}
-		else if (name.contains("Web")) {
-			return "search_web";
-		}
-		else if (name.contains("Experience")) {
-			return "search_experience";
-		}
-		else {
-			// 默认使用 provider 名称的 snake_case 形式
-			return toSnakeCase(name.replace("Provider", "").replace("Search", ""));
-		}
+		String snakeName = toSnakeCase(name.replace("Provider", "").replace("Search", ""));
+		return snakeName.startsWith("search_") ? snakeName : "search_" + snakeName;
 	}
 
 	/**

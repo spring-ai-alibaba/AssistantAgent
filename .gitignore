@@ -1,3 +1,5 @@
+# 编译输出
+out/
 target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/

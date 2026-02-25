@@ -18,6 +18,7 @@ package com.alibaba.assistant.agent.autoconfigure;
 import com.alibaba.assistant.agent.common.enums.Language;
 import com.alibaba.assistant.agent.common.tools.CodeactTool;
 import com.alibaba.assistant.agent.core.context.CodeContext;
+import com.alibaba.assistant.agent.core.executor.CodeactVariableProvider;
 import com.alibaba.assistant.agent.core.executor.GraalCodeExecutor;
 import com.alibaba.assistant.agent.core.executor.RuntimeEnvironmentManager;
 import com.alibaba.assistant.agent.core.executor.python.PythonEnvironmentManager;
@@ -32,6 +33,7 @@ import com.alibaba.assistant.agent.autoconfigure.subagent.CodeactSubAgentInterce
 import com.alibaba.assistant.agent.autoconfigure.tools.ExecuteCodeTool;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
 import com.alibaba.cloud.ai.graph.CompileConfig;
+import com.alibaba.cloud.ai.graph.GraphLifecycleListener;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.agent.Builder;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
@@ -202,7 +204,10 @@ public class CodeactAgent extends ReactAgent {
 		private List<String> stateKeysToPropagate = new ArrayList<>();
 
 		// GraphLifecycleListeners (用于可观测性)
-		private List<com.alibaba.cloud.ai.graph.GraphLifecycleListener> lifecycleListeners = new ArrayList<>();
+		private List<GraphLifecycleListener> lifecycleListeners = new ArrayList<>();
+
+		// CodeactVariableProvider (用于向 Python 执行环境注入自定义变量)
+		private CodeactVariableProvider variableProvider;
 
 		public CodeactAgentBuilder() {
 			super();
@@ -404,6 +409,25 @@ public class CodeactAgent extends ReactAgent {
 			if (listeners != null) {
 				this.lifecycleListeners.addAll(listeners);
 			}
+			return this;
+		}
+
+		/**
+		 * Set the CodeactVariableProvider for injecting custom variables into Python execution environment.
+		 *
+		 * <p>The provider is responsible for:
+		 * <ul>
+		 *   <li>Extracting variables from OverAllState and ToolContext</li>
+		 *   <li>Providing metadata for Prompt construction</li>
+		 * </ul>
+		 *
+		 * <p>If not set, no custom variables will be injected (backward compatible).
+		 *
+		 * @param provider the CodeactVariableProvider to use
+		 * @return CodeactAgentBuilder instance for chaining
+		 */
+		public CodeactAgentBuilder variableProvider(CodeactVariableProvider provider) {
+			this.variableProvider = provider;
 			return this;
 		}
 
@@ -656,7 +680,7 @@ public class CodeactAgent extends ReactAgent {
 			super.interceptors(codeactSubAgentInterceptor);
             super.modelInterceptors.add((ModelInterceptor) codeactSubAgentInterceptor);
 
-			ExecuteCodeTool executeCodeTool = new ExecuteCodeTool(this.executor, this.codeContext);
+			ExecuteCodeTool executeCodeTool = new ExecuteCodeTool(this.executor, this.codeContext, this.variableProvider);
 
 			// Note: InitialCodeGenHook 已废弃，代码生成通过 SubAgent 机制实现
 
