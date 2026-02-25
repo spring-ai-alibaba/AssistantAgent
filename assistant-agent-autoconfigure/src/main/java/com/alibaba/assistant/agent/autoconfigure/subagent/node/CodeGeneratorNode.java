@@ -15,6 +15,7 @@
  */
 package com.alibaba.assistant.agent.autoconfigure.subagent.node;
 
+import com.alibaba.assistant.agent.common.constant.CodeactStateKeys;
 import com.alibaba.assistant.agent.common.enums.Language;
 import com.alibaba.assistant.agent.common.tools.CodeactTool;
 import com.alibaba.assistant.agent.common.tools.CodeactToolMetadata;
@@ -41,10 +42,13 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * CodeGeneratorNode - 代码生成节点（专门用于CodeGeneratorSubAgent）
@@ -119,19 +123,32 @@ public class CodeGeneratorNode implements NodeActionWithConfig {
 			logger.debug("CodeGeneratorNode#apply 提取输入: functionName={}, requirement={}, parameters={}, historyCodeCount={}",
 					functionName, requirement, parameters, historyCode.size());
 
-			// 2. 构建系统提示（包含语言规范、可用CodeactTool和历史代码）
-			String systemPrompt = buildSystemPrompt(language, codeactTools, isCondition, customSystemPrompt, historyCode);
+			// 2. 从state提取工具白名单并筛选工具
+			List<String> availableToolNames = extractAvailableToolNames(state);
+			List<CodeactTool> filteredTools = filterToolsByWhitelist(codeactTools, availableToolNames);
+
+			logger.info("CodeGeneratorNode#apply 工具筛选: 总工具数={}, 白名单数={}, 筛选后工具数={}",
+					codeactTools != null ? codeactTools.size() : 0,
+					availableToolNames.size(),
+					filteredTools.size());
+
+			// 3. 构建系统提示（包含语言规范、可用CodeactTool和历史代码）
+			String systemPrompt = buildSystemPrompt(language, filteredTools, isCondition, customSystemPrompt, historyCode);
 
 			// 3. 构建用户消息
 			String userMessage = buildUserMessage(requirement, functionName, parameters, isCondition);
 
+			// 5. 从 state 中提取 Hook 注入的 messages
+			List<Message> hookInjectedMessages = extractHookInjectedMessages(state);
+			logger.info("CodeGeneratorNode#apply 从state提取Hook注入的messages: count={}", hookInjectedMessages.size());
+
             logger.info("CodeGeneratorNode#apply 构建消息: systemPrompt={}, userMessage={}",
                     systemPrompt, userMessage);
-			// 4. 构造ModelRequest
-			List<Message> messages = List.of(
-					new SystemMessage(systemPrompt),
-					new UserMessage(userMessage)
-			);
+			// 6. 构造 messages 列表
+			List<Message> messages = new ArrayList<>();
+			messages.add(new SystemMessage(systemPrompt));
+			messages.add(new UserMessage(userMessage));
+			messages.addAll(hookInjectedMessages);
 
 			ModelRequest modelRequest = ModelRequest.builder()
 					.messages(messages)
@@ -195,6 +212,156 @@ public class CodeGeneratorNode implements NodeActionWithConfig {
 				.or(() -> state.value("generated_functions", List.class))
 				.or(() -> state.value("code_history", List.class))
 				.orElse(new ArrayList<>());
+	}
+
+	/**
+	 * 从state提取可用工具名称白名单
+	 *
+	 * <p>从 {@link CodeactStateKeys#AVAILABLE_TOOL_NAMES} 中读取评估阶段筛选出的工具名称列表。
+	 * 如果白名单为空或不存在，返回空列表（表示使用全部工具，不做筛选）。
+	 *
+	 * @param state OverAllState 实例
+	 * @return 可用工具名称白名单，空列表表示不筛选
+	 */
+	@SuppressWarnings("unchecked")
+	private List<String> extractAvailableToolNames(OverAllState state) {
+		try {
+			Object value = state.value(CodeactStateKeys.AVAILABLE_TOOL_NAMES).orElse(null);
+			if (value instanceof List) {
+				List<?> rawList = (List<?>) value;
+				List<String> toolNames = new ArrayList<>();
+				for (Object item : rawList) {
+					if (item instanceof String) {
+						String name = ((String) item).trim();
+						if (!name.isEmpty()) {
+							toolNames.add(name);
+						}
+					}
+				}
+				logger.debug("CodeGeneratorNode#extractAvailableToolNames 从state提取到工具白名单: count={}, names={}",
+						toolNames.size(), toolNames);
+				return toolNames;
+			}
+		} catch (Exception e) {
+			logger.warn("CodeGeneratorNode#extractAvailableToolNames 提取失败", e);
+		}
+		return Collections.emptyList();
+	}
+
+	/**
+	 * 根据白名单筛选工具，并合并始终可用的基础工具
+	 *
+	 * <p>筛选逻辑：
+	 * <ul>
+	 *   <li>如果白名单为空，返回全部工具（保持向后兼容）</li>
+	 *   <li>如果白名单非空，返回：白名单中的工具 ∪ alwaysAvailable=true 的基础工具</li>
+	 * </ul>
+	 *
+	 * <p>基础工具（如 reply_tools）通过 {@link CodeactToolMetadata#alwaysAvailable()} 标识，
+	 * 无论白名单中是否包含，这些工具都会被包含在最终的可用工具列表中。
+	 *
+	 * @param allTools 全部工具列表
+	 * @param whitelist 工具名称白名单（为空时不筛选）
+	 * @return 筛选后的工具列表（包含白名单工具和基础工具）
+	 */
+	private List<CodeactTool> filterToolsByWhitelist(List<CodeactTool> allTools, List<String> whitelist) {
+		// 白名单为空时，返回全部工具
+		if (whitelist == null || whitelist.isEmpty()) {
+			logger.debug("CodeGeneratorNode#filterToolsByWhitelist 白名单为空，使用全部工具");
+			return allTools != null ? allTools : Collections.emptyList();
+		}
+
+		if (allTools == null || allTools.isEmpty()) {
+			logger.debug("CodeGeneratorNode#filterToolsByWhitelist 工具列表为空");
+			return Collections.emptyList();
+		}
+
+		// 构建白名单 Set（忽略大小写）
+		Set<String> whitelistSet = whitelist.stream()
+				.map(String::toLowerCase)
+				.collect(Collectors.toSet());
+
+		// 筛选工具：白名单中的工具 + alwaysAvailable=true 的基础工具
+		List<CodeactTool> filtered = new ArrayList<>();
+		List<String> whitelistMatchedNames = new ArrayList<>();
+		List<String> alwaysAvailableNames = new ArrayList<>();
+
+		for (CodeactTool tool : allTools) {
+			String toolName = tool.getName();
+			if (toolName == null) {
+				continue;
+			}
+
+			boolean inWhitelist = whitelistSet.contains(toolName.toLowerCase());
+			boolean isAlwaysAvailable = tool.getCodeactMetadata() != null
+					&& tool.getCodeactMetadata().alwaysAvailable();
+
+			if (inWhitelist) {
+				filtered.add(tool);
+				whitelistMatchedNames.add(toolName);
+			} else if (isAlwaysAvailable) {
+				filtered.add(tool);
+				alwaysAvailableNames.add(toolName);
+			}
+		}
+
+		// 记录筛选结果
+		logger.info("CodeGeneratorNode#filterToolsByWhitelist 筛选完成: " +
+						"总工具数={}, 白名单匹配={}, 基础工具(alwaysAvailable)={}, 最终工具数={}",
+				allTools.size(), whitelistMatchedNames.size(), alwaysAvailableNames.size(), filtered.size());
+
+		if (logger.isDebugEnabled()) {
+			List<String> allToolNames = allTools.stream()
+					.map(CodeactTool::getName)
+					.collect(Collectors.toList());
+			List<String> filteredToolNames = filtered.stream()
+					.map(CodeactTool::getName)
+					.collect(Collectors.toList());
+
+			logger.debug("CodeGeneratorNode#filterToolsByWhitelist 详细信息: " +
+							"whitelist={}, allTools={}, whitelistMatched={}, alwaysAvailable={}, filtered={}",
+					whitelist, allToolNames, whitelistMatchedNames, alwaysAvailableNames, filteredToolNames);
+		}
+
+		return filtered;
+	}
+
+	/**
+	 * 从 state 中提取 Hook 注入的 messages
+	 *
+	 * <p>Hook 通常将 messages 放入 state 的 "messages" 字段中，这个方法会提取这些 messages，
+	 * 排除掉 SystemMessage（因为我们会自己构建系统提示），保留其他类型的 messages。
+	 *
+	 * @param state OverAllState 实例
+	 * @return Hook 注入的 messages 列表（不包含 SystemMessage）
+	 */
+	@SuppressWarnings("unchecked")
+	private List<Message> extractHookInjectedMessages(OverAllState state) {
+		List<Message> result = new ArrayList<>();
+
+		try {
+			Object messagesObj = state.value("messages").orElse(null);
+			if (messagesObj instanceof List) {
+				List<?> messages = (List<?>) messagesObj;
+				for (Object obj : messages) {
+					if (obj instanceof Message msg) {
+						// 排除 SystemMessage（因为我们会自己构建系统提示）
+						// 保留 AssistantMessage、ToolResponseMessage 等（prompt contributor 注入的内容）
+						if (!(msg instanceof SystemMessage)) {
+							result.add(msg);
+							logger.debug("CodeGeneratorNode#extractHookInjectedMessages 提取到message: type={}, content={}",
+									msg.getClass().getSimpleName(),
+									msg.getText() != null ? msg.getText().substring(0, Math.min(100, msg.getText().length())) : "null");
+						}
+					}
+				}
+			}
+		} catch (Exception e) {
+			logger.warn("CodeGeneratorNode#extractHookInjectedMessages 提取失败", e);
+		}
+
+		logger.info("CodeGeneratorNode#extractHookInjectedMessages 提取完成: count={}", result.size());
+		return result;
 	}
 
 	/**

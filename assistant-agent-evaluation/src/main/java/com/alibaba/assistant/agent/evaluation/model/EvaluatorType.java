@@ -39,7 +39,14 @@ public enum EvaluatorType {
 	 * Uses Java code logic for evaluation.
 	 * Suitable for threshold checks, format validation, and custom business logic.
 	 */
-	RULE_BASED("rule-based");
+	RULE_BASED("rule-based"),
+
+	/**
+	 * Multimodal LLM-based evaluator
+	 * Supports processing multimodal inputs like images.
+	 * Extends LLM_BASED with additional capability to handle Media content.
+	 */
+	MULTIMODAL_LLM_BASED("multimodal-llm-based");
 
 	private final String value;
 

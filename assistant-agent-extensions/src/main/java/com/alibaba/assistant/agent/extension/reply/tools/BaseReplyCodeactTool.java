@@ -306,6 +306,7 @@ public class BaseReplyCodeactTool implements ReplyCodeactTool {
 			.fewShots(fewShots)
 			.displayName("回复工具")
 			.returnDirect(true)
+			.alwaysAvailable(true)  // 回复工具是基础工具，始终可用
 			.build();
 	}
 
