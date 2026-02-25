@@ -3,6 +3,7 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 *.sh
+logs/
 ### IntelliJ IDEA ###
 .idea
 *.iws
@@ -33,3 +34,6 @@ build/
 
 ### Mac OS ###
 .DS_Store
+/.m2/
+/.github/
+/.github/

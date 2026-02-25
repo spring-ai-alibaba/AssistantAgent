@@ -3,7 +3,9 @@ package com.alibaba.assistant.agent.extension.experience.config;
 import com.alibaba.assistant.agent.extension.experience.hook.CodeExperienceModelHook;
 import com.alibaba.assistant.agent.extension.experience.hook.CommonSenseExperienceModelHook;
 import com.alibaba.assistant.agent.extension.experience.hook.FastIntentReactHook;
+import com.alibaba.assistant.agent.extension.experience.hook.FastIntentJumpCleanupModelHook;
 import com.alibaba.assistant.agent.extension.experience.hook.ReactExperienceAgentHook;
+import com.alibaba.assistant.agent.extension.experience.hook.WorkReportDraftResumeReactHook;
 import com.alibaba.assistant.agent.extension.experience.tool.CommonSenseInjectionTool;
 import com.alibaba.assistant.agent.extension.experience.fastintent.FastIntentService;
 import com.alibaba.assistant.agent.extension.experience.internal.InMemoryExperienceProvider;
@@ -17,6 +19,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -84,6 +87,34 @@ public class ExperienceExtensionAutoConfiguration {
                                                    FastIntentService fastIntentService) {
         log.info("ExperienceExtensionAutoConfiguration#fastIntentReactHook - reason=creating fast intent react hook bean");
         return new FastIntentReactHook(experienceProvider, properties, fastIntentService);
+    }
+
+    /**
+     * 工作汇报草稿续填 Hook（BEFORE_AGENT）
+     */
+    @Bean
+    @ConditionalOnProperty(prefix = "spring.ai.alibaba.codeact.extension.experience",
+                          name = "react-experience-enabled",
+                          havingValue = "true",
+                          matchIfMissing = true)
+    public WorkReportDraftResumeReactHook workReportDraftResumeReactHook(ObjectProvider<ChatModel> chatModelProvider) {
+        ChatModel chatModel = chatModelProvider.getIfAvailable();
+        log.info("ExperienceExtensionAutoConfiguration#workReportDraftResumeReactHook - reason=creating work report draft resume hook bean, chatModelReady={}",
+                chatModel != null);
+        return new WorkReportDraftResumeReactHook(chatModel);
+    }
+
+    /**
+     * FastIntent 跳转状态清理 Hook（BEFORE_MODEL）
+     */
+    @Bean
+    @ConditionalOnProperty(prefix = "spring.ai.alibaba.codeact.extension.experience",
+                          name = "react-experience-enabled",
+                          havingValue = "true",
+                          matchIfMissing = true)
+    public FastIntentJumpCleanupModelHook fastIntentJumpCleanupModelHook() {
+        log.info("ExperienceExtensionAutoConfiguration#fastIntentJumpCleanupModelHook - reason=creating fast intent jump cleanup hook bean");
+        return new FastIntentJumpCleanupModelHook();
     }
 
     /**

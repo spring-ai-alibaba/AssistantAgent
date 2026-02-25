@@ -37,7 +37,7 @@ spring.ai.alibaba.codeact.extension.experience:
   fast-intent-enabled: false          # Default: disabled
   fast-intent-react-enabled: true
   fast-intent-code-enabled: true
-  fast-intent-allowed-tools: []       # Empty = no restriction
+  fast-intent-allowed-tools: []       # Empty = no restriction; if set, include capability tools like submit_office_work_report
 
   # Query limits
   max-items-per-query: 5
@@ -154,6 +154,400 @@ spring.ai.alibaba.codeact.extension.trigger:
     timeout-seconds: 300
 
 # ============================================================================
+# Capability Registration (Optional)
+# Configuration-driven business capability tools (no hardcoded endpoint logic)
+# ============================================================================
+assistant:
+  agent:
+    capability:
+      # Tenant-scoped provider registration.
+      # Integrators implement provider protocol and register per tenant.
+      tenant-providers:
+        - tenant-id: default
+          providers:
+            - enabled: false
+              provider-code: oa-capability-provider
+              provider-version: v1
+              base-url: https://oa-provider.example.com
+              options-query-path: /api/capability/options/query
+              entity-resolve-path: /api/capability/entity/resolve
+              default-value-path: /api/capability/default/value
+              submit-path: /api/capability/submit
+              token-exchange-path: /api/oauth/token/exchange
+              token-refresh-path: /api/oauth/token/refresh
+              connect-timeout-ms: 5000
+              read-timeout-ms: 10000
+              headers:
+                X-Provider-Client: assistant-agent
+              auth:
+                token-header-name: Authorization
+                token-prefix: "Bearer "
+                client-id: assistant-agent
+                client-secret: ${OA_PROVIDER_CLIENT_SECRET:}
+                refresh-token-encryption-key: ${CAPABILITY_REFRESH_TOKEN_KEY:assistant-agent-refresh-token-key}
+                refresh-ahead-seconds: 60
+
+      registrations:
+        - enabled: false
+          tool-name: submit_office_work_report
+          provider-code: oa-capability-provider
+          submit-action: submit_work_report
+          description: Submit OA daily work report
+          target-class-name: office_work_tools
+          target-class-description: OA work report capability tools
+          operation-intent-keywords:
+            - 发起工作汇报
+            - OA系统工作汇报
+            - 工作汇报
+          operation-intent-patterns:
+            - ".*(发起|提交).*(工作汇报|日报|周报).*"
+          slot-filling-enabled: true
+          confirmation-required: true
+          confirmation-arg-name: confirmed
+          # Optional: direct endpoint fallback when provider-code is not configured.
+          endpoint-url: http://office.test/oa/work/add
+          method: POST
+          content-type: application/x-www-form-urlencoded; charset=UTF-8
+          connect-timeout-ms: 5000
+          read-timeout-ms: 10000
+          headers:
+            Accept: "*/*"
+            X-Requested-With: XMLHttpRequest
+            Origin: http://office.test
+            Referer: http://office.test/oa/work/add?types=1
+          header-args:
+            Cookie: cookie
+          form-field-names:
+            - types
+            - start_date
+            - end_date
+            - to_unames
+            - to_uids
+            - approver_user_id
+            - check_copy_uids
+            - works
+            - plans
+            - send
+            - remark
+            - file
+            - file_ids
+            - id
+          default-form-data:
+            file: ""
+            file_ids: ""
+            id: "0"
+          fields:
+            - name: types
+              type: string
+              required: true
+              description: 汇报类型（1=日报, 2=周报, 3=月报）
+              input-mode: SELECT_SINGLE
+              ask-mode: SINGLE
+              infer-mode: LLM
+              infer-prompt: 支持用户输入日报/周报/月报或1/2/3
+              options:
+                - label: 日报
+                  value: "1"
+                  description: 按天汇报
+                - label: 周报
+                  value: "2"
+                  description: 按周汇报
+                - label: 月报
+                  value: "3"
+                  description: 按月汇报
+            - name: start_date
+              type: string
+              required: true
+              description: 开始日期（可按类型自动带出）
+              ask-mode: AUTO
+              default-value-action: resolve_report_start_date
+              depends-on:
+                - types
+            - name: end_date
+              type: string
+              required: true
+              description: 结束日期（可按类型自动带出）
+              ask-mode: AUTO
+              default-value-action: resolve_report_end_date
+              depends-on:
+                - types
+            - name: report_department_id
+              type: string
+              required: false
+              description: 报告对象所属部门
+              input-mode: SELECT_SINGLE
+              option-query-action: query_departments
+            - name: to_unames
+              type: string
+              required: true
+              description: 汇报对象姓名（可多选）
+              input-mode: SELECT_MULTI
+              ask-mode: SINGLE
+              infer-mode: LLM
+              infer-prompt: 支持多个姓名，用逗号、顿号或空格分隔
+              option-query-action: query_department_users
+              entity-resolve-action: resolve_user
+              depends-on:
+                - report_department_id
+            - name: to_uids
+              type: string
+              required: true
+              description: 汇报对象ID（系统自动映射）
+              input-mode: SELECT_MULTI
+              option-query-action: query_department_users
+              depends-on:
+                - report_department_id
+            - name: approver_department_id
+              type: string
+              required: false
+              description: 审批人所属部门（可选）
+              input-mode: SELECT_SINGLE
+              option-query-action: query_departments
+            - name: approver_user_id
+              type: string
+              required: true
+              description: 审批人（单选，默认当前用户上级）
+              input-mode: SELECT_SINGLE
+              ask-mode: SINGLE
+              infer-mode: LLM
+              option-query-action: query_department_users
+              default-value-action: query_default_approver
+              depends-on:
+                - approver_department_id
+            - name: check_copy_uids
+              type: string
+              required: false
+              description: 抄送人（可选）
+              input-mode: SELECT_MULTI
+              infer-mode: LLM
+              option-query-action: query_all_users
+            - name: works
+              type: string
+              required: true
+              ask-mode: BATCH
+              infer-mode: LLM
+              description: 本期工作内容
+            - name: plans
+              type: string
+              required: false
+              infer-mode: LLM
+              description: 下期工作计划（可选）
+            - name: send
+              type: string
+              required: true
+              description: 发送方式（0=仅保存, 1=立即发送）
+              input-mode: SELECT_SINGLE
+              ask-mode: SINGLE
+              infer-mode: LLM
+              infer-prompt: 支持用户输入仅保存/保存/不发送/立即发送/发送
+              options:
+                - label: 仅保存
+                  value: "0"
+                - label: 立即发送
+                  value: "1"
+            - name: remark
+              type: string
+              required: false
+              description: Additional remark
+            - name: cookie
+              type: string
+              required: true
+              description: 认证 Cookie
+        - enabled: false
+          tool-name: submit_leave_application
+          provider-code: oa-capability-provider
+          submit-action: submit_leave_application
+          description: Submit OA leave application
+          target-class-name: office_leave_tools
+          target-class-description: OA leave capability tools
+          operation-intent-keywords:
+            - 请假
+            - 休假
+            - 年假
+            - 病假
+            - 事假
+            - 调休
+          operation-intent-patterns:
+            - ".*(请假|休假|年假|病假|事假|调休).*"
+            - ".*(申请|提交).*(请假|休假).*"
+          slot-filling-enabled: true
+          confirmation-required: true
+          confirmation-arg-name: confirmed
+          endpoint-url: http://office.test/home/leaves/add
+          method: POST
+          content-type: application/x-www-form-urlencoded; charset=UTF-8
+          connect-timeout-ms: 5000
+          read-timeout-ms: 10000
+          headers:
+            Accept: "*/*"
+            X-Requested-With: XMLHttpRequest
+            Origin: http://office.test
+            Referer: http://office.test/home/leaves/add?types=1
+          header-args:
+            Cookie: cookie
+          form-field-names:
+            - types
+            - start_date
+            - end_date
+            - duration
+            - reason
+            - check_flow_id
+            - check_uids
+            - check_copy_uids
+            - file_ids
+            - id
+          default-form-data:
+            file_ids: ""
+            id: "0"
+          fields:
+            - name: types
+              type: string
+              required: true
+              description: 请假类型（事假/年假/病假/调休等）
+              input-mode: SELECT_SINGLE
+              option-query-action: query_leave_types
+            - name: start_date
+              type: string
+              required: true
+              description: 请假开始日期（yyyy-MM-dd）
+            - name: end_date
+              type: string
+              required: true
+              description: 请假结束日期（yyyy-MM-dd）
+            - name: duration
+              type: string
+              required: false
+              description: 请假时长（可选）
+            - name: reason
+              type: string
+              required: true
+              description: 请假原因
+            - name: check_flow_id
+              type: string
+              required: false
+              description: 审批流程（可自动带出）
+              input-mode: SELECT_SINGLE
+              option-query-action: query_leave_check_flow
+            - name: check_uids
+              type: string
+              required: false
+              description: 审批人（可多选）
+              input-mode: SELECT_MULTI
+              option-query-action: query_department_users
+              default-value-action: query_default_approver
+            - name: check_copy_uids
+              type: string
+              required: false
+              description: 抄送人（可选）
+              input-mode: SELECT_MULTI
+              option-query-action: query_all_users
+            - name: cookie
+              type: string
+              required: true
+              description: 认证 Cookie
+        - enabled: false
+          tool-name: submit_meeting_room_booking
+          provider-code: oa-capability-provider
+          submit-action: submit_meeting_room_booking
+          description: Submit OA meeting room booking
+          target-class-name: office_meeting_tools
+          target-class-description: OA meeting capability tools
+          operation-intent-keywords:
+            - 会议室预定
+            - 会议室预订
+            - 预约会议室
+            - 订会议室
+            - 开会
+          operation-intent-patterns:
+            - ".*(预定|预订|预约|订).*(会议室).*"
+            - ".*(会议室).*(预定|预订|预约).*"
+          slot-filling-enabled: true
+          confirmation-required: true
+          confirmation-arg-name: confirmed
+          endpoint-url: http://office.test/adm/meeting/add
+          method: POST
+          content-type: application/x-www-form-urlencoded; charset=UTF-8
+          connect-timeout-ms: 5000
+          read-timeout-ms: 10000
+          headers:
+            Accept: "*/*"
+            X-Requested-With: XMLHttpRequest
+            Origin: http://office.test
+            Referer: http://office.test/adm/meeting/add
+          header-args:
+            Cookie: cookie
+          form-field-names:
+            - room_id
+            - title
+            - start_date
+            - end_date
+            - num
+            - requirement
+            - join_uids
+            - remark
+            - check_flow_id
+            - check_uids
+            - id
+          default-form-data:
+            id: "0"
+          fields:
+            - name: room_id
+              type: string
+              required: true
+              description: 会议室
+              input-mode: SELECT_SINGLE
+              option-query-action: query_meeting_rooms
+            - name: title
+              type: string
+              required: true
+              description: 会议主题
+            - name: start_date
+              type: string
+              required: true
+              description: 开始时间（yyyy-MM-dd HH:mm）
+            - name: end_date
+              type: string
+              required: true
+              description: 结束时间（yyyy-MM-dd HH:mm）
+            - name: num
+              type: string
+              required: true
+              description: 参会人数
+            - name: requirement
+              type: string
+              required: true
+              description: 会议需求（投影、电子屏等）
+              input-mode: SELECT_MULTI
+              option-query-action: query_meeting_requirements
+            - name: join_uids
+              type: string
+              required: false
+              description: 参会人员（可选）
+              input-mode: SELECT_MULTI
+              option-query-action: query_all_users
+            - name: remark
+              type: string
+              required: false
+              description: 会议说明（可选）
+            - name: check_flow_id
+              type: string
+              required: false
+              description: 审批流程（可自动带出）
+              input-mode: SELECT_SINGLE
+              option-query-action: query_meeting_check_flow
+            - name: check_uids
+              type: string
+              required: false
+              description: 审批人（可多选）
+              input-mode: SELECT_MULTI
+              option-query-action: query_department_users
+              default-value-action: query_default_approver
+            - name: cookie
+              type: string
+              required: true
+              description: 认证 Cookie
+
+# ============================================================================
 # MCP Client (Optional)
 # ============================================================================
 spring.ai.mcp.client:
@@ -171,6 +565,13 @@ spring.ai.mcp.client:
 # Logging
 # ============================================================================
 logging:
+  file:
+    name: ./logs/assistant-agent.log
+  logback:
+    rollingpolicy:
+      max-file-size: 20MB
+      max-history: 14
+      total-size-cap: 2GB
   level:
     com.alibaba.assistant.agent: INFO
     # com.alibaba.assistant.agent: DEBUG

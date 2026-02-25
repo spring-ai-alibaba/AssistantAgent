@@ -29,6 +29,7 @@ import com.alibaba.assistant.agent.extension.experience.fastintent.FastIntentSer
 import com.alibaba.assistant.agent.extension.experience.spi.ExperienceProvider;
 import com.alibaba.assistant.agent.extension.search.tools.SearchCodeactToolFactory;
 import com.alibaba.assistant.agent.extension.search.tools.UnifiedSearchCodeactTool;
+import com.alibaba.assistant.agent.start.capability.registry.CapabilityToolRegistrar;
 import com.alibaba.assistant.agent.common.enums.Language;
 import com.alibaba.cloud.ai.graph.agent.hook.Hook;
 import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
@@ -84,12 +85,31 @@ public class CodeactAgentConfig {
 			
 			【核心原则】
 			- 代码优先：优先通过编写代码来解决问题，而不是直接使用React阶段的工具
-			- 主动推断：遇到信息不完整时，使用合理默认值或从上下文推断，不要反问用户
+			- 主动推断：遇到信息不完整时，优先使用合理默认值或上下文推断；但槽位收集场景必须向用户补齐缺失字段
 			- 完整逻辑：在代码中实现完整的处理流程，包括数据获取、处理和回复
 			- 立即行动：看到任务立即分析并编写代码，不要犹豫或过度思考
 			
 
             【标准工作流程】
+
+            ## 0. 能力工具槽位收集（任意启用 slot-filling 的业务工具）
+            ⚠️ 关键：这是必须与用户交互的特例，不适用“不要反问用户”规则。
+
+            当业务能力工具返回不同状态时，必须严格执行：
+            1. status=SLOT_MISSING：
+               - 明确告知缺失字段（missing_fields）
+               - 逐项向用户索取缺失信息
+               - 禁止调用 write_code / execute_code
+            2. status=WAIT_CONFIRM：
+               - 展示已收集字段（collected_slots）
+               - 明确询问“是否确认提交”
+               - 用户未明确确认前，禁止提交
+            3. 用户确认后：
+               - 再次调用同一个能力工具，并携带 confirmed=true（或工具定义的确认参数）
+            4. status=SUBMITTED：
+               - 告知提交成功
+            5. status=SUBMIT_FAILED：
+               - 告知失败原因，并引导用户补充/修正后重试
 
             ## 1. 信息查询任务（如"xxx是什么"、"查询xxx"、"诺曼底平台是什么"）
             ⚠️ 关键：遇到查询类问题，立即写代码，绝不反问！
@@ -191,10 +211,10 @@ public class CodeactAgentConfig {
             - 不能直接使用 write_code + execute_code 来实现延迟操作
 
             【禁止行为】
-            ❌ 不要反问用户要参数或更多信息
-            ❌ 不要说"我需要更多信息才能继续"
-            ❌ 不要说"根据您提供的信息还不足以确定"
-            ❌ 不要说"可以提供一些额外的上下文吗"
+            ❌ 在非槽位收集场景下，不要反问用户要参数或更多信息
+            ❌ 在非槽位收集场景下，不要说"我需要更多信息才能继续"
+            ❌ 在非槽位收集场景下，不要说"根据您提供的信息还不足以确定"
+            ❌ 在非槽位收集场景下，不要说"可以提供一些额外的上下文吗"
             ❌ 不要说"请明确指示"、"请确认是否继续"
             ❌ 不要等待用户补充信息再行动
             ❌ 不要在React阶段直接回复，而应该在代码中实现回复逻辑
@@ -202,6 +222,7 @@ public class CodeactAgentConfig {
             ❌ 遇到"xxx是什么"类问题，不要思考、不要解释，直接写代码搜索
             ❌ 创建触发器时不要跳过任何步骤（必须先write_condition_code，再write_code动作，再write_code订阅）
             ❌ 定时任务不要使用普通的 write_code + execute_code，必须使用触发器三步流程
+            ❌ 业务能力工具返回 SLOT_MISSING/WAIT_CONFIRM 时，不要转去写代码生成子任务
 
             【正确行为】
             ✅ 遇到查询类问题，立即写代码调用search工具，不要任何犹豫
@@ -214,8 +235,10 @@ public class CodeactAgentConfig {
             ✅ 主动尝试多种可能性
             ✅ 创建触发器时严格按照三步流程：write_condition_code（条件） → write_code（动作） → write_code（订阅+回复）
             ✅ 识别定时/延迟/触发类任务（如"X分钟后"、"定时"、"提醒"），立即使用触发器三步流程
+            ✅ 业务能力工具返回 SLOT_MISSING 时，直接向用户追问 missing_fields
+            ✅ 业务能力工具返回 WAIT_CONFIRM 时，只做确认，不做代码生成
 
-            记住：你是代码驱动的Agent，永远不要反问用户！遇到查询直接写代码搜索！遇到定时/触发任务立即使用三步流程！在代码中实现完整逻辑！
+            记住：你是代码驱动的Agent。查询/计算/触发任务优先代码执行；能力工具槽位收集必须按字段追问与确认提交流程执行。
 			""";
 
 	/**
@@ -262,6 +285,7 @@ public class CodeactAgentConfig {
 	 * @param searchCodeactToolFactory Search模块的工具工厂（可选）
 	 * @param triggerCodeactTools Trigger模块的工具列表（可选）
 	 * @param unifiedSearchCodeactTool 统一搜索工具（可选）
+	 * @param capabilityToolRegistrar 能力注册器（可选，配置驱动）
 	 * @param mcpToolCallbackProvider MCP工具提供者（由MCP Client Boot Starter自动注入，可选）
 	 */
 	@Bean
@@ -271,6 +295,7 @@ public class CodeactAgentConfig {
 			@Autowired(required = false) SearchCodeactToolFactory searchCodeactToolFactory,
 			@Autowired(required = false) List<TriggerCodeactTool> triggerCodeactTools,
 			@Autowired(required = false) UnifiedSearchCodeactTool unifiedSearchCodeactTool,
+			@Autowired(required = false) CapabilityToolRegistrar capabilityToolRegistrar,
 			@Autowired(required = false) ToolCallbackProvider mcpToolCallbackProvider,
             @Autowired(required = false) ExperienceProvider experienceProvider,
             @Autowired(required = false) ExperienceExtensionProperties experienceExtensionProperties,
@@ -282,6 +307,7 @@ public class CodeactAgentConfig {
 
 		/*-----------准备工具-----------*/
 		List<CodeactTool> allCodeactTools = new ArrayList<>();
+		List<CodeactTool> capabilityTools = new ArrayList<>();
 
 		// 添加UnifiedSearchCodeactTool
 		if (unifiedSearchCodeactTool != null) {
@@ -310,6 +336,15 @@ public class CodeactAgentConfig {
 			logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=添加TriggerCodeactTools, count={}", triggerCodeactTools.size());
 		}
 
+		// 添加配置驱动的业务能力工具（能力注册）
+		if (capabilityToolRegistrar != null) {
+			capabilityTools = capabilityToolRegistrar.createRegisteredTools();
+			if (!capabilityTools.isEmpty()) {
+				allCodeactTools.addAll(capabilityTools);
+				logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=添加注册能力工具, count={}", capabilityTools.size());
+			}
+		}
+
 		// 添加 MCP 动态工具（通过 MCP Client Boot Starter 注入的 ToolCallbackProvider）
 		// 配置方式参考 mcp-client-spring-boot.md，在 application.properties 中配置：
 		// spring.ai.mcp.client.streamable-http.connections.my-server.url=https://mcp.example.com
@@ -332,8 +367,18 @@ public class CodeactAgentConfig {
 
 		logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=合并后CodeactTool总数, count={}", allCodeactTools.size());
 
-		// React阶段不需要外部工具，write_code/execute_code/write_condition_code会在CodeactAgent内部自动添加
-		logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=React阶段使用内置工具(write_code, execute_code, write_condition_code)");
+		// React 阶段工具：内置 write_code/execute_code/write_condition_code + Reply + 业务能力工具
+		List<ToolCallback> reactPhaseTools = new ArrayList<>();
+		if (replyCodeactTools != null && !replyCodeactTools.isEmpty()) {
+			reactPhaseTools.addAll(replyCodeactTools);
+		}
+		if (!capabilityTools.isEmpty()) {
+			reactPhaseTools.addAll(capabilityTools);
+			logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=React阶段添加注册能力工具, count={}",
+					capabilityTools.size());
+		}
+		logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=React阶段将使用内置工具(write_code, execute_code, write_condition_code) + 外部工具, externalToolCount={}",
+				reactPhaseTools.size());
 
 
         /*---------------------准备hooks-------------------*/
@@ -367,7 +412,7 @@ public class CodeactAgentConfig {
 				.allowIO(false)
 				.allowNativeAccess(false)
 				.executionTimeout(30000)
-                .tools(replyCodeactTools != null ? replyCodeactTools.toArray(new ToolCallback[0]) : new ToolCallback[0])
+                .tools(reactPhaseTools.toArray(new ToolCallback[0]))
                 .codeactTools(allCodeactTools)
                 .hooks(reactHooks)
                 .subAgentHooks(codeactHooks)

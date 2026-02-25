@@ -22,6 +22,8 @@ import com.alibaba.cloud.ai.graph.RunnableConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
 import java.util.List;
@@ -53,18 +55,18 @@ public class CodeactEvaluationContextFactory {
 		Map<String, Object> input = new HashMap<>();
 		Map<String, Object> executionResult = new HashMap<>();
 
-		// 提取用户输入 - 从 state 的 messages key 中获取
+		// 提取用户输入 - 优先取最后一条用户消息，其次回退 state.input
 		Optional<List<Message>> messagesOpt = state.value("messages");
 		if (messagesOpt.isPresent()) {
 			List<Message> messages = messagesOpt.get();
 			if (!messages.isEmpty()) {
-				// 取最后一条用户消息
-				Message lastMessage = messages.get(messages.size() - 1);
-				input.put(CodeactEvaluationTag.INPUT_USER_INPUT, lastMessage.getText());
-
 				// 会话历史
 				input.put(CodeactEvaluationTag.INPUT_CONVERSATION_HISTORY, messages);
 			}
+		}
+		String userInput = resolveUserInput(state, messagesOpt);
+		if (StringUtils.hasText(userInput)) {
+			input.put(CodeactEvaluationTag.INPUT_USER_INPUT, userInput);
 		}
 
 		// 提取 Agent 名称（从 config 或 state 中）
@@ -104,9 +106,12 @@ public class CodeactEvaluationContextFactory {
 		if (messagesOpt.isPresent()) {
 			List<Message> messages = messagesOpt.get();
 			if (!messages.isEmpty()) {
-				input.put(CodeactEvaluationTag.INPUT_USER_INPUT, messages.get(messages.size() - 1).getText());
 				input.put(CodeactEvaluationTag.INPUT_CONVERSATION_HISTORY, messages);
 			}
+		}
+		String userInput = resolveUserInput(state, messagesOpt);
+		if (StringUtils.hasText(userInput)) {
+			input.put(CodeactEvaluationTag.INPUT_USER_INPUT, userInput);
 		}
 
 		// 当前模型输出
@@ -117,6 +122,32 @@ public class CodeactEvaluationContextFactory {
 		externalParamsOpt.ifPresent(params -> input.putAll(params));
 
 		return new EvaluationContext(input, executionResult);
+	}
+
+	private String resolveUserInput(OverAllState state, Optional<List<Message>> messagesOpt) {
+		if (messagesOpt.isPresent()) {
+			List<Message> messages = messagesOpt.get();
+			for (int i = messages.size() - 1; i >= 0; i--) {
+				Message message = messages.get(i);
+				if (message instanceof UserMessage && StringUtils.hasText(message.getText())) {
+					return message.getText();
+				}
+			}
+		}
+
+		String fallbackInput = state.value("input", String.class).orElse(null);
+		if (StringUtils.hasText(fallbackInput)) {
+			return fallbackInput;
+		}
+
+		if (messagesOpt.isPresent()) {
+			List<Message> messages = messagesOpt.get();
+			if (!messages.isEmpty() && StringUtils.hasText(messages.get(messages.size() - 1).getText())) {
+				return messages.get(messages.size() - 1).getText();
+			}
+		}
+
+		return null;
 	}
 
 	/**
