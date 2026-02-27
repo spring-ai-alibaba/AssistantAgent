@@ -37,12 +37,24 @@ public class ToolCallRecord implements Serializable {
 	 */
 	private String tool;
 
+	/**
+	 * 工具调用是否已回复用户（即工具的返回结果中repliedToUser=true）
+	 */
+	private boolean repliedToUser;
+
 	public ToolCallRecord() {
 	}
 
 	public ToolCallRecord(int order, String tool) {
 		this.order = order;
 		this.tool = tool;
+		this.repliedToUser = false;
+	}
+
+	public ToolCallRecord(int order, String tool, boolean repliedToUser) {
+		this.order = order;
+		this.tool = tool;
+		this.repliedToUser = repliedToUser;
 	}
 
 	public int getOrder() {
@@ -61,9 +73,17 @@ public class ToolCallRecord implements Serializable {
 		this.tool = tool;
 	}
 
+	public boolean isRepliedToUser() {
+		return repliedToUser;
+	}
+
+	public void setRepliedToUser(boolean repliedToUser) {
+		this.repliedToUser = repliedToUser;
+	}
+
 	@Override
 	public String toString() {
-		return "{\"order\": " + order + ", \"tool\": \"" + tool + "\"}";
+		return "{\"order\": " + order + ", \"tool\": \"" + tool + "\", \"repliedToUser\": " + repliedToUser + "}";
 	}
 }
 

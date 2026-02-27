@@ -56,6 +56,18 @@ public interface McpServerAwareToolCallback extends ToolCallback {
 	}
 
 	/**
+	 * 获取 MCP Server 完整描述（可选）。
+	 *
+	 * <p>此描述将用于生成 Python 类的 docstring，提供更详细的功能说明。
+	 * 如果返回 null，将使用 displayName 或 serverName 作为描述。
+	 *
+	 * @return MCP Server 完整描述，可以为 null
+	 */
+	default String getServerDescription() {
+		return null;
+	}
+
+	/**
 	 * 获取原始工具名称。
 	 *
 	 * <p>MCP 协议中定义的原始工具名称，如 "getCodeInfo"、"searchApplications" 等。

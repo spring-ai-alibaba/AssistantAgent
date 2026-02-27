@@ -106,29 +106,39 @@ public class FastIntentReactHook extends AgentHook implements Prioritized {
                 return CompletableFuture.completedFuture(Map.of());
             }
 
-            ExperienceQueryContext queryContext = buildQueryContext(state, config);
-
-            ExperienceQuery query = new ExperienceQuery(ExperienceType.REACT);
-            query.setLimit(Math.max(10, properties.getMaxItemsPerQuery())); // fastpath needs enough candidates
-            List<Experience> experiences = experienceProvider.query(query, queryContext);
-
-            if (CollectionUtils.isEmpty(experiences)) {
-                return CompletableFuture.completedFuture(Map.of());
-            }
-
-            List<Message> messages = state != null ? (List<Message>) state.value("messages").orElse(List.of()) : List.of();
-            Map<String, Object> md = config != null ? config.metadata().orElse(Collections.emptyMap()) : Collections.emptyMap();
+            // 获取用户输入，用于向量搜索
             String userInput = state != null ? state.value("input", String.class).orElse(null) : null;
             if (!StringUtils.hasText(userInput)) {
                 // fallback: find last UserMessage text if present
-                for (int i = messages.size() - 1; i >= 0; i--) {
-                    Message m = messages.get(i);
+                @SuppressWarnings("unchecked")
+                List<Message> msgs = state != null ? (List<Message>) state.value("messages").orElse(List.of()) : List.of();
+                for (int i = msgs.size() - 1; i >= 0; i--) {
+                    Message m = msgs.get(i);
                     if (m instanceof org.springframework.ai.chat.messages.UserMessage um) {
                         userInput = um.getText();
                         break;
                     }
                 }
             }
+
+            ExperienceQueryContext queryContext = buildQueryContext(state, config, userInput);
+
+            ExperienceQuery query = new ExperienceQuery(ExperienceType.REACT);
+            query.setLimit(Math.max(20, properties.getMaxItemsPerQuery())); // fastpath needs enough candidates
+            // 关键修复：设置查询文本，用于向量搜索
+            if (StringUtils.hasText(userInput)) {
+                query.setText(userInput);
+            }
+            List<Experience> experiences = experienceProvider.query(query, queryContext);
+
+            if (CollectionUtils.isEmpty(experiences)) {
+                return CompletableFuture.completedFuture(Map.of());
+            }
+
+            // 复用之前获取的messages
+            @SuppressWarnings("unchecked")
+            List<Message> messages = state != null ? (List<Message>) state.value("messages").orElse(List.of()) : List.of();
+            Map<String, Object> md = config != null ? config.metadata().orElse(Collections.emptyMap()) : Collections.emptyMap();
 
             FastIntentContext ctx = new FastIntentContext(userInput, messages, md, state, null);
 
@@ -211,8 +221,12 @@ public class FastIntentReactHook extends AgentHook implements Prioritized {
         }
     }
 
-    private ExperienceQueryContext buildQueryContext(OverAllState state, RunnableConfig config) {
+    private ExperienceQueryContext buildQueryContext(OverAllState state, RunnableConfig config, String userQuery) {
         ExperienceQueryContext context = new ExperienceQueryContext();
+        // 关键修复：设置userQuery，用于向量搜索
+        if (StringUtils.hasText(userQuery)) {
+            context.setUserQuery(userQuery);
+        }
         if (state != null) {
             state.value("user_id", String.class).ifPresent(context::setUserId);
             state.value("project_id", String.class).ifPresent(context::setProjectId);
