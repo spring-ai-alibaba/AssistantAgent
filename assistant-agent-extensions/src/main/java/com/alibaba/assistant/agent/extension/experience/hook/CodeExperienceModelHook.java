@@ -90,11 +90,14 @@ public class CodeExperienceModelHook extends ModelHook {
                 return CompletableFuture.completedFuture(Map.of());
             }
 
+            // 获取用户输入，用于向量搜索
+            String userInput = state.value("input", String.class).orElse(null);
+
             // 构造查询上下文
-            ExperienceQueryContext context = buildQueryContext(state, config, messages);
+            ExperienceQueryContext context = buildQueryContext(state, config, messages, userInput);
 
             // 查询代码经验
-            ExperienceQuery query = buildCodeQuery(context);
+            ExperienceQuery query = buildCodeQuery(context, userInput);
             List<Experience> experiences = experienceProvider.query(query, context);
 
             if (CollectionUtils.isEmpty(experiences)) {
@@ -135,9 +138,14 @@ public class CodeExperienceModelHook extends ModelHook {
     /**
      * 构建代码经验查询条件
      */
-    private ExperienceQuery buildCodeQuery(ExperienceQueryContext context) {
+    private ExperienceQuery buildCodeQuery(ExperienceQueryContext context, String userInput) {
         ExperienceQuery query = new ExperienceQuery(ExperienceType.CODE);
         query.setLimit(properties.getMaxItemsPerQuery());
+
+        // 关键修复：设置查询文本，用于向量搜索
+        if (StringUtils.hasText(userInput)) {
+            query.setText(userInput);
+        }
 
         // 设置语言
         if (StringUtils.hasText(context.getLanguage())) {
@@ -261,8 +269,13 @@ public class CodeExperienceModelHook extends ModelHook {
     /**
      * 构建查询上下文
      */
-    private ExperienceQueryContext buildQueryContext(OverAllState state, RunnableConfig config, List<Message> messages) {
+    private ExperienceQueryContext buildQueryContext(OverAllState state, RunnableConfig config, List<Message> messages, String userQuery) {
         ExperienceQueryContext context = new ExperienceQueryContext();
+
+        // 关键修复：设置userQuery，用于向量搜索
+        if (StringUtils.hasText(userQuery)) {
+            context.setUserQuery(userQuery);
+        }
 
         // 从state提取
         if (state != null) {

@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
@@ -40,6 +41,8 @@ public class NameNormalizer {
 	private static final Pattern LEADING_DIGIT = Pattern.compile("^[0-9]");
 
 	private static final Pattern MULTI_UNDERSCORE = Pattern.compile("_+");
+
+	public static final AtomicBoolean ENABLED_PINYIN = new AtomicBoolean(false);
 
 
 	/**
@@ -120,7 +123,7 @@ public class NameNormalizer {
 				// 常见分隔符转为下划线
 				sb.append('_');
 			}
-			else if (Pinyin.isChinese(c)) {
+			else if (ENABLED_PINYIN.get() && Pinyin.isChinese(c)) {
 				// 中文字符转为拼音（优先使用 Pinyin 库的判断，更准确）
 				String pinyin = Pinyin.toPinyin(c).toLowerCase();
 				sb.append(pinyin);

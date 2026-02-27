@@ -16,6 +16,7 @@
 package com.alibaba.assistant.agent.autoconfigure.tools;
 
 import com.alibaba.assistant.agent.core.context.CodeContext;
+import com.alibaba.assistant.agent.core.context.SessionCodeManager;
 import com.alibaba.assistant.agent.core.executor.RuntimeEnvironmentManager;
 import com.alibaba.assistant.agent.core.model.GeneratedCode;
 import com.alibaba.assistant.agent.autoconfigure.subagent.BaseAgentTaskTool;
@@ -35,6 +36,7 @@ import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -97,8 +99,8 @@ public class WriteCodeTool implements BiFunction<WriteCodeTool.Request, ToolCont
 			structuredInputs.put("function_name", request.functionName);
 			structuredInputs.put("parameters", request.parameters != null ? request.parameters : new ArrayList<>());
 
-			// 添加历史代码（从 CodeContext 获取已生成的函数）
-			List<String> historyCode = getHistoryCode();
+			// 添加历史代码（合并全局和session维度）
+			List<String> historyCode = getHistoryCode(toolContext);
 			structuredInputs.put("history_code", historyCode);
 
 			String taskDescription = buildTaskDescription(request);
@@ -188,13 +190,16 @@ public class WriteCodeTool implements BiFunction<WriteCodeTool.Request, ToolCont
 	}
 
 	/**
-	 * 注册代码到 CodeContext 和 Store
+	 * 注册代码到 Session状态 和 Store
+	 *
+	 * <p>代码会被保存到OverAllState的session级别存储中，而不是全局共享的CodeContext，
+	 * 这样不同session的代码不会相互干扰。
 	 */
 	private void registerCode(Request request, String generatedCode, ToolContext toolContext) {
 		// 验证函数名
 		String actualFunctionName = environmentManager.extractFunctionName(generatedCode);
 		if (actualFunctionName != null && !actualFunctionName.equals(request.functionName)) {
-			logger.warn("WriteCodeTool#registerCode 生成的函数名不匹配: expected={}, actual={}",
+			logger.warn("WriteCodeTool#registerCode - reason=生成的函数名不匹配, expected={}, actual={}",
 					request.functionName, actualFunctionName);
 		}
 
@@ -207,11 +212,37 @@ public class WriteCodeTool implements BiFunction<WriteCodeTool.Request, ToolCont
 		);
 		code.setParameters(request.parameters != null ? new ArrayList<>(request.parameters) : new ArrayList<>());
 
-		// 注册到 CodeContext
-		codeContext.registerFunction(code);
+		// 获取 OverAllState
+		OverAllState state = getOverAllState(toolContext);
 
-		// 持久化到 Store
-		saveToStore(toolContext, code);
+		// 注册到 Session 级别存储（优先）
+		if (state != null) {
+			SessionCodeManager.registerSessionFunction(state, code);
+			logger.info("WriteCodeTool#registerCode - reason=代码已注册到session, functionName={}",
+					request.functionName);
+		} else {
+			// 降级：如果无法获取state，仍然注册到共享的CodeContext
+			codeContext.registerFunction(code);
+			logger.warn("WriteCodeTool#registerCode - reason=无法获取state降级到全局CodeContext, functionName={}",
+					request.functionName);
+		}
+
+		// 持久化到 Store（用于跨session的长期存储，默认暂时为空不做任何操作）
+		// saveToStore(toolContext, code);
+	}
+
+	/**
+	 * 从ToolContext获取OverAllState
+	 */
+	private OverAllState getOverAllState(ToolContext toolContext) {
+		if (toolContext == null || toolContext.getContext() == null) {
+			return null;
+		}
+		Object state = toolContext.getContext().get(ToolContextConstants.AGENT_STATE_CONTEXT_KEY);
+		if (state instanceof OverAllState) {
+			return (OverAllState) state;
+		}
+		return null;
 	}
 
 	/**
@@ -250,15 +281,27 @@ public class WriteCodeTool implements BiFunction<WriteCodeTool.Request, ToolCont
 	}
 
 	/**
-	 * 从 CodeContext 获取历史生成的代码
+	 * 获取历史生成的代码（合并全局和session维度）
+	 *
+	 * <p>使用SessionCodeManager获取合并后的代码，session维度的代码优先级高于全局代码。
+	 *
+	 * @param toolContext 工具上下文（用于获取session状态）
+	 * @return 历史代码列表
 	 */
-	private List<String> getHistoryCode() {
+	private List<String> getHistoryCode(ToolContext toolContext) {
 		List<String> historyCode = new ArrayList<>();
-		if (codeContext != null) {
-			for (GeneratedCode code : codeContext.getAllFunctions()) {
-				historyCode.add(code.getCode());
-			}
+
+		OverAllState state = getOverAllState(toolContext);
+
+		// 使用SessionCodeManager获取合并后的代码
+		Collection<GeneratedCode> mergedFunctions = SessionCodeManager.getMergedFunctions(state, codeContext);
+		for (GeneratedCode code : mergedFunctions) {
+			historyCode.add(code.getCode());
 		}
+
+		logger.debug("WriteCodeTool#getHistoryCode - reason=获取历史代码, totalCount={}, sessionCount={}",
+				historyCode.size(), SessionCodeManager.getSessionFunctionCount(state));
+
 		return historyCode;
 	}
 

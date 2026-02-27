@@ -20,6 +20,7 @@ import com.alibaba.assistant.agent.common.tools.definition.ParameterNode;
 import com.alibaba.assistant.agent.common.tools.definition.ParameterTree;
 import com.alibaba.assistant.agent.common.enums.Language;
 import com.alibaba.assistant.agent.core.context.CodeContext;
+import com.alibaba.assistant.agent.core.context.SessionCodeManager;
 import com.alibaba.assistant.agent.core.executor.bridge.AgentToolBridge;
 import com.alibaba.assistant.agent.core.executor.bridge.LoggerBridge;
 import com.alibaba.assistant.agent.core.executor.bridge.StateBridge;
@@ -31,6 +32,7 @@ import com.alibaba.assistant.agent.core.tool.DefaultToolRegistryBridgeFactory;
 import com.alibaba.assistant.agent.core.tool.ToolRegistryBridge;
 import com.alibaba.assistant.agent.core.tool.ToolRegistryBridgeFactory;
 import com.alibaba.cloud.ai.graph.OverAllState;
+import com.alibaba.cloud.ai.graph.agent.tools.ToolContextConstants;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Value;
@@ -43,10 +45,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -67,10 +71,12 @@ public class GraalCodeExecutor {
 	private static class ExecutionResultWrapper {
 		private final Object result;
 		private final List<ToolCallRecord> callTrace;
+		private final List<ToolCallRecord> replyToUserTrace;
 
-		public ExecutionResultWrapper(Object result, List<ToolCallRecord> callTrace) {
+		public ExecutionResultWrapper(Object result, List<ToolCallRecord> callTrace, List<ToolCallRecord> replyToUserTrace) {
 			this.result = result;
 			this.callTrace = callTrace != null ? callTrace : new ArrayList<>();
+			this.replyToUserTrace = replyToUserTrace != null ? replyToUserTrace : new ArrayList<>();
 		}
 
 		public Object getResult() {
@@ -79,6 +85,10 @@ public class GraalCodeExecutor {
 
 		public List<ToolCallRecord> getCallTrace() {
 			return callTrace;
+		}
+
+		public List<ToolCallRecord> getReplyToUserTrace() {
+			return replyToUserTrace;
 		}
 	}
 
@@ -187,6 +197,8 @@ public class GraalCodeExecutor {
 	 * <p>The ToolContext is passed to ToolRegistryBridgeFactory when creating
 	 * ToolRegistryBridge for CodeactTools.
 	 *
+	 * <p>代码会从session级别和全局CodeContext合并获取，session维度的代码优先级更高。
+	 *
 	 * @param functionName the function name to execute
 	 * @param args the function arguments
 	 * @param toolContext the tool context
@@ -199,9 +211,13 @@ public class GraalCodeExecutor {
 		long startTime = System.currentTimeMillis();
 
 		try {
-			// Check if function exists
-			GeneratedCode code = codeContext.getFunction(functionName)
-				.orElseThrow(() -> new IllegalArgumentException("Function not found: " + functionName));
+			// 从ToolContext获取OverAllState以支持session级别代码
+			OverAllState state = getOverAllState(toolContext);
+
+			// 使用SessionCodeManager获取函数（session优先）
+			Optional<GeneratedCode> codeOpt = SessionCodeManager.getFunction(state, codeContext, functionName);
+			GeneratedCode code = codeOpt.orElseThrow(() ->
+					new IllegalArgumentException("Function not found: " + functionName));
 
 			// IMPORTANT: Re-extract the actual function name from the generated code
 			// Because LLM might generate different function names than what we registered
@@ -210,7 +226,8 @@ public class GraalCodeExecutor {
 				throw new IllegalStateException("Cannot extract function name from code: " + functionName);
 			}
 
-			logger.info("GraalCodeExecutor#execute 注册的函数名={}, 实际函数名={}", functionName, actualFunctionName);
+			logger.info("GraalCodeExecutor#execute - reason=函数名解析完成, 注册函数名={}, 实际函数名={}",
+					functionName, actualFunctionName);
 
 			// Generate complete code with all functions
 			StringBuilder codeBuilder = new StringBuilder();
@@ -219,11 +236,23 @@ public class GraalCodeExecutor {
 			codeBuilder.append(environmentManager.generateImports(codeContext));
 			codeBuilder.append("\n\n");
 
-			// Add all registered functions
-			for (GeneratedCode func : codeContext.getAllFunctions()) {
+			// 注入自定义变量（从ToolContext获取）
+			String customVariables = generateCustomVariables(toolContext);
+			if (customVariables != null && !customVariables.isEmpty()) {
+				codeBuilder.append("# ========== 预注入的上下文变量 ==========\n");
+				codeBuilder.append(customVariables);
+				codeBuilder.append("# ========================================\n\n");
+				logger.info("GraalCodeExecutor#execute - reason=注入自定义变量完成");
+			}
+
+			// 使用SessionCodeManager获取合并后的所有函数（session优先）
+			Collection<GeneratedCode> mergedFunctions = SessionCodeManager.getMergedFunctions(state, codeContext);
+			codeBuilder.append("# === 历史代码（session + global merged） ===\n");
+			for (GeneratedCode func : mergedFunctions) {
 				codeBuilder.append(func.getCode());
 				codeBuilder.append("\n\n");
 			}
+			codeBuilder.append("# === 历史代码结束 ===\n\n");
 
 			// Check if the function accepts parameters by inspecting the code
 			// Need to handle:
@@ -241,12 +270,12 @@ public class GraalCodeExecutor {
 			if (!functionHasNoParams && args != null && !args.isEmpty()) {
 				// Function accepts parameters and we have args to pass
 				functionCall = environmentManager.generateFunctionCall(actualFunctionName, args);
-				logger.debug("GraalCodeExecutor#execute 函数接受参数，生成带参数的调用: {}", functionCall);
+				logger.debug("GraalCodeExecutor#execute - reason=函数接受参数生成带参数调用, functionCall={}", functionCall);
 			} else {
 				// Function doesn't accept parameters or no args provided
 				functionCall = actualFunctionName + "()";
 				if (args != null && !args.isEmpty()) {
-					logger.warn("GraalCodeExecutor#execute 函数不接受参数，但提供了args={}，将忽略参数", args);
+					logger.warn("GraalCodeExecutor#execute - reason=函数不接受参数但提供了args将忽略, args={}", args);
 				}
 			}
 
@@ -256,8 +285,8 @@ public class GraalCodeExecutor {
 
 			String finalCode = codeBuilder.toString();
 
-			logger.info("GraalCodeExecutor#execute 准备执行的完整代码:\n{}", finalCode);
-			logger.debug("GraalCodeExecutor#execute 代码长度: {} 字符", finalCode.length());
+			logger.info("GraalCodeExecutor#execute - reason=准备执行完整代码, codeLength={}", finalCode.length());
+			logger.debug("GraalCodeExecutor#execute 完整代码:\n{}", finalCode);
 
 			// Execute with GraalVM
 			ExecutionResultWrapper resultWrapper = executeWithGraal(finalCode, toolContext);
@@ -265,22 +294,37 @@ public class GraalCodeExecutor {
 			record.setSuccess(true);
 			record.setResult(resultWrapper.getResult() != null ? String.valueOf(resultWrapper.getResult()) : "null");
 			record.setCallTrace(resultWrapper.getCallTrace());
+			record.setReplyToUserTrace(resultWrapper.getReplyToUserTrace());
 
-			logger.info("GraalCodeExecutor#execute 执行成功: result={}, callTraceSize={}",
-					resultWrapper.getResult(), resultWrapper.getCallTrace().size());
+			logger.info("GraalCodeExecutor#execute - reason=执行成功, result={}, callTraceSize={}, replyToUserTraceSize={}",
+					resultWrapper.getResult(), resultWrapper.getCallTrace().size(), resultWrapper.getReplyToUserTrace().size());
 
 		} catch (Exception e) {
 			record.setSuccess(false);
 			record.setErrorMessage(e.getMessage());
 			record.setStackTrace(getStackTrace(e));
 
-			logger.error("GraalCodeExecutor#execute 执行失败: functionName=" + functionName, e);
+			logger.error("GraalCodeExecutor#execute - reason=执行失败, functionName=" + functionName, e);
 		} finally {
 			long duration = System.currentTimeMillis() - startTime;
 			record.setDurationMs(duration);
 		}
 
 		return record;
+	}
+
+	/**
+	 * 从ToolContext获取OverAllState
+	 */
+	private OverAllState getOverAllState(ToolContext toolContext) {
+		if (toolContext == null || toolContext.getContext() == null) {
+			return null;
+		}
+		Object state = toolContext.getContext().get(ToolContextConstants.AGENT_STATE_CONTEXT_KEY);
+		if (state instanceof OverAllState) {
+			return (OverAllState) state;
+		}
+		return null;
 	}
 
 	/**
@@ -313,8 +357,10 @@ public class GraalCodeExecutor {
 			record.setSuccess(true);
 			record.setResult(String.valueOf(resultWrapper.getResult()));
 			record.setCallTrace(resultWrapper.getCallTrace());
+			record.setReplyToUserTrace(resultWrapper.getReplyToUserTrace());
 
-			logger.info("GraalCodeExecutor#executeDirect 执行成功, callTraceSize={}", resultWrapper.getCallTrace().size());
+			logger.info("GraalCodeExecutor#executeDirect 执行成功, callTraceSize={}, replyToUserTraceSize={}",
+					resultWrapper.getCallTrace().size(), resultWrapper.getReplyToUserTrace().size());
 
 		} catch (Exception e) {
 			record.setSuccess(false);
@@ -328,6 +374,120 @@ public class GraalCodeExecutor {
 		}
 
 		return record;
+	}
+
+	// ==================== 自定义变量注入机制 ====================
+
+	/**
+	 * ToolContext 中用于传递自定义变量的 key
+	 * 自定义变量会在代码执行前注入，作为全局变量可在函数中直接使用
+	 */
+	public static final String CUSTOM_VARIABLES_KEY = "codeact_custom_variables";
+
+	/**
+	 * 预定义的变量名常量
+	 */
+	public static final String VAR_ORIGINAL_USER_INPUT = "original_user_input";
+	public static final String VAR_USER_ID = "user_id";
+	public static final String VAR_SENSORY_MEMORY = "sensory_memory";
+
+	/**
+	 * 从 ToolContext 中提取自定义变量并生成 Python 代码
+	 *
+	 * 变量格式: Map<String, Object>
+	 * - key: 变量名（必须是有效的 Python 标识符）
+	 * - value: 变量值（支持 String, Number, Boolean, List, Map）
+	 *
+	 * @param toolContext 工具上下文
+	 * @return Python 变量定义代码，如果没有自定义变量则返回空字符串
+	 */
+	@SuppressWarnings("unchecked")
+	private String generateCustomVariables(ToolContext toolContext) {
+		if (toolContext == null) {
+			return "";
+		}
+
+		Object customVarsObj = toolContext.getContext().get(CUSTOM_VARIABLES_KEY);
+		if (!(customVarsObj instanceof Map)) {
+			return "";
+		}
+
+		Map<String, Object> customVars = (Map<String, Object>) customVarsObj;
+		if (customVars.isEmpty()) {
+			return "";
+		}
+
+		StringBuilder sb = new StringBuilder();
+		for (Map.Entry<String, Object> entry : customVars.entrySet()) {
+			String varName = entry.getKey();
+			Object varValue = entry.getValue();
+
+			// 验证变量名是否是有效的 Python 标识符
+			if (!isValidPythonIdentifier(varName)) {
+				logger.warn("GraalCodeExecutor#generateCustomVariables - reason=跳过无效变量名, varName={}", varName);
+				continue;
+			}
+
+			// 生成 Python 变量定义
+			String pythonValue = toPythonLiteral(varValue);
+			sb.append(varName).append(" = ").append(pythonValue).append("\n");
+			logger.debug("GraalCodeExecutor#generateCustomVariables - reason=注入变量, varName={}, valueType={}",
+					varName, varValue != null ? varValue.getClass().getSimpleName() : "null");
+		}
+
+		return sb.toString();
+	}
+
+	/**
+	 * 将 Java 对象转换为 Python 字面量
+	 */
+	@SuppressWarnings("unchecked")
+	private String toPythonLiteral(Object value) {
+		if (value == null) {
+			return "None";
+		}
+		if (value instanceof String) {
+			// 转义特殊字符并使用三引号处理多行字符串
+			String str = (String) value;
+			if (str.contains("\n") || str.contains("\"") || str.contains("'")) {
+				// 使用三引号，转义其中的三引号
+				String escaped = str.replace("\\", "\\\\").replace("\"\"\"", "\\\"\\\"\\\"");
+				return "\"\"\"" + escaped + "\"\"\"";
+			} else {
+				return "\"" + str.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
+			}
+		}
+		if (value instanceof Number) {
+			return value.toString();
+		}
+		if (value instanceof Boolean) {
+			return ((Boolean) value) ? "True" : "False";
+		}
+		if (value instanceof List) {
+			List<?> list = (List<?>) value;
+			StringBuilder sb = new StringBuilder("[");
+			for (int i = 0; i < list.size(); i++) {
+				if (i > 0) sb.append(", ");
+				sb.append(toPythonLiteral(list.get(i)));
+			}
+			sb.append("]");
+			return sb.toString();
+		}
+		if (value instanceof Map) {
+			Map<String, Object> map = (Map<String, Object>) value;
+			StringBuilder sb = new StringBuilder("{");
+			boolean first = true;
+			for (Map.Entry<String, Object> entry : map.entrySet()) {
+				if (!first) sb.append(", ");
+				first = false;
+				sb.append("\"").append(entry.getKey()).append("\": ");
+				sb.append(toPythonLiteral(entry.getValue()));
+			}
+			sb.append("}");
+			return sb.toString();
+		}
+		// 其他类型转为字符串
+		return "\"" + value.toString().replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
 	}
 
 	/**
@@ -499,9 +659,11 @@ public class GraalCodeExecutor {
 
 			// 获取工具调用追踪记录
 			List<ToolCallRecord> callTrace = toolRegistryBridge != null ? toolRegistryBridge.getCallTrace() : new ArrayList<>();
-			logger.info("GraalCodeExecutor#executeWithGraal - reason=获取callTrace完成, callTraceSize={}", callTrace.size());
+			List<ToolCallRecord> replyToUserTrace = toolRegistryBridge != null ? toolRegistryBridge.getReplyToUserTrace() : new ArrayList<>();
+			logger.info("GraalCodeExecutor#executeWithGraal - reason=获取callTrace完成, callTraceSize={}, replyToUserTraceSize={}",
+					callTrace.size(), replyToUserTrace.size());
 
-			return new ExecutionResultWrapper(javaResult, callTrace);
+			return new ExecutionResultWrapper(javaResult, callTrace, replyToUserTrace);
 
 		} catch (Exception e) {
 			String errors = errorStream.toString(StandardCharsets.UTF_8);
@@ -1062,8 +1224,14 @@ public class GraalCodeExecutor {
 		code.append(String.format("%s    # Call Java tool through __tool_registry__\n", indent));
 		code.append(String.format("%s    result_json = __tool_registry__.callTool('%s', args_json)\n", indent, toolName));
 		code.append(String.format("%s    \n", indent));
-		code.append(String.format("%s    # Parse result\n", indent));
-		code.append(String.format("%s    return json.loads(result_json)\n", indent));
+		code.append(String.format("%s    # Parse result (handle None or empty string)\n", indent));
+		code.append(String.format("%s    if result_json is None or result_json == '' or (hasattr(result_json, '__len__') and len(result_json) == 0):\n", indent));
+		code.append(String.format("%s        return {}\n", indent));
+		code.append(String.format("%s    # Convert Java String to Python str if needed\n", indent));
+		code.append(String.format("%s    result_str = str(result_json) if not isinstance(result_json, str) else result_json\n", indent));
+		code.append(String.format("%s    if not result_str or result_str.strip() == '':\n", indent));
+		code.append(String.format("%s        return {}\n", indent));
+		code.append(String.format("%s    return json.loads(result_str)\n", indent));
 		code.append("\n");
 	}
 

@@ -155,15 +155,21 @@ public class McpDynamicToolFactory implements DynamicCodeactToolFactory {
 		if (callback instanceof McpServerAwareToolCallback serverAwareCallback) {
 			String serverName = serverAwareCallback.getServerName();
 			String displayName = serverAwareCallback.getServerDisplayName();
+			String serverDescription = serverAwareCallback.getServerDescription();
 
 			if (serverName != null && !serverName.isEmpty()) {
 				targetClassName = nameNormalizer.normalizeClassName(serverName) + "_tools";
-				targetClassDescription = displayName != null ? displayName : serverName;
+				// 优先使用完整的服务器描述，其次使用显示名称，最后使用服务器名
+				if (serverDescription != null && !serverDescription.isEmpty()) {
+					targetClassDescription = serverDescription;
+				} else {
+					targetClassDescription = displayName != null ? displayName : serverName;
+				}
 				// 使用原始工具名而不是 ToolDefinition 中的名称
 				toolName = serverAwareCallback.getToolName();
 
 				logger.debug("McpDynamicToolFactory#createToolFromCallback - reason=从McpServerAwareToolCallback获取服务器信息, " +
-						"serverName={}, toolName={}", serverName, toolName);
+						"serverName={}, toolName={}, hasServerDescription={}", serverName, toolName, serverDescription != null);
 			}
 		}
 		// 如果有自定义的 serverSpecs，尝试匹配（作为后备方案）

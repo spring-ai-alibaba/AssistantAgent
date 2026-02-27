@@ -70,9 +70,6 @@ public class ToolRegistryBridge {
 				toolContext != null,
 				toolContext != null && toolContext.getContext() != null ? toolContext.getContext().keySet() : "null");
 
-		// 记录工具调用到追踪列表
-		recordToolCall(toolName);
-
 		try {
 			// 从注册表获取工具
 			CodeactTool tool = registry.getTool(toolName)
@@ -81,26 +78,74 @@ public class ToolRegistryBridge {
 			// 调用工具
 			String result = tool.call(argsJson, toolContext);
 
-			logger.info("ToolRegistryBridge#callTool - reason=工具调用成功，准备观测返回值, toolName={}, resultLength={}",
-					toolName, result != null ? result.length() : 0);
+			// 处理 null 或空字符串返回值
+			boolean isEmptyResult = (result == null || result.isEmpty());
+			if (isEmptyResult) {
+				logger.warn("ToolRegistryBridge#callTool - reason=工具返回null或空字符串，使用默认空对象, toolName={}", toolName);
+				result = "{}";
+			}
 
-			// 观测返回值结构
-			observeReturnSchema(toolName, result, true);
+			logger.info("ToolRegistryBridge#callTool - reason=工具调用成功，准备观测返回值, toolName={}, resultLength={}, isEmptyResult={}",
+					toolName, result.length(), isEmptyResult);
 
-			logger.info("ToolRegistryBridge#callTool - reason=工具调用完成, toolName={}", toolName);
+			// 解析返回结果，检查repliedToUser标志
+			boolean repliedToUser = checkRepliedToUser(result);
+
+			// 记录工具调用到追踪列表（包含repliedToUser标志）
+			recordToolCall(toolName, repliedToUser);
+
+			// 观测返回值结构（仅当有实际数据时才观测，避免空返回值污染 schema）
+			if (!isEmptyResult) {
+				observeReturnSchema(toolName, result, true);
+			} else {
+				logger.debug("ToolRegistryBridge#callTool - reason=跳过schema观测因为返回值为空, toolName={}", toolName);
+			}
+
+			logger.info("ToolRegistryBridge#callTool - reason=工具调用完成, toolName={}, repliedToUser={}", toolName, repliedToUser);
 
 			return result;
 		}
 		catch (Exception e) {
 			logger.error("ToolRegistryBridge#callTool - reason=工具调用失败, toolName=" + toolName, e);
+			String errorMessage = e.getMessage();
+			if (errorMessage == null) {
+				errorMessage = e.getClass().getSimpleName();
+			}
+			String errorResult = "{\"error\": \"" + errorMessage.replace("\"", "\\\"").replace("\n", " ").replace("\r", " ") + "\"}";
+
+			// 记录工具调用（失败情况，repliedToUser=false）
+			recordToolCall(toolName, false);
 
 			// 观测错误返回值结构
-			String errorResult = "{\"error\": \"" + e.getMessage().replace("\"", "\\\"") + "\"}";
 			observeReturnSchema(toolName, errorResult, false);
 
 			// 直接抛出异常，让Python层能够捕获并正确处理错误信息
 			throw new RuntimeException(e.getMessage(), e);
 		}
+	}
+
+	/**
+	 * 检查工具返回结果中是否包含repliedToUser=true标志。
+	 * @param resultJson 返回值JSON
+	 * @return 如果包含repliedToUser=true则返回true，否则返回false
+	 */
+	private boolean checkRepliedToUser(String resultJson) {
+		if (resultJson == null || resultJson.isEmpty()) {
+			return false;
+		}
+		try {
+			// 简单的JSON解析检查repliedToUser字段
+			// 使用简单的字符串匹配来避免引入额外依赖
+			if (resultJson.contains("\"repliedToUser\"")) {
+				// 更精确的检查：查找 "repliedToUser": true 或 "repliedToUser":true
+				return resultJson.contains("\"repliedToUser\":true") ||
+					   resultJson.contains("\"repliedToUser\": true") ||
+					   resultJson.contains("\"repliedToUser\" : true");
+			}
+		} catch (Exception e) {
+			logger.debug("ToolRegistryBridge#checkRepliedToUser - reason=解析repliedToUser标志失败, error={}", e.getMessage());
+		}
+		return false;
 	}
 
 	/**
@@ -134,8 +179,9 @@ public class ToolRegistryBridge {
 	/**
 	 * 记录工具调用。
 	 * @param toolName 工具名称
+	 * @param repliedToUser 工具调用是否已回复用户
 	 */
-	private void recordToolCall(String toolName) {
+	private void recordToolCall(String toolName, boolean repliedToUser) {
 		// 获取工具的targetClassName来构建完整的工具标识
 		String toolIdentifier = toolName;
 		try {
@@ -150,9 +196,10 @@ public class ToolRegistryBridge {
 			logger.warn("ToolRegistryBridge#recordToolCall - reason=获取工具元数据失败, toolName={}", toolName);
 		}
 
-		ToolCallRecord record = new ToolCallRecord(callTrace.size() + 1, toolIdentifier);
+		ToolCallRecord record = new ToolCallRecord(callTrace.size() + 1, toolIdentifier, repliedToUser);
 		callTrace.add(record);
-		logger.info("ToolRegistryBridge#recordToolCall - reason=记录工具调用, order={}, tool={}", record.getOrder(), record.getTool());
+		logger.info("ToolRegistryBridge#recordToolCall - reason=记录工具调用, order={}, tool={}, repliedToUser={}",
+				record.getOrder(), record.getTool(), record.isRepliedToUser());
 	}
 
 	/**
@@ -161,6 +208,20 @@ public class ToolRegistryBridge {
 	 */
 	public List<ToolCallRecord> getCallTrace() {
 		return new ArrayList<>(callTrace);
+	}
+
+	/**
+	 * 获取已回复用户的工具调用追踪记录（replyToUserTrace）。
+	 * @return 已回复用户的工具调用记录列表
+	 */
+	public List<ToolCallRecord> getReplyToUserTrace() {
+		List<ToolCallRecord> replyToUserTrace = new ArrayList<>();
+		for (ToolCallRecord record : callTrace) {
+			if (record.isRepliedToUser()) {
+				replyToUserTrace.add(record);
+			}
+		}
+		return replyToUserTrace;
 	}
 
 	/**

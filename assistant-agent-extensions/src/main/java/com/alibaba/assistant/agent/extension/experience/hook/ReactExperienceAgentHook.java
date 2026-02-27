@@ -77,12 +77,19 @@ public class ReactExperienceAgentHook extends AgentHook {
                 return CompletableFuture.completedFuture(Map.of());
             }
 
+            // 获取用户输入，用于向量搜索
+            String userInput = state != null ? state.value("input", String.class).orElse(null) : null;
+
             // 构造查询上下文
-            ExperienceQueryContext context = buildQueryContext(state, config);
+            ExperienceQueryContext context = buildQueryContext(state, config, userInput);
 
             // 查询React经验
             ExperienceQuery query = new ExperienceQuery(ExperienceType.REACT);
             query.setLimit(Math.min(properties.getMaxItemsPerQuery(), 3));
+            // 关键修复：设置查询文本，用于向量搜索
+            if (StringUtils.hasText(userInput)) {
+                query.setText(userInput);
+            }
 
             List<Experience> experiences = experienceProvider.query(query, context);
 
@@ -204,8 +211,13 @@ public class ReactExperienceAgentHook extends AgentHook {
     /**
      * 构建查询上下文
      */
-    private ExperienceQueryContext buildQueryContext(OverAllState state, RunnableConfig config) {
+    private ExperienceQueryContext buildQueryContext(OverAllState state, RunnableConfig config, String userQuery) {
         ExperienceQueryContext context = new ExperienceQueryContext();
+
+        // 关键修复：设置userQuery，用于向量搜索
+        if (StringUtils.hasText(userQuery)) {
+            context.setUserQuery(userQuery);
+        }
 
         // 从state提取
         if (state != null) {
