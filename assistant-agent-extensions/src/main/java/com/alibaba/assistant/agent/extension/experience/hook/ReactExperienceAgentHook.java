@@ -1,7 +1,9 @@
 package com.alibaba.assistant.agent.extension.experience.hook;
 
+import com.alibaba.assistant.agent.common.constant.HookPriorityConstants;
 import com.alibaba.assistant.agent.common.hook.AgentPhase;
 import com.alibaba.assistant.agent.common.hook.HookPhases;
+import com.alibaba.cloud.ai.graph.agent.Prioritized;
 import com.alibaba.assistant.agent.extension.experience.config.ExperienceExtensionProperties;
 import com.alibaba.assistant.agent.extension.experience.model.Experience;
 import com.alibaba.assistant.agent.extension.experience.model.ExperienceQuery;
@@ -38,11 +40,14 @@ import java.util.concurrent.CompletableFuture;
  * 2. 将策略经验注入到初始messages中
  * 3. 影响Agent的整体行为模式
  *
+ * 优先级：{@link HookPriorityConstants#REACT_EXPERIENCE_HOOK}（20），
+ * 确保在快速意图 Hook（50）之前执行。
+ *
  * @author Assistant Agent Team
  */
 @HookPhases(AgentPhase.REACT)
 @HookPositions(HookPosition.BEFORE_AGENT)
-public class ReactExperienceAgentHook extends AgentHook {
+public class ReactExperienceAgentHook extends AgentHook implements Prioritized {
 
     private static final Logger log = LoggerFactory.getLogger(ReactExperienceAgentHook.class);
 
@@ -58,6 +63,11 @@ public class ReactExperienceAgentHook extends AgentHook {
     @Override
     public String getName() {
         return "ReactExperienceAgentHook";
+    }
+
+    @Override
+    public int getOrder() {
+        return HookPriorityConstants.REACT_EXPERIENCE_HOOK;
     }
 
     @Override
