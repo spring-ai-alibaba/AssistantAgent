@@ -84,9 +84,15 @@ public class ExecutionRecord implements Serializable {
 	 */
 	private List<ToolCallRecord> callTrace;
 
+	/**
+	 * 已回复用户的工具调用追踪记录，记录那些返回结果中repliedToUser=true的工具调用
+	 */
+	private List<ToolCallRecord> replyToUserTrace;
+
 	public ExecutionRecord() {
 		this.executedAt = LocalDateTime.now();
 		this.callTrace = new ArrayList<>();
+		this.replyToUserTrace = new ArrayList<>();
 	}
 
 	public ExecutionRecord(String functionName, Language language) {
@@ -177,6 +183,14 @@ public class ExecutionRecord implements Serializable {
 		this.callTrace = callTrace;
 	}
 
+	public List<ToolCallRecord> getReplyToUserTrace() {
+		return replyToUserTrace;
+	}
+
+	public void setReplyToUserTrace(List<ToolCallRecord> replyToUserTrace) {
+		this.replyToUserTrace = replyToUserTrace;
+	}
+
 	/**
 	 * 添加一条工具调用记录
 	 * @param toolName 工具名称
@@ -199,6 +213,7 @@ public class ExecutionRecord implements Serializable {
 				", executedAt=" + executedAt +
 				", durationMs=" + durationMs +
 				", callTrace=" + callTrace +
+				", replyToUserTrace=" + replyToUserTrace +
 				'}';
 	}
 }

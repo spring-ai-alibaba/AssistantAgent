@@ -5,8 +5,18 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.alibaba.agent.assistant</groupId>
     <artifactId>assistant-agent</artifactId>
-    <version>0.1.3</version>
+    <version>0.1.5</version>
     <packaging>pom</packaging>
+    <distributionManagement>
+        <repository>
+            <id>releases</id>
+            <url>http://repo.alibaba-inc.com/mvn/releases</url>
+        </repository>
+        <snapshotRepository>
+            <id>snapshots</id>
+            <url>http://repo.alibaba-inc.com/mvn/snapshots</url>
+        </snapshotRepository>
+    </distributionManagement>
     <modules>
         <module>assistant-agent-autoconfigure</module>
         <module>assistant-agent-common</module>
@@ -142,6 +152,18 @@
                 <configuration>
                     <mainClass>com.alibaba.assistant.agent.start.AssistantAgentApplication</mainClass>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

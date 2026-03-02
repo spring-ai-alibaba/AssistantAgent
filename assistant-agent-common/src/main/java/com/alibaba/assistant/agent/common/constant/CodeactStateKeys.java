@@ -132,5 +132,17 @@ public final class CodeactStateKeys {
 	 * <p>由 CodeGeneratorSubAgent.init_context 节点注入
 	 */
 	public static final String LANGUAGE = "language";
+
+	// ==================== Session级别代码存储 ====================
+
+	/**
+	 * Session级别生成的代码Map
+	 *
+	 * <p>类型：Map&lt;String, GeneratedCode&gt;
+	 * <p>Key为函数名，Value为GeneratedCode对象
+	 * <p>存储在OverAllState中，会随checkpoint持久化
+	 * <p>与全局CodeContext中的代码合并时，session维度的代码优先
+	 */
+	public static final String SESSION_GENERATED_CODES = "session_generated_codes";
 }
 

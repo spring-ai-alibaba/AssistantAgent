@@ -29,6 +29,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ToolContext;
+import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -147,24 +148,24 @@ public class ExecuteCodeTool implements BiFunction<ExecuteCodeTool.Request, Tool
 			ToolContext enrichedToolContext = enrichToolContextWithVariables(toolContext, state);
 
 			// Execute code with toolContext for CodeactTools
-			ExecutionRecord record = executor.execute(request.functionName, request.args, toolContext);
+			ExecutionRecord record = executor.execute(request.functionName, request.args, enrichedToolContext);
 
 			// Update state
 			updateState(state, record);
 
 			if (record.isSuccess()) {
-				logger.info("ExecuteCodeTool#apply 代码执行成功: functionName={}, result={}",
-					request.functionName, record.getResult());
-				return new Response(true, record.getResult(), null, record.getCallTrace(), record.getDurationMs());
+				logger.info("ExecuteCodeTool#apply 代码执行成功: functionName={}, result={}, replyToUserTraceSize={}",
+					request.functionName, record.getResult(), record.getReplyToUserTrace() != null ? record.getReplyToUserTrace().size() : 0);
+				return new Response(true, record.getResult(), null, record.getCallTrace(), record.getReplyToUserTrace(), !CollectionUtils.isEmpty(record.getReplyToUserTrace()), record.getDurationMs());
 			} else {
 				logger.error("ExecuteCodeTool#apply 代码执行失败: functionName={}, error={}",
 					request.functionName, record.getErrorMessage());
-				return new Response(false, null, record.getErrorMessage(), record.getCallTrace(), record.getDurationMs());
+				return new Response(false, null, record.getErrorMessage(), record.getCallTrace(), record.getReplyToUserTrace(), !CollectionUtils.isEmpty(record.getReplyToUserTrace()), record.getDurationMs());
 			}
 
 		} catch (Exception e) {
 			logger.error("ExecuteCodeTool#apply 代码执行异常", e);
-			return new Response(false, null, "Execution error: " + e.getMessage(), new ArrayList<>(), 0);
+			return new Response(false, null, "Execution error: " + e.getMessage(), new ArrayList<>(), new ArrayList<>(), false, 0);
 		}
 	}
 
@@ -259,18 +260,22 @@ public class ExecuteCodeTool implements BiFunction<ExecuteCodeTool.Request, Tool
 		public boolean success;
 		public String result;
 		public List<ToolCallRecord> callTrace;
+		public List<ToolCallRecord> replyToUserTrace;
 		public String error;
 		public long durationMs;
+		public boolean repliedToUser;
 
 		public Response() {
 		}
 
-		public Response(boolean success, String result, String error, List<ToolCallRecord> callTrace, long durationMs) {
+		public Response(boolean success, String result, String error, List<ToolCallRecord> callTrace, List<ToolCallRecord> replyToUserTrace, boolean repliedToUser, long durationMs) {
 			this.success = success;
 			this.result = result;
 			this.callTrace = callTrace;
+			this.replyToUserTrace = replyToUserTrace;
 			this.error = error;
 			this.durationMs = durationMs;
+			this.repliedToUser = repliedToUser;
 		}
 	}
 }

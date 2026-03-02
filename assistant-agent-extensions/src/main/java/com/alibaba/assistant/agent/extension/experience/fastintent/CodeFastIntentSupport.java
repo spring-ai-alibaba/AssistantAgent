@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.model.ToolContext;
+import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
 import java.util.List;
@@ -66,9 +67,19 @@ public class CodeFastIntentSupport {
 
             FastIntentContext ctx = new FastIntentContext(input, messages, md, state, toolRequest);
 
-            ExperienceQueryContext queryContext = buildQueryContext(state, config, language);
+            ExperienceQueryContext queryContext = buildQueryContext(state, config, language, input);
+            // 使用 write_code 的 requirement 参数作为搜索文本，提升向量搜索召回率
+            String requirement = toolRequest != null ? (String) toolRequest.get("requirement") : null;
+            if (StringUtils.hasText(requirement)) {
+                queryContext.setUserQuery(requirement);
+            }
             ExperienceQuery query = new ExperienceQuery(ExperienceType.CODE);
-            query.setLimit(Math.max(20, properties.getMaxItemsPerQuery()));
+            query.setText(requirement);
+            query.setLimit(Math.max(40, properties.getMaxItemsPerQuery()));
+
+            log.info("CodeFastIntentSupport#tryHit - reason=querying code experiences, text={}, limit={}",
+                    requirement != null ? (requirement.length() > 50 ? requirement.substring(0, 50) + "..." : requirement) : "null",
+                    query.getLimit());
 
             List<Experience> candidates = experienceProvider.query(query, queryContext);
             Optional<Experience> bestOpt = fastIntentService.selectBestMatch(candidates, ctx);
@@ -91,8 +102,12 @@ public class CodeFastIntentSupport {
         }
     }
 
-    private ExperienceQueryContext buildQueryContext(OverAllState state, RunnableConfig config, String language) {
+    private ExperienceQueryContext buildQueryContext(OverAllState state, RunnableConfig config, String language, String userQuery) {
         ExperienceQueryContext queryContext = new ExperienceQueryContext();
+        // 关键修复：设置userQuery，用于向量搜索
+        if (userQuery != null && !userQuery.isBlank()) {
+            queryContext.setUserQuery(userQuery);
+        }
         if (state != null) {
             state.value("user_id", String.class).ifPresent(queryContext::setUserId);
             state.value("project_id", String.class).ifPresent(queryContext::setProjectId);
