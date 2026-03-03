@@ -133,6 +133,18 @@ public final class CodeactStateKeys {
 	 */
 	public static final String LANGUAGE = "language";
 
+	// ==================== Hook 通信 ====================
+
+	/**
+	 * CodeGeneratorNode 执行时传入的 messages 列表（含 beforeModel Hook 注入的内容）
+	 *
+	 * <p>类型：List&lt;org.springframework.ai.chat.messages.Message&gt;
+	 * <p>由 CodeGeneratorNode 在调用模型后写入，供 afterModel Hook 读取与审计。
+	 * <p>写端：CodeGeneratorNode#apply（key = "codeact_node_messages"）
+	 * <p>读端：afterModel Hook（如需访问本次代码生成的完整 messages 上下文）
+	 */
+	public static final String CODEACT_NODE_MESSAGES = "codeact_node_messages";
+
 	// ==================== Session级别代码存储 ====================
 
 	/**
