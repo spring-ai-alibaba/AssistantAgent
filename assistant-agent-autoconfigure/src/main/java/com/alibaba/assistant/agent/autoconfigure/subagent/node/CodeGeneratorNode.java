@@ -405,10 +405,11 @@ public class CodeGeneratorNode implements NodeActionWithConfig {
 		sb.append("2. 函数名和参数必须与要求完全一致\n");
 		sb.append("3. 调用工具使用 实例名.方法名() 格式\n");
 		sb.append("4. 只返回纯代码，不要 ```python 标记\n");
+		sb.append("5. ⚠️【禁止生成注释】不要生成任何注释，包括：函数注释（docstring）、行注释（#开头）、多行注释。直接输出纯净的可执行代码。\n");
 		if (isCondition) {
-			sb.append("5. 条件函数必须返回 True 或 False\n");
+			sb.append("6. 条件函数必须返回 True 或 False\n");
 		} else {
-			sb.append("5. 【重要】每个函数必须有 return 语句返回结果\n");
+			sb.append("6. 【重要】每个函数必须有 return 语句返回结果\n");
 			sb.append("   - 查询/搜索类：return 搜索结果\n");
 			sb.append("   - 处理/计算类：return 处理结果\n");
 			sb.append("   - 通知/回复类：先执行操作，再 return 操作结果或状态\n");
@@ -616,15 +617,15 @@ public class CodeGeneratorNode implements NodeActionWithConfig {
 
 		// 优先从 registry 获取（包含观测到的 schema）
 		if (returnSchemaRegistry != null) {
-			logger.info("CodeGeneratorNode#getReturnSchema - reason=开始查询schema, registryHashCode={}, toolName={}, allToolsWithSchema={}",
+			logger.debug("CodeGeneratorNode#getReturnSchema - reason=开始查询schema, registryHashCode={}, toolName={}, allToolsWithSchema={}",
 					System.identityHashCode(returnSchemaRegistry), toolName, returnSchemaRegistry.getToolsWithSchema());
 			ReturnSchema observed = returnSchemaRegistry.getSchema(toolName).orElse(null);
 			if (observed != null) {
-				logger.info("CodeGeneratorNode#getReturnSchema - reason=从registry获取到schema, toolName={}, sampleCount={}, hasSuccessShape={}",
+				logger.debug("CodeGeneratorNode#getReturnSchema - reason=从registry获取到schema, toolName={}, sampleCount={}, hasSuccessShape={}",
 						toolName, observed.getSampleCount(), observed.getSuccessShape() != null);
 				return observed;
 			} else {
-				logger.info("CodeGeneratorNode#getReturnSchema - reason=registry中未找到schema, toolName={}", toolName);
+				logger.debug("CodeGeneratorNode#getReturnSchema - reason=registry中未找到schema, toolName={}", toolName);
 			}
 		} else {
 			logger.warn("CodeGeneratorNode#getReturnSchema - reason=returnSchemaRegistry为null, toolName={}", toolName);

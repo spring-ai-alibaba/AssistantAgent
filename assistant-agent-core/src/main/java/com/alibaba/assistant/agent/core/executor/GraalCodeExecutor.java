@@ -41,6 +41,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.ToolCallback;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
@@ -439,7 +442,23 @@ public class GraalCodeExecutor {
 	}
 
 	/**
+	 * 用于序列化复杂对象的 ObjectMapper
+	 */
+	private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
+
+	/**
 	 * 将 Java 对象转换为 Python 字面量
+	 *
+	 * <p>支持的类型转换：
+	 * <ul>
+	 *   <li>null -> None</li>
+	 *   <li>String -> Python 字符串（支持多行）</li>
+	 *   <li>Number -> Python 数字</li>
+	 *   <li>Boolean -> True/False</li>
+	 *   <li>List -> Python 列表</li>
+	 *   <li>Map -> Python 字典</li>
+	 *   <li>其他对象 -> 尝试 JSON 序列化后解析为 Python 对象</li>
+	 * </ul>
 	 */
 	@SuppressWarnings("unchecked")
 	private String toPythonLiteral(Object value) {
@@ -486,8 +505,38 @@ public class GraalCodeExecutor {
 			sb.append("}");
 			return sb.toString();
 		}
-		// 其他类型转为字符串
-		return "\"" + value.toString().replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
+		// 其他复杂对象类型：尝试使用 Jackson 序列化为 JSON，然后在 Python 中解析
+		// 这样可以正确处理 Attachment 等 POJO 对象，而不是简单地调用 toString()
+		return convertComplexObjectToPythonLiteral(value);
+	}
+
+	/**
+	 * 将复杂对象转换为 Python 字面量
+	 *
+	 * <p>先尝试使用 Jackson 将对象序列化为 JSON，然后转换为 Python 字典/列表格式。
+	 * 如果序列化失败，则退化为字符串表示。
+	 *
+	 * @param value 要转换的对象
+	 * @return Python 字面量表示
+	 */
+	private String convertComplexObjectToPythonLiteral(Object value) {
+		try {
+			// 使用 Jackson 将对象序列化为 JSON 字符串
+			String jsonStr = JSON_MAPPER.writeValueAsString(value);
+
+			// 将 JSON 反序列化为 Map 或 List，然后递归转换为 Python 字面量
+			// 这样可以复用已有的 Map/List 处理逻辑
+			Object parsed = JSON_MAPPER.readValue(jsonStr, Object.class);
+
+			// 递归调用 toPythonLiteral 处理反序列化后的对象（Map 或 List）
+			return toPythonLiteral(parsed);
+		} catch (JsonProcessingException e) {
+			// JSON 序列化失败，退化为字符串表示
+			logger.warn("GraalCodeExecutor#convertComplexObjectToPythonLiteral - reason=JSON序列化失败, " +
+					"valueType={}, error={}, 退化为toString()", value.getClass().getName(), e.getMessage());
+			String strValue = value.toString();
+			return "\"" + strValue.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
+		}
 	}
 
 	/**
@@ -1231,7 +1280,11 @@ public class GraalCodeExecutor {
 		code.append(String.format("%s    result_str = str(result_json) if not isinstance(result_json, str) else result_json\n", indent));
 		code.append(String.format("%s    if not result_str or result_str.strip() == '':\n", indent));
 		code.append(String.format("%s        return {}\n", indent));
-		code.append(String.format("%s    return json.loads(result_str)\n", indent));
+		code.append(String.format("%s    # Try to parse as JSON, if not valid JSON return raw string as result\n", indent));
+		code.append(String.format("%s    try:\n", indent));
+		code.append(String.format("%s        return json.loads(result_str)\n", indent));
+		code.append(String.format("%s    except (json.JSONDecodeError, ValueError):\n", indent));
+		code.append(String.format("%s        return result_str\n", indent));
 		code.append("\n");
 	}
 

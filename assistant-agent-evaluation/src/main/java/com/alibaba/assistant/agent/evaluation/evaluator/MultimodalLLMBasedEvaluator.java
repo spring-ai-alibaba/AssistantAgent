@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.content.Media;
 
@@ -49,6 +50,7 @@ public class MultimodalLLMBasedEvaluator extends LLMBasedEvaluator {
     private static final Logger logger = LoggerFactory.getLogger(MultimodalLLMBasedEvaluator.class);
 
     private final ChatModel multimodalChatModel;
+    private final ChatOptions multimodalChatOptions;
 
     /**
      * 用于将 Map 转换为 MediaConvertible 实现类的 ObjectMapper
@@ -69,7 +71,21 @@ public class MultimodalLLMBasedEvaluator extends LLMBasedEvaluator {
      * @param evaluatorId 评估器ID
      */
     public MultimodalLLMBasedEvaluator(ChatModel textModel, ChatModel multimodalModel, String evaluatorId) {
-        this(textModel, multimodalModel, evaluatorId, createDefaultObjectMapper());
+        this(textModel, multimodalModel, evaluatorId, null, null, createDefaultObjectMapper());
+    }
+
+    /**
+     * 构造函数（带 ChatOptions）
+     *
+     * @param textModel 纯文本模型，用于普通评估
+     * @param multimodalModel 多模态模型，用于处理图片等多模态输入
+     * @param evaluatorId 评估器ID
+     * @param textChatOptions 纯文本模型的ChatOptions（可选）
+     * @param multimodalChatOptions 多模态模型的ChatOptions（可选）
+     */
+    public MultimodalLLMBasedEvaluator(ChatModel textModel, ChatModel multimodalModel, String evaluatorId,
+                                        ChatOptions textChatOptions, ChatOptions multimodalChatOptions) {
+        this(textModel, multimodalModel, evaluatorId, textChatOptions, multimodalChatOptions, createDefaultObjectMapper());
     }
 
     /**
@@ -93,8 +109,24 @@ public class MultimodalLLMBasedEvaluator extends LLMBasedEvaluator {
      */
     public MultimodalLLMBasedEvaluator(ChatModel textModel, ChatModel multimodalModel, 
                                         String evaluatorId, ObjectMapper objectMapper) {
-        super(textModel, evaluatorId);
+        this(textModel, multimodalModel, evaluatorId, null, null, objectMapper);
+    }
+
+    /**
+     * 构造函数（完整参数）
+     *
+     * @param textModel 纯文本模型，用于普通评估
+     * @param multimodalModel 多模态模型，用于处理图片等多模态输入
+     * @param evaluatorId 评估器ID
+     * @param textChatOptions 纯文本模型的ChatOptions（可选）
+     * @param multimodalChatOptions 多模态模型的ChatOptions（可选）
+     * @param objectMapper 用于类型转换的 ObjectMapper
+     */
+    public MultimodalLLMBasedEvaluator(ChatModel textModel, ChatModel multimodalModel, String evaluatorId,
+                                        ChatOptions textChatOptions, ChatOptions multimodalChatOptions, ObjectMapper objectMapper) {
+        super(textModel, evaluatorId, textChatOptions);
         this.multimodalChatModel = multimodalModel;
+        this.multimodalChatOptions = multimodalChatOptions;
         this.objectMapper = objectMapper != null ? objectMapper : new ObjectMapper();
     }
 
@@ -316,8 +348,10 @@ public class MultimodalLLMBasedEvaluator extends LLMBasedEvaluator {
                     .media(mediaList)
                     .build();
 
-            // 调用多模态模型
-            Prompt prompt = new Prompt(List.of(userMessage));
+            // 调用多模态模型（支持自定义ChatOptions）
+            Prompt prompt = multimodalChatOptions != null
+                    ? new Prompt(List.of(userMessage), multimodalChatOptions)
+                    : new Prompt(List.of(userMessage));
             ChatResponse chatResponse = multimodalChatModel.call(prompt);
             String responseText = chatResponse.getResult().getOutput().getText();
 

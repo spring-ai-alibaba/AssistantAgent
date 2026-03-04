@@ -29,6 +29,7 @@ import com.alibaba.assistant.agent.extension.search.model.SearchRequest;
 import com.alibaba.assistant.agent.extension.search.model.SearchResultItem;
 import com.alibaba.assistant.agent.extension.search.model.SearchResultSet;
 import com.alibaba.assistant.agent.extension.search.model.SearchSourceType;
+import com.alibaba.assistant.agent.extension.search.spi.SearchExtendedParameter;
 import com.alibaba.assistant.agent.extension.search.spi.SearchProvider;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -165,7 +166,7 @@ public class BaseSearchCodeactTool implements SearchCodeactTool {
 		String inputSchema = toolDefinition.inputSchema();
 
 		// 构建 ParameterTree
-		ParameterTree parameterTree = ParameterTree.builder()
+		ParameterTree.Builder treeBuilder = ParameterTree.builder()
 			.rawInputSchema(inputSchema)
 			.addParameter(ParameterNode.builder()
 				.name("query")
@@ -179,9 +180,29 @@ public class BaseSearchCodeactTool implements SearchCodeactTool {
 				.description("返回结果数量限制")
 				.required(false)
 				.defaultValue(10)
-				.build())
-			.addRequiredName("query")
-			.build();
+				.build());
+
+		// 动态添加 Provider 声明的扩展参数
+		List<SearchExtendedParameter> extParams = searchProvider.getExtendedParameters();
+		if (extParams != null) {
+			for (SearchExtendedParameter ext : extParams) {
+				ParameterNode.Builder nodeBuilder = ParameterNode.builder()
+					.name(ext.getName())
+					.type(ParameterType.fromJsonSchemaType(ext.getType()))
+					.description(ext.getDescription())
+					.required(ext.isRequired());
+				if (ext.getDefaultValue() != null) {
+					nodeBuilder.defaultValue(ext.getDefaultValue());
+				}
+				treeBuilder.addParameter(nodeBuilder.build());
+				if (ext.isRequired()) {
+					treeBuilder.addRequiredName(ext.getName());
+				}
+			}
+		}
+
+		treeBuilder.addRequiredName("query");
+		ParameterTree parameterTree = treeBuilder.build();
 
 		return DefaultCodeactToolDefinition.builder()
 			.name(toolName)
@@ -277,8 +298,28 @@ public class BaseSearchCodeactTool implements SearchCodeactTool {
 		limitProp.put("default", 10);
 		properties.put("limit", limitProp);
 
+		// 动态添加 Provider 声明的扩展参数
+		List<String> requiredNames = new ArrayList<>();
+		requiredNames.add("query");
+
+		List<SearchExtendedParameter> extParams = searchProvider.getExtendedParameters();
+		if (extParams != null) {
+			for (SearchExtendedParameter ext : extParams) {
+				Map<String, Object> extProp = new LinkedHashMap<>();
+				extProp.put("type", ext.getType());
+				extProp.put("description", ext.getDescription());
+				if (ext.getDefaultValue() != null) {
+					extProp.put("default", ext.getDefaultValue());
+				}
+				properties.put(ext.getName(), extProp);
+				if (ext.isRequired()) {
+					requiredNames.add(ext.getName());
+				}
+			}
+		}
+
 		schema.put("properties", properties);
-		schema.put("required", Arrays.asList("query"));
+		schema.put("required", requiredNames);
 
 		try {
 			return objectMapper.writeValueAsString(schema);
@@ -302,6 +343,17 @@ public class BaseSearchCodeactTool implements SearchCodeactTool {
 		request.setQuery(query);
 		request.getSourceTypes().add(sourceType);
 		request.setTopK(limit);
+
+		// 将 Provider 声明的扩展参数值放入 filters
+		List<SearchExtendedParameter> extParams = searchProvider.getExtendedParameters();
+		if (extParams != null) {
+			for (SearchExtendedParameter ext : extParams) {
+				Object value = params.get(ext.getName());
+				if (value != null) {
+					request.getFilters().put(ext.getName(), value);
+				}
+			}
+		}
 
 		return request;
 	}
