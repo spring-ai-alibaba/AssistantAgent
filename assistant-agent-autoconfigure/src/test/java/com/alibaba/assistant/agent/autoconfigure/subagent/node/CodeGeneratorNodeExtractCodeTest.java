@@ -7,20 +7,20 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * CodeGeneratorNode#extractCodeFromContent 单测
+ * Unit tests for CodeGeneratorNode#extractCodeFromContent.
  *
- * <p>覆盖 LLM 各种典型输出格式，验证代码提取的健壮性。
+ * <p>Covers various LLM output formats to verify robustness of code extraction.
  */
 class CodeGeneratorNodeExtractCodeTest {
 
-    // ==================== 1. 标准 markdown 代码块 ====================
+    // ==================== 1. Standard markdown code blocks ====================
 
     @Nested
-    @DisplayName("标准 markdown 代码块")
+    @DisplayName("Standard markdown code blocks")
     class MarkdownCodeBlock {
 
         @Test
-        @DisplayName("纯 ```python 代码块")
+        @DisplayName("Pure ```python code block")
         void pureCodeBlock() {
             String input = "```python\ndef foo():\n    return 42\n```";
             String result = CodeGeneratorNode.extractCodeFromContent(input);
@@ -29,7 +29,7 @@ class CodeGeneratorNodeExtractCodeTest {
         }
 
         @Test
-        @DisplayName("纯 ``` 代码块（无语言标记）")
+        @DisplayName("Pure ``` code block (no language tag)")
         void pureCodeBlockNoLang() {
             String input = "```\ndef bar():\n    pass\n```";
             String result = CodeGeneratorNode.extractCodeFromContent(input);
@@ -37,7 +37,7 @@ class CodeGeneratorNodeExtractCodeTest {
         }
 
         @Test
-        @DisplayName("```py 简写标记")
+        @DisplayName("```py shorthand tag")
         void pyShorthand() {
             String input = "```py\ndef baz():\n    return 1\n```";
             String result = CodeGeneratorNode.extractCodeFromContent(input);
@@ -45,30 +45,31 @@ class CodeGeneratorNodeExtractCodeTest {
         }
     }
 
-    // ==================== 2. 自然语言 + 代码块（核心场景） ====================
+    // ==================== 2. Natural language prefix + code block (core scenario) ====================
 
     @Nested
-    @DisplayName("自然语言前缀 + 代码块")
+    @DisplayName("Natural language prefix + code block")
     class NaturalLanguagePrefixWithCodeBlock {
 
         @Test
-        @DisplayName("中文分析 + ```python 代码块（复现实际报错场景）")
+        @DisplayName("Analysis text before ```python block (reproduces the real production crash)")
         void chineseAnalysisBeforeCodeBlock() {
-            String input = "根据需求分析，我需要为项目\"秦逸test项目\"创建一个迭代。\n"
-                    + "查看可用工具，需要先查询项目列表获取。\n\n"
+            String input = "Based on the requirements, I need to create an iteration for the project.\n"
+                    + "Looking at available tools, I need to query the project list first.\n\n"
                     + "```python\n"
                     + "def create_iteration():\n"
-                    + "    project_name = \"秦逸test项目\"\n"
-                    + "    return {\"success\": False, \"message\": \"缺少项目ID，无法创建迭代\"}\n"
+                    + "    project_name = \"test-project\"\n"
+                    + "    return {\"success\": False, \"message\": \"missing project ID, cannot create iteration\"}\n"
                     + "```";
             String result = CodeGeneratorNode.extractCodeFromContent(input);
-            assertTrue(result.startsWith("def create_iteration():"), "应以函数定义开头，实际: " + result.substring(0, Math.min(50, result.length())));
-            assertFalse(result.contains("根据需求分析"), "不应包含自然语言分析");
-            assertFalse(result.contains("```"), "不应包含 markdown 标记");
+            assertTrue(result.startsWith("def create_iteration():"),
+                    "should start with function definition, actual: " + result.substring(0, Math.min(50, result.length())));
+            assertFalse(result.contains("Based on the requirements"), "should not contain analysis text");
+            assertFalse(result.contains("```"), "should not contain markdown markers");
         }
 
         @Test
-        @DisplayName("英文分析 + 代码块")
+        @DisplayName("English analysis text before code block")
         void englishAnalysisBeforeCodeBlock() {
             String input = "I'll create a function to search for the project.\n\n"
                     + "```python\n"
@@ -81,11 +82,11 @@ class CodeGeneratorNodeExtractCodeTest {
         }
 
         @Test
-        @DisplayName("多段落分析 + 代码块")
+        @DisplayName("Multi-paragraph analysis before code block")
         void multiParagraphAnalysis() {
-            String input = "首先分析需求。\n\n"
-                    + "然后确定使用哪些工具。\n\n"
-                    + "最后生成代码如下：\n\n"
+            String input = "First, analyze the requirements.\n\n"
+                    + "Then, determine which tools to use.\n\n"
+                    + "Finally, the generated code is as follows:\n\n"
                     + "```python\n"
                     + "def my_func():\n"
                     + "    return True\n"
@@ -95,49 +96,49 @@ class CodeGeneratorNodeExtractCodeTest {
         }
     }
 
-    // ==================== 3. 多代码块 ====================
+    // ==================== 3. Multiple code blocks ====================
 
     @Nested
-    @DisplayName("多代码块（取最后一个）")
+    @DisplayName("Multiple code blocks (last one wins)")
     class MultipleCodeBlocks {
 
         @Test
-        @DisplayName("两个代码块，取最后一个")
+        @DisplayName("Two code blocks - should take the last one")
         void twoCodeBlocks() {
-            String input = "先看一个错误的版本：\n\n"
+            String input = "Here is the wrong version:\n\n"
                     + "```python\n"
                     + "def wrong():\n"
                     + "    pass\n"
                     + "```\n\n"
-                    + "修正后的版本：\n\n"
+                    + "Here is the corrected version:\n\n"
                     + "```python\n"
                     + "def correct():\n"
                     + "    return 42\n"
                     + "```";
             String result = CodeGeneratorNode.extractCodeFromContent(input);
-            assertTrue(result.contains("def correct():"), "应提取最后一个代码块");
-            assertFalse(result.contains("def wrong():"), "不应包含第一个代码块");
+            assertTrue(result.contains("def correct():"), "should extract the last code block");
+            assertFalse(result.contains("def wrong():"), "should not contain the first code block");
         }
 
         @Test
-        @DisplayName("三个代码块，取最后一个")
+        @DisplayName("Three code blocks - should take the last one")
         void threeCodeBlocks() {
             String input = "v1:\n```python\ndef v1():\n    pass\n```\n"
                     + "v2:\n```python\ndef v2():\n    pass\n```\n"
-                    + "最终版:\n```python\ndef v3():\n    return 'final'\n```";
+                    + "final:\n```python\ndef v3():\n    return 'final'\n```";
             String result = CodeGeneratorNode.extractCodeFromContent(input);
             assertTrue(result.contains("def v3():"));
         }
     }
 
-    // ==================== 4. 无 markdown 标记 ====================
+    // ==================== 4. No markdown markers ====================
 
     @Nested
-    @DisplayName("无 markdown 标记")
+    @DisplayName("No markdown markers")
     class NoMarkdown {
 
         @Test
-        @DisplayName("纯代码（直接以 def 开头）")
+        @DisplayName("Pure code starting with def")
         void pureCode() {
             String input = "def hello():\n    return 'hello'";
             String result = CodeGeneratorNode.extractCodeFromContent(input);
@@ -145,76 +146,76 @@ class CodeGeneratorNodeExtractCodeTest {
         }
 
         @Test
-        @DisplayName("自然语言 + 裸 def（无代码块包裹）")
+        @DisplayName("Natural language followed by bare def (no code block wrapper)")
         void naturalLanguageThenBareDef() {
-            String input = "好的，我来生成代码。\n"
+            String input = "Sure, here is the generated code.\n"
                     + "def do_something():\n"
                     + "    return True";
             String result = CodeGeneratorNode.extractCodeFromContent(input);
-            assertTrue(result.startsWith("def do_something():"), "应从 def 处截取");
-            assertFalse(result.contains("好的"), "不应包含自然语言");
+            assertTrue(result.startsWith("def do_something():"), "should start from def");
+            assertFalse(result.contains("Sure, here"), "should not contain natural language prefix");
         }
 
         @Test
-        @DisplayName("纯自然语言（无代码，兜底返回原文）")
+        @DisplayName("Pure natural language (no code, fallback returns content as-is)")
         void pureNaturalLanguage() {
-            String input = "抱歉，我无法生成代码。";
+            String input = "Sorry, I cannot generate code for this request.";
             String result = CodeGeneratorNode.extractCodeFromContent(input);
-            assertEquals("抱歉，我无法生成代码。", result);
+            assertEquals("Sorry, I cannot generate code for this request.", result);
         }
     }
 
-    // ==================== 5. 边界场景 ====================
+    // ==================== 5. Edge cases ====================
 
     @Nested
-    @DisplayName("边界场景")
+    @DisplayName("Edge cases")
     class EdgeCases {
 
         @Test
-        @DisplayName("null 输入")
+        @DisplayName("null input")
         void nullInput() {
             assertNull(CodeGeneratorNode.extractCodeFromContent(null));
         }
 
         @Test
-        @DisplayName("空字符串")
+        @DisplayName("empty string")
         void emptyString() {
             assertEquals("", CodeGeneratorNode.extractCodeFromContent(""));
         }
 
         @Test
-        @DisplayName("只有空白字符")
+        @DisplayName("whitespace-only input")
         void onlyWhitespace() {
             String result = CodeGeneratorNode.extractCodeFromContent("   \n\n  ");
-            // 纯空白内容，trim 后为空，直接返回原值
+            // whitespace-only: guard returns the original value
             assertNotNull(result);
         }
 
         @Test
-        @DisplayName("代码块内含全角字符（字符串中）")
+        @DisplayName("full-width characters inside a string literal should be preserved")
         void fullWidthCharsInString() {
             String input = "```python\n"
                     + "def greet():\n"
-                    + "    return '你好，世界！'\n"
+                    + "    return 'hello, world!'\n"
                     + "```";
             String result = CodeGeneratorNode.extractCodeFromContent(input);
-            assertTrue(result.contains("你好，世界！"), "应保留字符串中的全角字符");
+            assertTrue(result.contains("'hello, world!'"), "should preserve characters inside string literals");
         }
 
         @Test
-        @DisplayName("代码块内含全角字符（注释中）")
+        @DisplayName("full-width characters inside a comment should be preserved")
         void fullWidthCharsInComment() {
             String input = "```python\n"
                     + "def foo():\n"
-                    + "    # 查询项目，获取结果\n"
+                    + "    # query project, get result\n"
                     + "    return None\n"
                     + "```";
             String result = CodeGeneratorNode.extractCodeFromContent(input);
-            assertTrue(result.contains("# 查询项目，获取结果"), "应保留注释中的全角字符");
+            assertTrue(result.contains("# query project, get result"), "should preserve characters inside comments");
         }
 
         @Test
-        @DisplayName("代码前后有大量空行")
+        @DisplayName("lots of surrounding blank lines")
         void lotsOfWhitespace() {
             String input = "\n\n\n```python\n\ndef foo():\n    pass\n\n```\n\n\n";
             String result = CodeGeneratorNode.extractCodeFromContent(input);
@@ -222,52 +223,50 @@ class CodeGeneratorNodeExtractCodeTest {
         }
 
         @Test
-        @DisplayName("空代码块 + 后续代码块，应取后面非空的")
+        @DisplayName("empty code block followed by a real code block - should take the real one")
         void emptyCodeBlockFollowedByReal() {
             String input = "```python\n\n```\n\n```python\ndef fallback():\n    pass\n```";
             String result = CodeGeneratorNode.extractCodeFromContent(input);
-            // 策略1：两个代码块，第一个为空被跳过，第二个有效
             assertTrue(result.startsWith("def fallback():"));
         }
     }
 
-    // ==================== 6. 模拟实际 LLM 输出 ====================
+    // ==================== 6. Real-world LLM output simulation ====================
 
     @Nested
-    @DisplayName("模拟实际 LLM 输出")
+    @DisplayName("Real-world LLM output simulation")
     class RealWorldLLMOutput {
 
         @Test
-        @DisplayName("模拟实际报错的完整 LLM 输出")
+        @DisplayName("Full LLM output that reproduced the real production SyntaxError crash")
         void realWorldCrashCase() {
-            // 这是导致线上 SyntaxError 的实际 LLM 输出格式
-            String input = "根据需求分析，我需要为项目\"秦逸test项目\"创建一个迭代。"
-                    + "查看可用工具，`coop_tools.create_sprint` 需要 `projectId` 参数，"
-                    + "但需求中没有提供项目ID，需要先查询项目列表获取。\n"
+            String input = "Based on the requirements, I need to create an iteration for the project. "
+                    + "Looking at the available tools, `coop_tools.create_sprint` requires a `projectId` parameter, "
+                    + "but no project ID was provided, so I need to query the project list first.\n"
                     + "\n"
-                    + "但是，当前可用工具列表中只有 `coop_tools.create_sprint` 和 `o2_tools.add_iteration`，"
-                    + "没有查询项目列表的工具。因此我需要向用户说明缺少必要信息。\n"
+                    + "However, the current tool list only contains `coop_tools.create_sprint` and `o2_tools.add_iteration`, "
+                    + "with no tool to query the project list. I need to inform the user of the missing information.\n"
                     + "\n"
                     + "```python\n"
                     + "def create_iteration():\n"
-                    + "    project_name = \"秦逸test项目\"\n"
-                    + "    iteration_name = \"测试迭代2\"\n"
-                    + "    owner_info = \"不存在（99999999）\"\n"
+                    + "    project_name = \"test-project\"\n"
+                    + "    iteration_name = \"test-iteration-2\"\n"
+                    + "    owner_info = \"not-found(99999999)\"\n"
                     + "    \n"
                     + "    owner_id_result = llm_tools.call_llm(\n"
                     + "        source_data=owner_info,\n"
                     + "        target_format=\"99999999\",\n"
-                    + "        extract_requirement=\"从括号中提取负责人工号，纯数字字符串\"\n"
+                    + "        extract_requirement=\"extract owner ID from parentheses as a numeric string\"\n"
                     + "    )\n"
                     + "    owner_id = owner_id_result if owner_id_result else \"99999999\"\n"
                     + "    \n"
                     + "    reply_tools.send_message(\n"
-                    + "        message=f\"创建迭代需要项目ID，但当前无法查询项目列表。\"\n"
+                    + "        message=f\"Cannot create iteration: missing project ID.\"\n"
                     + "    )\n"
                     + "    \n"
                     + "    return {\n"
                     + "        \"success\": False,\n"
-                    + "        \"message\": \"缺少项目ID，无法创建迭代\",\n"
+                    + "        \"message\": \"missing project ID, cannot create iteration\",\n"
                     + "        \"projectName\": project_name,\n"
                     + "        \"iterationName\": iteration_name,\n"
                     + "        \"ownerId\": owner_id\n"
@@ -276,14 +275,14 @@ class CodeGeneratorNodeExtractCodeTest {
 
             String result = CodeGeneratorNode.extractCodeFromContent(input);
             assertTrue(result.startsWith("def create_iteration():"),
-                    "应以函数定义开头，实际开头: " + result.substring(0, Math.min(60, result.length())));
-            assertFalse(result.contains("根据需求分析"), "不应包含自然语言");
-            assertTrue(result.contains("reply_tools.send_message"), "应保留函数体");
-            assertTrue(result.contains("\"success\": False"), "应保留返回值");
+                    "should start with function definition, actual: " + result.substring(0, Math.min(60, result.length())));
+            assertFalse(result.contains("Based on the requirements"), "should not contain natural language");
+            assertTrue(result.contains("reply_tools.send_message"), "should preserve function body");
+            assertTrue(result.contains("\"success\": False"), "should preserve return value");
         }
 
         @Test
-        @DisplayName("LLM 只返回代码不带任何解释")
+        @DisplayName("LLM returns only code with no explanation")
         void llmReturnsOnlyCode() {
             String input = "def simple():\n    return 1 + 1";
             String result = CodeGeneratorNode.extractCodeFromContent(input);
@@ -291,22 +290,22 @@ class CodeGeneratorNodeExtractCodeTest {
         }
 
         @Test
-        @DisplayName("LLM 返回代码后面还有解释")
+        @DisplayName("LLM returns a code block followed by explanation text")
         void codeBlockFollowedByExplanation() {
             String input = "```python\n"
                     + "def calculate():\n"
                     + "    return 42\n"
                     + "```\n\n"
-                    + "这个函数会返回42，因为这是宇宙的终极答案。";
+                    + "This function returns 42, the answer to life, the universe, and everything.";
             String result = CodeGeneratorNode.extractCodeFromContent(input);
             assertTrue(result.startsWith("def calculate():"));
-            assertFalse(result.contains("宇宙的终极答案"), "不应包含代码块后的解释");
+            assertFalse(result.contains("answer to life"), "should not contain explanation after code block");
         }
 
         @Test
-        @DisplayName("LLM 输出含缩进的复杂函数")
+        @DisplayName("LLM returns a complex indented function")
         void complexIndentedFunction() {
-            String input = "以下是实现：\n\n```python\n"
+            String input = "Here is the implementation:\n\n```python\n"
                     + "def process_data(**kwargs):\n"
                     + "    results = []\n"
                     + "    for key, value in kwargs.items():\n"
@@ -323,5 +322,4 @@ class CodeGeneratorNodeExtractCodeTest {
         }
     }
 }
-
 
