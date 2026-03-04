@@ -61,6 +61,13 @@ public class EvaluationSuite {
 	private List<EvaluationCriterion> criteria = new ArrayList<>();
 
 	/**
+	 * Default timeout for individual criterion execution (in milliseconds).
+	 * This is used when a criterion does not specify its own timeoutMs.
+	 * Default is 10000ms (10 seconds).
+	 */
+	private long defaultCriterionTimeoutMs = 10000;
+
+	/**
 	 * Compiled evaluation graph representation based on criteria dependencies.
 	 * This is built by EvaluationSuiteBuilder using graph-core and treated as an internal implementation detail for execution.
 	 */
@@ -123,5 +130,13 @@ public class EvaluationSuite {
 
 	public void setCompiledGraph(CompiledGraph compiledGraph) {
 		this.compiledGraph = compiledGraph;
+	}
+
+	public long getDefaultCriterionTimeoutMs() {
+		return defaultCriterionTimeoutMs;
+	}
+
+	public void setDefaultCriterionTimeoutMs(long defaultCriterionTimeoutMs) {
+		this.defaultCriterionTimeoutMs = defaultCriterionTimeoutMs;
 	}
 }

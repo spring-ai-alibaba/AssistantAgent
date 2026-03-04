@@ -137,7 +137,7 @@ public class DefaultReturnSchemaRegistry implements ReturnSchemaRegistry {
 			return Optional.empty();
 		}
 		ReturnSchema schema = mergedSchemas.get(toolName);
-		logger.info("DefaultReturnSchemaRegistry#getSchema - reason=查询schema, hashCode={}, toolName={}, found={}, allTools={}",
+		logger.debug("DefaultReturnSchemaRegistry#getSchema - reason=查询schema, hashCode={}, toolName={}, found={}, allTools={}",
 				System.identityHashCode(this), toolName, schema != null, mergedSchemas.keySet());
 		return Optional.ofNullable(schema);
 	}

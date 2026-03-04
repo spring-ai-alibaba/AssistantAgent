@@ -131,25 +131,30 @@ public class Experience {
     }
 
     /**
-     * 获取有效内容：优先使用 content，如果为空则从 artifact.code 自动生成
+     * 获取有效内容：合并 content 与 artifact.code，两者均有值时拼接返回
      * <p>
-     * 这样可以避免 CODE 经验中 content 和 artifact.code 的冗余配置
+     * 先拼接 content（如有），再拼接从 artifact.code 生成的内容（如有）
      */
     public String getEffectiveContent() {
-        // 1. 如果 content 有值，直接返回
+        StringBuilder result = new StringBuilder();
+
+        // 1. 追加 content
         if (content != null && !content.isBlank()) {
-            return content;
+            result.append(content);
         }
 
-        // 2. 如果 artifact.code 存在，自动生成 content
+        // 2. 追加 artifact.code 生成的内容
         if (artifact != null && artifact.getCode() != null) {
             ExperienceArtifact.CodeArtifact codeArtifact = artifact.getCode();
             if (codeArtifact.getCode() != null && !codeArtifact.getCode().isBlank()) {
-                return buildContentFromCodeArtifact(codeArtifact);
+                if (!result.isEmpty()) {
+                    result.append("\n\n");
+                }
+                result.append(buildContentFromCodeArtifact(codeArtifact));
             }
         }
 
-        return content;
+        return result.isEmpty() ? content : result.toString();
     }
 
     /**

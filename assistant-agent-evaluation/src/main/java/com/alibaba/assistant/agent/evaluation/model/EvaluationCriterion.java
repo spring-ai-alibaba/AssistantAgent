@@ -109,6 +109,21 @@ public class EvaluationCriterion {
 	 */
 	private MultimodalConfig multimodalConfig;
 
+	/**
+	 * Timeout configuration for this criterion (in milliseconds).
+	 * If not set, will use the suite-level default timeout.
+	 * When timeout occurs, the criterion returns TIMEOUT status with defaultValue.
+	 */
+	private Long timeoutMs;
+
+	/**
+	 * Default value to use when:
+	 * - The criterion times out
+	 * - The criterion execution fails with an error
+	 * This ensures evaluation can continue even when individual criteria fail.
+	 */
+	private Object defaultValue;
+
 	public String getName() {
 		return name;
 	}
@@ -235,6 +250,22 @@ public class EvaluationCriterion {
 
 	public void setMultimodalConfig(MultimodalConfig multimodalConfig) {
 		this.multimodalConfig = multimodalConfig;
+	}
+
+	public Long getTimeoutMs() {
+		return timeoutMs;
+	}
+
+	public void setTimeoutMs(Long timeoutMs) {
+		this.timeoutMs = timeoutMs;
+	}
+
+	public Object getDefaultValue() {
+		return defaultValue;
+	}
+
+	public void setDefaultValue(Object defaultValue) {
+		this.defaultValue = defaultValue;
 	}
 
 	/**
