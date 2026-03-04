@@ -55,6 +55,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -212,6 +213,7 @@ public class GraalCodeExecutor {
 
 		ExecutionRecord record = new ExecutionRecord(functionName, codeContext.getLanguage());
 		long startTime = System.currentTimeMillis();
+		String finalCode = null;
 
 		try {
 			// 从ToolContext获取OverAllState以支持session级别代码
@@ -286,7 +288,7 @@ public class GraalCodeExecutor {
 			codeBuilder.append("_result = ").append(functionCall).append("\n");
 			codeBuilder.append("_result  # Return the result\n");
 
-			String finalCode = codeBuilder.toString();
+			finalCode = codeBuilder.toString();
 
 			logger.info("GraalCodeExecutor#execute - reason=准备执行完整代码, codeLength={}", finalCode.length());
 			logger.debug("GraalCodeExecutor#execute 完整代码:\n{}", finalCode);
@@ -308,6 +310,7 @@ public class GraalCodeExecutor {
 			record.setStackTrace(getStackTrace(e));
 
 			logger.error("GraalCodeExecutor#execute - reason=执行失败, functionName=" + functionName, e);
+			logCodeContextAroundError(finalCode, e, 5);
 		} finally {
 			long duration = System.currentTimeMillis() - startTime;
 			record.setDurationMs(duration);
@@ -349,10 +352,11 @@ public class GraalCodeExecutor {
 
 		ExecutionRecord record = new ExecutionRecord("__direct__", codeContext.getLanguage());
 		long startTime = System.currentTimeMillis();
+		String completeCode = null;
 
 		try {
 			// Wrap code with imports
-			String completeCode = environmentManager.generateImports(codeContext) + "\n" + code;
+			completeCode = environmentManager.generateImports(codeContext) + "\n" + code;
 
 			// Execute with GraalVM
 			ExecutionResultWrapper resultWrapper = executeWithGraal(completeCode, toolContext);
@@ -370,7 +374,8 @@ public class GraalCodeExecutor {
 			record.setErrorMessage(e.getMessage());
 			record.setStackTrace(getStackTrace(e));
 
-			logger.error("GraalCodeExecutor#executeDirect 执行失败", e);
+			logger.error("GraalCodeExecutor#executeDirect - reason=执行失败", e);
+			logCodeContextAroundError(completeCode, e, 5);
 		} finally {
 			long duration = System.currentTimeMillis() - startTime;
 			record.setDurationMs(duration);
@@ -858,6 +863,80 @@ public class GraalCodeExecutor {
 		PrintStream ps = new PrintStream(baos, true, StandardCharsets.UTF_8);
 		e.printStackTrace(ps);
 		return baos.toString(StandardCharsets.UTF_8);
+	}
+
+	/**
+	 * 从异常信息中提取报错行号，打印该行前后各 contextLines 行的代码用于排查。
+	 *
+	 * <p>支持从以下格式中提取行号：
+	 * <ul>
+	 *   <li>GraalPython: {@code SyntaxError: ... (Unnamed, line 21)}</li>
+	 *   <li>GraalPython: {@code ... at line 21}</li>
+	 *   <li>通用格式: {@code line 21}</li>
+	 * </ul>
+	 *
+	 * @param code 完整的待执行代码
+	 * @param e 执行时抛出的异常
+	 * @param contextLines 报错行前后各打印多少行，默认建议 5
+	 */
+	private void logCodeContextAroundError(String code, Exception e, int contextLines) {
+		if (code == null || code.isEmpty()) {
+			return;
+		}
+
+		// 从异常消息中提取行号
+		int errorLine = extractErrorLineNumber(e);
+		String[] lines = code.split("\n");
+
+		if (errorLine > 0) {
+			// 提取报错行前后 contextLines 行
+			int start = Math.max(0, errorLine - 1 - contextLines);
+			int end = Math.min(lines.length, errorLine + contextLines);
+
+			StringBuilder snippet = new StringBuilder();
+			for (int i = start; i < end; i++) {
+				String marker = (i == errorLine - 1) ? " >>> " : "     ";
+				snippet.append(String.format("%s%4d: %s\n", marker, i + 1, lines[i]));
+			}
+			logger.error("GraalCodeExecutor#logCodeContextAroundError - reason=报错行附近代码, errorLine={}, totalLines={}\n{}",
+					errorLine, lines.length, snippet);
+		} else {
+			// 无法提取行号，打印全部代码（带行号）
+			StringBuilder numberedCode = new StringBuilder();
+			for (int i = 0; i < lines.length; i++) {
+				numberedCode.append(String.format("%4d: %s\n", i + 1, lines[i]));
+			}
+			logger.error("GraalCodeExecutor#logCodeContextAroundError - reason=无法提取报错行号打印全部代码, totalLines={}\n{}",
+					lines.length, numberedCode);
+		}
+	}
+
+	/**
+	 * 从异常（含cause链）中提取报错行号。
+	 *
+	 * @param e 异常
+	 * @return 行号（1-based），提取失败返回 -1
+	 */
+	private int extractErrorLineNumber(Exception e) {
+		// 匹配 "line 数字" 格式，覆盖 "(Unnamed, line 21)" / "at line 21" 等
+		Pattern linePattern = Pattern.compile("line\\s+(\\d+)");
+
+		// 遍历 cause 链，尝试从每一层异常消息中提取
+		Throwable current = e;
+		while (current != null) {
+			String msg = current.getMessage();
+			if (msg != null) {
+				Matcher matcher = linePattern.matcher(msg);
+				if (matcher.find()) {
+					try {
+						return Integer.parseInt(matcher.group(1));
+					} catch (NumberFormatException ignored) {
+					}
+				}
+			}
+			current = current.getCause();
+		}
+		return -1;
 	}
 
 	/**

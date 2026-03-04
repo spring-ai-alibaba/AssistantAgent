@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.alibaba.agent.assistant</groupId>
         <artifactId>assistant-agent</artifactId>
-        <version>0.1.8</version>
+        <version>0.1.9</version>
     </parent>
 
     <artifactId>assistant-agent-autoconfigure</artifactId>
@@ -77,6 +77,14 @@
             <version>${graalvm.polyglot.version}</version>
             <type>pom</type>
             <optional>true</optional>
+        </dependency>
+
+        <!-- Test -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.11.0</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
