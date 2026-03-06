@@ -114,3 +114,24 @@ spring.ai.alibaba.codeact.extension.prompt:
 logging:
   level:
     com.alibaba.assistant.agent: DEBUG
+
+# ============================================================================
+# MCP Client (Optional)
+# ============================================================================
+spring.ai.mcp.client:
+  enabled: false
+  name: assistant-agent-mcp
+  version: 1.0.0
+  type: SYNC
+  request-timeout: 30s
+  toolcallback:
+    enabled: true
+  streamable-http:
+    connections:
+      remote-server:
+        url: http://localhost:20000
+        endpoint: /mcp
+#        headers:
+#          rich-ai-token: rich12333-1
+#  stdio:
+#    servers-configuration: classpath:mcp-servers.json

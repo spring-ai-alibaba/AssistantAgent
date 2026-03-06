@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "rich-mcp": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "http://47.103.38.180:8080/mcp",
+        "--header",
+        "rich-ai-token: rich12333-1"
+      ]
+    }
+
+  }
+}

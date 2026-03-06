@@ -1,6 +1,7 @@
 # 编译输出
 out/
 target/
+jar/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
@@ -35,3 +36,4 @@ build/
 
 ### Mac OS ###
 .DS_Store
+/.trae/
