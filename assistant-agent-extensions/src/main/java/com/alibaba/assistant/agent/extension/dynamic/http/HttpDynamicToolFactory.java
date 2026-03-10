@@ -172,7 +172,7 @@ public class HttpDynamicToolFactory implements DynamicCodeactToolFactory {
 
 		// 解析 tags 用于确定类名
 		String targetClassName = "http_api";
-		String targetClassDescription = "HTTP API tools generated from OpenAPI";
+		String targetClassDescription = "从 OpenAPI 生成的 HTTP API 工具";
 
 		if (operation.has("tags") && operation.get("tags").isArray()) {
 			JsonNode tags = operation.get("tags");

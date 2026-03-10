@@ -40,7 +40,7 @@ public class ReplyExtensionProperties {
 		ReplyToolConfig sendMessage = new ReplyToolConfig();
 		sendMessage.setToolName("send_message");
 		sendMessage.setChannelCode("IDE_TEXT");
-		sendMessage.setDescription("Send a message to the user");
+		sendMessage.setDescription("向用户发送消息");
 		sendMessage.setReactEnabled(true);
 		sendMessage.setCodeActEnabled(true);
 
@@ -48,7 +48,7 @@ public class ReplyExtensionProperties {
 		textParam.setName("text");
 		textParam.setType("STRING");
 		textParam.setRequired(true);
-		textParam.setDescription("The message text to send");
+		textParam.setDescription("要发送的消息文本");
 		sendMessage.setParameters(List.of(textParam));
 
 		defaultTools.add(sendMessage);

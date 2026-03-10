@@ -264,7 +264,7 @@ public class CodeactAgentConfig {
 
 		CodeactAgent.CodeactAgentBuilder builder = CodeactAgent.builder()
 				.name("CodeactAgent")
-				.description("A code-driven agent that solves problems by writing and executing Python code")
+				.description("通过编写和执行 Python 代码来解决问题的代码驱动智能体")
 				.systemPrompt(SYSTEM_PROMPT)   // 系统角色定义（SystemMessage）
 				.model(chatModel)
 				.language(Language.PYTHON)     // CodeactAgentBuilder特有方法
@@ -306,7 +306,7 @@ public class CodeactAgentConfig {
 			McpDynamicToolFactory factory = McpDynamicToolFactory.builder()
 					.toolCallbackProvider(toolCallbackProvider)
 					.defaultTargetClassNamePrefix("mcp-server")  // MCP Server name
-					.defaultTargetClassDescription("MCP tools providing various capabilities")
+					.defaultTargetClassDescription("提供各种能力的 MCP 工具")
 					.build();
 
 			// Create factory context and generate tools

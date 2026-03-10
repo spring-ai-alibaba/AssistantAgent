@@ -147,72 +147,72 @@ public class MockKnowledgeStoreSearchProvider implements SearchProvider {
                     List.of("python", "安全", "沙箱", "代码执行", "graalvm")
             ),
             new KnowledgeItem(
-                    "DevOps Platform",
-                    "A unified DevOps platform providing project management, code hosting, and CI/CD capabilities.",
-                    "# DevOps Platform\n\n" +
-                            "## Platform Overview\n" +
-                            "A comprehensive DevOps platform that integrates:\n" +
-                            "- Project Management (requirements, tasks, defects)\n" +
-                            "- Code Hosting (Git)\n" +
-                            "- Continuous Integration/Deployment (CI/CD)\n" +
-                            "- Test Management\n" +
-                            "- Release Management\n\n" +
-                            "## Core Features\n\n" +
-                            "### 1. Project Management\n" +
-                            "- Agile Kanban\n" +
-                            "- Sprint Planning\n" +
-                            "- Requirements Tracking\n\n" +
-                            "### 2. Code Management\n" +
-                            "- Git-based Code Hosting\n" +
-                            "- Code Review Workflow\n" +
-                            "- Branch Management\n\n" +
-                            "### 3. Build & Release\n" +
-                            "- Automated Build\n" +
-                            "- Multi-environment Deployment\n" +
-                            "- Canary Release Support\n\n" +
-                            "### 4. Quality Control\n" +
-                            "- Automated Testing\n" +
-                            "- Code Scanning\n" +
-                            "- Quality Gates\n\n" +
-                            "## Integration with AI Assistant\n" +
-                            "The AI assistant can access platform data via API:\n" +
-                            "- Query project information\n" +
-                            "- Get build status\n" +
-                            "- View release records\n" +
-                            "- Check code quality",
-                    List.of("devops", "platform", "project-management", "ci/cd")
+                    "DevOps 平台",
+                    "统一的 DevOps 平台，提供项目管理、代码托管和 CI/CD 能力。",
+                    "# DevOps 平台\n\n" +
+                            "## 平台概述\n" +
+                            "一个综合的 DevOps 平台，集成了：\n" +
+                            "- 项目管理（需求、任务、缺陷）\n" +
+                            "- 代码托管（Git）\n" +
+                            "- 持续集成/部署（CI/CD）\n" +
+                            "- 测试管理\n" +
+                            "- 发布管理\n\n" +
+                            "## 核心功能\n\n" +
+                            "### 1. 项目管理\n" +
+                            "- 敏捷看板\n" +
+                            "- 迭代规划\n" +
+                            "- 需求跟踪\n\n" +
+                            "### 2. 代码管理\n" +
+                            "- 基于 Git 的代码托管\n" +
+                            "- 代码评审流程\n" +
+                            "- 分支管理\n\n" +
+                            "### 3. 构建与发布\n" +
+                            "- 自动化构建\n" +
+                            "- 多环境部署\n" +
+                            "- 灰度发布支持\n\n" +
+                            "### 4. 质量控制\n" +
+                            "- 自动化测试\n" +
+                            "- 代码扫描\n" +
+                            "- 质量门禁\n\n" +
+                            "## 与 AI 助手集成\n" +
+                            "AI 助手可以通过 API 访问平台数据：\n" +
+                            "- 查询项目信息\n" +
+                            "- 获取构建状态\n" +
+                            "- 查看发布记录\n" +
+                            "- 检查代码质量",
+                    List.of("devops", "平台", "项目管理", "ci/cd")
             ),
             new KnowledgeItem(
-                    "MoLiHong AI Assistant",
-                    "MoLiHong is an intelligent development assistant built on Spring AI Alibaba and Codeact framework.",
-                    "# MoLiHong AI Assistant\n\n" +
-                            "## Identity\n" +
-                            "MoLiHong is an AI-powered development assistant created by MoLiHai (Assistant AI Team), focusing on:\n" +
-                            "- Configuration queries\n" +
-                            "- Information retrieval\n" +
-                            "- Development Q&A\n" +
-                            "- Automated task execution\n\n" +
-                            "## Technical Architecture\n" +
-                            "- **Framework**: Spring AI Alibaba\n" +
-                            "- **Agent**: Codeact Agent\n" +
-                            "- **Model**: Qwen Series\n" +
-                            "- **Code Execution**: GraalVM Python\n\n" +
-                            "## Core Capabilities\n\n" +
-                            "### 1. Configuration Query\n" +
+                    "魔力红 AI 助手",
+                    "魔力红是基于 Spring AI Alibaba 和 Codeact 框架构建的智能开发助手。",
+                    "# 魔力红 AI 助手\n\n" +
+                            "## 身份\n" +
+                            "魔力红是由魔力海(Assistant AI Team)创建的 AI 驱动开发助手，专注于：\n" +
+                            "- 配置查询\n" +
+                            "- 信息检索\n" +
+                            "- 开发问答\n" +
+                            "- 自动化任务执行\n\n" +
+                            "## 技术架构\n" +
+                            "- **框架**: Spring AI Alibaba\n" +
+                            "- **智能体**: Codeact Agent\n" +
+                            "- **模型**: 通义千问系列\n" +
+                            "- **代码执行**: GraalVM Python\n\n" +
+                            "## 核心能力\n\n" +
+                            "### 1. 配置查询\n" +
                             "```\n" +
-                            "User: Query the feature.new_ui config for tenant 12345\n" +
-                            "MoLiHong: [Generate and execute code] Current status: enabled, traffic ratio 10%\n" +
+                            "用户：查询租户 12345 的 feature.new_ui 配置\n" +
+                            "魔力红：[生成并执行代码] 当前状态：已启用，流量比例 10%\n" +
                             "```\n\n" +
-                            "### 2. Knowledge Q&A\n" +
-                            "Answer development questions based on knowledge base\n\n" +
-                            "### 3. Code Generation\n" +
-                            "Generate and execute code based on requirements\n\n" +
-                            "## Use Cases\n" +
-                            "1. Quick configuration queries\n" +
-                            "2. Platform usage guidance\n" +
-                            "3. Automated data processing\n" +
-                            "4. Development workflow consulting",
-                    List.of("molihong", "ai-assistant", "assistant-ai", "intelligent-agent")
+                            "### 2. 知识问答\n" +
+                            "基于知识库回答开发问题\n\n" +
+                            "### 3. 代码生成\n" +
+                            "根据需求生成并执行代码\n\n" +
+                            "## 使用场景\n" +
+                            "1. 快速配置查询\n" +
+                            "2. 平台使用指导\n" +
+                            "3. 自动化数据处理\n" +
+                            "4. 开发流程咨询",
+                    List.of("魔力红", "ai助手", "智能体", "intelligent-agent")
             )
     );
 

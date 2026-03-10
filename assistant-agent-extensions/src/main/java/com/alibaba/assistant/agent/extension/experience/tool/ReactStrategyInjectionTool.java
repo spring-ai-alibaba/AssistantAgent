@@ -38,12 +38,12 @@ public class ReactStrategyInjectionTool {
      * @return 错误提示信息
      */
     @Tool(name = TOOL_NAME,
-          description = "[INTERNAL SYSTEM TOOL - DO NOT CALL] " +
-                  "This is an internal system tool that is automatically invoked by the framework to inject React strategy guidance. " +
-                  "You must NEVER call this tool directly. " +
-                  "The strategy guidance you need is already provided in the conversation context. " +
-                  "If you need to perform actions, use the appropriate tools like write_code, execute_code, send_message, etc. " +
-                  "Calling this tool will result in an error.")
+          description = "[内部系统工具 - 请勿调用] " +
+                  "这是一个由框架自动调用的内部系统工具，用于注入 React 策略指导。" +
+                  "你绝对不能直接调用此工具。" +
+                  "你需要的策略指导已经在对话上下文中提供。" +
+                  "如果需要执行操作，请使用适当的工具，如 write_code、execute_code 等。" +
+                  "调用此工具将导致错误。")
     public String inject() {
         log.error("ReactStrategyInjectionTool#inject - reason=LLM错误调用了内部系统工具, " +
                 "这表明LLM没有遵循工具描述中的禁止调用说明");

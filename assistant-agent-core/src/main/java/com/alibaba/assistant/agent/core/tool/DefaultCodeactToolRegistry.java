@@ -232,8 +232,8 @@ public class DefaultCodeactToolRegistry implements CodeactToolRegistry {
 		}
 
 		StringBuilder prompt = new StringBuilder();
-		prompt.append("## Available Tools\n\n");
-		prompt.append("You can use the following tools in your code:\n\n");
+		prompt.append("## 可用工具\n\n");
+		prompt.append("你可以在代码中使用以下工具：\n\n");
 
 		// Group by className
 		Map<String, List<CodeactTool>> toolsByClass = new HashMap<>();

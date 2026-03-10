@@ -231,17 +231,17 @@ public class ExecuteCodeTool implements BiFunction<ExecuteCodeTool.Request, Tool
 	 */
 	public static class Request {
 		@JsonProperty(required = true)
-		@JsonPropertyDescription("The exact name of the function to execute. " +
-			"This MUST be the same function name used when generating the code with write_code tool. " +
-			"You can list available functions by checking the generated_codes in state.")
+		@JsonPropertyDescription("要执行的函数名称。" +
+			"必须与使用 write_code 工具生成代码时使用的函数名完全相同。" +
+			"可以通过检查 state 中的 generated_codes 来列出可用函数。")
 		public String functionName;
 
 		@JsonProperty
-		@JsonPropertyDescription("Function arguments as a map of parameter names to values. " +
-			"The parameter names MUST exactly match the parameters specified when the function was generated. " +
-			"Example: If function was generated with parameters ['a', 'b'], then use {\"a\": value1, \"b\": value2}. " +
-			"If the function was generated without specific parameters (uses **kwargs), you can pass any parameters. " +
-			"Value types: String, Number (int/float), Boolean, List, Map/Object")
+		@JsonPropertyDescription("函数参数，以参数名到值的映射形式提供。" +
+			"参数名必须与生成函数时指定的参数完全匹配。" +
+			"示例：如果函数生成时参数为 ['a', 'b']，则使用 {\"a\": value1, \"b\": value2}。" +
+			"如果函数生成时没有指定特定参数（使用 **kwargs），可以传入任意参数。" +
+			"值类型：字符串、数字（int/float）、布尔值、列表、字典/对象")
 		public Map<String, Object> args;
 
 		public Request() {

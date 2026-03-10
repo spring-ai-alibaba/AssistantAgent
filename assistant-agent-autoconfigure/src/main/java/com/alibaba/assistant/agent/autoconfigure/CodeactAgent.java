@@ -685,12 +685,12 @@ public class CodeactAgent extends ReactAgent {
 			
 			allTools.add(
 				FunctionToolCallback.builder("execute_code", executeCodeTool)
-					.description("Execute a previously registered function by its exact name with matching parameters. " +
-						"CRITICAL: The functionName MUST exactly match the name used in write_code. " +
-						"The 'args' parameter names MUST exactly match the 'parameters' specified in write_code. " +
-						"Example: If you called write_code with functionName='calculate_sum' and parameters=['a', 'b'], " +
-						"then you must call execute_code with functionName='calculate_sum' and args={'a': 10, 'b': 20}. " +
-						"Parameter value types supported: String, Number, Boolean, List, Map/Object.")
+					.description("执行之前通过 write_code 注册的函数。" +
+						"重要提示：functionName 必须与 write_code 中使用的函数名完全匹配。" +
+						"'args' 参数名必须与 write_code 中指定的 'parameters' 完全匹配。" +
+						"示例：如果调用 write_code 时使用 functionName='calculate_sum' 和 parameters=['a', 'b']，" +
+						"则调用 execute_code 时必须使用 functionName='calculate_sum' 和 args={'a': 10, 'b': 20}。" +
+						"支持的参数值类型：字符串、数字、布尔值、列表、字典/对象。")
 					.inputType(ExecuteCodeTool.Request.class)
 					.build()
 			);

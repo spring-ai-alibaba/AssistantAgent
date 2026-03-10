@@ -128,72 +128,72 @@ public class LLMBasedEvaluator implements Evaluator {
 		StringBuilder prompt = new StringBuilder();
 
 		// Instruction
-		prompt.append("You are an evaluator performing the following evaluation task:\n\n");
+		prompt.append("你是一个评估专家，正在执行以下评估任务：\n\n");
 
 		// Description
-		prompt.append("Evaluation Criterion Description: ").append(criterion.getDescription()).append("\n\n");
+		prompt.append("评估标准描述：").append(criterion.getDescription()).append("\n\n");
 
 		// Working mechanism
 		if (criterion.getWorkingMechanism() != null && !criterion.getWorkingMechanism().isEmpty()) {
-			prompt.append("Working Mechanism:\n");
+			prompt.append("工作机制：\n");
 			// Interpolate working mechanism to support placeholders like {{common_sense_data}}
 			String interpolatedMechanism = interpolateTemplate(criterion.getWorkingMechanism(), executionContext);
 			prompt.append(interpolatedMechanism).append("\n\n");
 		}
 
 		// Unified output format with RESULT: prefix
-		prompt.append("Output your response in the following format:\n\n");
+		prompt.append("请按以下格式输出你的响应：\n\n");
 		prompt.append("RESULT: ");
 		switch (criterion.getResultType()) {
 			case BOOLEAN:
-				prompt.append("(true or false)\n");
+				prompt.append("（true 或 false）\n");
 				break;
 			case ENUM:
 				if (!criterion.getOptions().isEmpty()) {
-					prompt.append("(one of: ").append(String.join(", ", criterion.getOptions())).append(")\n");
+					prompt.append("（以下选项之一：").append(String.join(", ", criterion.getOptions())).append("）\n");
 				}
 				break;
 			case SCORE:
-				prompt.append("(a numeric score between 0 and 1)\n");
+				prompt.append("（0 到 1 之间的数值分数）\n");
 				break;
 			case JSON:
-				prompt.append("(a valid JSON object)\n");
+				prompt.append("（有效的 JSON 对象）\n");
 				break;
 			case LIST:
-				prompt.append("(a JSON array, e.g., [\"item1\", \"item2\"] or [0, 1, 2])\n");
+				prompt.append("（JSON 数组，例如 [\"item1\", \"item2\"] 或 [0, 1, 2]）\n");
 				break;
 			default:
-				prompt.append("(your evaluation result)\n");
+				prompt.append("（你的评估结果）\n");
 		}
 
 		// Add reasoning section only when needed
 		if (criterion.getReasoningPolicy() != ReasoningPolicy.NONE) {
 			prompt.append("REASONING:\n");
 			if (criterion.getReasoningPolicy() == ReasoningPolicy.BRIEF) {
-				prompt.append("(brief explanation in 1-2 sentences)\n");
+				prompt.append("（1-2 句话的简要解释）\n");
 			} else if (criterion.getReasoningPolicy() == ReasoningPolicy.FULL) {
-				prompt.append("(detailed reasoning process)\n");
+				prompt.append("（详细的推理过程）\n");
 			}
 		} else {
-			prompt.append("(No reasoning required for this evaluation)\n");
+			prompt.append("（此评估无需推理说明）\n");
 		}
 
 		// Few-shot examples
 		if (!criterion.getFewShots().isEmpty()) {
-			prompt.append("\nExamples:\n");
+			prompt.append("\n示例：\n");
 			for (int i = 0; i < criterion.getFewShots().size(); i++) {
 				EvaluationCriterion.FewShotExample example = criterion.getFewShots().get(i);
-				prompt.append("Example ").append(i + 1).append(":\n");
-				prompt.append("[Input] ").append(example.getInput()).append("\n");
+				prompt.append("示例 ").append(i + 1).append("：\n");
+				prompt.append("[输入] ").append(example.getInput()).append("\n");
 				if (example.getContext() != null && !example.getContext().isEmpty()) {
-					prompt.append("[Context] ").append(example.getContext()).append("\n");
+					prompt.append("[上下文] ").append(example.getContext()).append("\n");
 				}
-				prompt.append("[Expected Output] ").append("RESULT: ").append(example.getExpectedOutput()).append("\n\n");
+				prompt.append("[预期输出] ").append("RESULT: ").append(example.getExpectedOutput()).append("\n\n");
 			}
 		}
 
 		// Context information
-		prompt.append("\nContext:\n");
+		prompt.append("\n上下文：\n");
 		if (!criterion.getContextBindings().isEmpty()) {
 			for (String binding : criterion.getContextBindings()) {
 				Object value = resolveContextBinding(binding, executionContext);
@@ -203,7 +203,7 @@ public class LLMBasedEvaluator implements Evaluator {
 
 		// Previous results if any dependencies
 		if (!criterion.getDependsOn().isEmpty() && !executionContext.getDependencyResults().isEmpty()) {
-			prompt.append("Previous Evaluation Results:\n");
+			prompt.append("前置评估结果：\n");
 			for (String depName : criterion.getDependsOn()) {
 				CriterionResult prevResult = executionContext.getDependencyResult(depName);
 				if (prevResult != null) {
@@ -213,7 +213,7 @@ public class LLMBasedEvaluator implements Evaluator {
 			prompt.append("\n");
 		}
 
-		prompt.append("\nYour evaluation result:\n");
+		prompt.append("\n你的评估结果：\n");
 
 		return prompt.toString();
 	}
