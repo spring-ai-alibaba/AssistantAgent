@@ -89,23 +89,20 @@ spring.ai.alibaba.codeact.extension.reply:
 # ============================================================================
 # Evaluation Module - with input routing
 # ============================================================================
+# 4.1 重构后：统一使用 default-suite，取消了 codeact 阶段
 spring.ai.alibaba.codeact.extension.evaluation:
   enabled: true
   input-routing:
     enabled: true
-    suite-id: react-phase-suite
-  code-generation-input:
-    enabled: true
-    suite-id: codeact-phase-suite
+    suite-id: default-suite
 
 # ============================================================================
 # Prompt Contributor Module - 启用基于评估的 Prompt 贡献
 # ============================================================================
+# 4.1 重构后：取消了 codeact 阶段，只保留 react 阶段
 spring.ai.alibaba.codeact.extension.prompt:
   enabled: true
   react:
-    enabled: true
-  codeact:
     enabled: true
 
 # ============================================================================

@@ -17,9 +17,10 @@ spring:
             timeout-ms: 5000
 
             # 输入路由评估配置
+            # 4.1 重构后统一使用 default-suite
             input-routing:
               enabled: true
-              suite-id: react-phase-suite
+              suite-id: default-suite
 
             # 代码生成输入评估配置（新增）
             code-generation-input:

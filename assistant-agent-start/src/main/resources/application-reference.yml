@@ -126,15 +126,14 @@ spring.ai.alibaba.codeact.extension.evaluation:
   async: false
   timeout-ms: 5000
 
+  # 4.1 重构后：统一使用 default-suite，取消了 codeact 阶段
   input-routing:
     enabled: true
-    suite-id: react-phase-suite
+    suite-id: default-suite
   model-output:
     enabled: false
     suite-id: model_output_quality_suite
-  code-generation-input:
-    enabled: false
-    suite-id: codeact-phase-suite
+  # deprecated: code-generation-input 已弃用（4.1 重构后取消了 codeact 阶段）
   code-execution:
     enabled: false
     suite-id: code_execution_suite
