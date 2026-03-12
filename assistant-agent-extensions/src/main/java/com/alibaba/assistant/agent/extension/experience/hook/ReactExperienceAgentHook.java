@@ -1,7 +1,9 @@
 package com.alibaba.assistant.agent.extension.experience.hook;
 
+import com.alibaba.assistant.agent.common.constant.HookPriorityConstants;
 import com.alibaba.assistant.agent.common.hook.AgentPhase;
 import com.alibaba.assistant.agent.common.hook.HookPhases;
+import com.alibaba.cloud.ai.graph.agent.Prioritized;
 import com.alibaba.assistant.agent.extension.experience.config.ExperienceExtensionProperties;
 import com.alibaba.assistant.agent.extension.experience.model.Experience;
 import com.alibaba.assistant.agent.extension.experience.model.ExperienceQuery;
@@ -38,11 +40,14 @@ import java.util.concurrent.CompletableFuture;
  * 2. 将策略经验注入到初始messages中
  * 3. 影响Agent的整体行为模式
  *
+ * 优先级：{@link HookPriorityConstants#REACT_EXPERIENCE_HOOK}（20），
+ * 确保在快速意图 Hook（50）之前执行。
+ *
  * @author Assistant Agent Team
  */
 @HookPhases(AgentPhase.REACT)
 @HookPositions(HookPosition.BEFORE_AGENT)
-public class ReactExperienceAgentHook extends AgentHook {
+public class ReactExperienceAgentHook extends AgentHook implements Prioritized {
 
     private static final Logger log = LoggerFactory.getLogger(ReactExperienceAgentHook.class);
 
@@ -58,6 +63,11 @@ public class ReactExperienceAgentHook extends AgentHook {
     @Override
     public String getName() {
         return "ReactExperienceAgentHook";
+    }
+
+    @Override
+    public int getOrder() {
+        return HookPriorityConstants.REACT_EXPERIENCE_HOOK;
     }
 
     @Override
@@ -77,12 +87,19 @@ public class ReactExperienceAgentHook extends AgentHook {
                 return CompletableFuture.completedFuture(Map.of());
             }
 
+            // 获取用户输入，用于向量搜索
+            String userInput = state != null ? state.value("input", String.class).orElse(null) : null;
+
             // 构造查询上下文
-            ExperienceQueryContext context = buildQueryContext(state, config);
+            ExperienceQueryContext context = buildQueryContext(state, config, userInput);
 
             // 查询React经验
             ExperienceQuery query = new ExperienceQuery(ExperienceType.REACT);
-            query.setLimit(Math.min(properties.getMaxItemsPerQuery(), 3));
+            query.setLimit(Math.min(properties.getMaxItemsPerQuery(), 30));
+            // 关键修复：设置查询文本，用于向量搜索
+            if (StringUtils.hasText(userInput)) {
+                query.setText(userInput);
+            }
 
             List<Experience> experiences = experienceProvider.query(query, context);
 
@@ -204,8 +221,13 @@ public class ReactExperienceAgentHook extends AgentHook {
     /**
      * 构建查询上下文
      */
-    private ExperienceQueryContext buildQueryContext(OverAllState state, RunnableConfig config) {
+    private ExperienceQueryContext buildQueryContext(OverAllState state, RunnableConfig config, String userQuery) {
         ExperienceQueryContext context = new ExperienceQueryContext();
+
+        // 关键修复：设置userQuery，用于向量搜索
+        if (StringUtils.hasText(userQuery)) {
+            context.setUserQuery(userQuery);
+        }
 
         // 从state提取
         if (state != null) {

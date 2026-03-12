@@ -224,6 +224,44 @@ public class EvaluationCriterionBuilder {
 	}
 
 	/**
+	 * Set the timeout for this criterion execution (in milliseconds).
+	 * When timeout occurs, the criterion returns TIMEOUT status with defaultValue.
+	 *
+	 * @param timeoutMs timeout in milliseconds
+	 * @return this builder
+	 */
+	public EvaluationCriterionBuilder timeoutMs(long timeoutMs) {
+		criterion.setTimeoutMs(timeoutMs);
+		return this;
+	}
+
+	/**
+	 * Set the default value to use when the criterion times out or errors.
+	 * This ensures evaluation can continue even when individual criteria fail.
+	 *
+	 * @param defaultValue the default value to use on timeout/error
+	 * @return this builder
+	 */
+	public EvaluationCriterionBuilder defaultValue(Object defaultValue) {
+		criterion.setDefaultValue(defaultValue);
+		return this;
+	}
+
+	/**
+	 * Configure timeout and default value together.
+	 * A convenience method for setting both timeout and fallback behavior.
+	 *
+	 * @param timeoutMs timeout in milliseconds
+	 * @param defaultValue the default value to use on timeout/error
+	 * @return this builder
+	 */
+	public EvaluationCriterionBuilder withTimeout(long timeoutMs, Object defaultValue) {
+		criterion.setTimeoutMs(timeoutMs);
+		criterion.setDefaultValue(defaultValue);
+		return this;
+	}
+
+	/**
 	 * Ensure the dependent criterion is in the dependsOn list
 	 */
 	private void ensureDependsOn(String dependsOnCriterion) {

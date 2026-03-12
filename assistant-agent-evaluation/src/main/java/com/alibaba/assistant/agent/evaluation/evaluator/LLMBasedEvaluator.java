@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
 
 import java.util.HashMap;
@@ -48,11 +49,17 @@ public class LLMBasedEvaluator implements Evaluator {
 	private final ChatModel chatModel;
 	private final String evaluatorId;
 	private final ObjectMapper objectMapper;
+	private final ChatOptions chatOptions;
 
 	public LLMBasedEvaluator(ChatModel chatModel, String evaluatorId) {
+		this(chatModel, evaluatorId, null);
+	}
+
+	public LLMBasedEvaluator(ChatModel chatModel, String evaluatorId, ChatOptions chatOptions) {
 		this.chatModel = chatModel;
 		this.evaluatorId = evaluatorId;
 		this.objectMapper = new ObjectMapper();
+		this.chatOptions = chatOptions;
 	}
 
 	@Override
@@ -71,8 +78,8 @@ public class LLMBasedEvaluator implements Evaluator {
 			logger.debug("Evaluating criterion {} with LLM, prompt: {}, chatModel: {} ({})",
 				executionContext.getCriterion().getName(), promptText, chatModel.getClass().getSimpleName(), chatModel);
 
-			// Call LLM
-			Prompt prompt = new Prompt(promptText);
+			// Call LLM with optional ChatOptions
+			Prompt prompt = chatOptions != null ? new Prompt(promptText, chatOptions) : new Prompt(promptText);
 			ChatResponse chatResponse = chatModel.call(prompt);
 			String response = chatResponse.getResult().getOutput().getText();
 

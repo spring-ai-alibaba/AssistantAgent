@@ -132,5 +132,29 @@ public final class CodeactStateKeys {
 	 * <p>由 CodeGeneratorSubAgent.init_context 节点注入
 	 */
 	public static final String LANGUAGE = "language";
+
+	// ==================== Hook 通信 ====================
+
+	/**
+	 * CodeGeneratorNode 执行时传入的 messages 列表（含 beforeModel Hook 注入的内容）
+	 *
+	 * <p>类型：List&lt;org.springframework.ai.chat.messages.Message&gt;
+	 * <p>由 CodeGeneratorNode 在调用模型后写入，供 afterModel Hook 读取与审计。
+	 * <p>写端：CodeGeneratorNode#apply（key = "codeact_node_messages"）
+	 * <p>读端：afterModel Hook（如需访问本次代码生成的完整 messages 上下文）
+	 */
+	public static final String CODEACT_NODE_MESSAGES = "codeact_node_messages";
+
+	// ==================== Session级别代码存储 ====================
+
+	/**
+	 * Session级别生成的代码Map
+	 *
+	 * <p>类型：Map&lt;String, GeneratedCode&gt;
+	 * <p>Key为函数名，Value为GeneratedCode对象
+	 * <p>存储在OverAllState中，会随checkpoint持久化
+	 * <p>与全局CodeContext中的代码合并时，session维度的代码优先
+	 */
+	public static final String SESSION_GENERATED_CODES = "session_generated_codes";
 }
 

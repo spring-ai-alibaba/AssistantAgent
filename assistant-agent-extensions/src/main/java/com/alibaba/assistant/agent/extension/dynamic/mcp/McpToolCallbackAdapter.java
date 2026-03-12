@@ -84,19 +84,67 @@ public class McpToolCallbackAdapter extends AbstractDynamicCodeactTool {
 			result = delegate.call(argsJson);
 		}
 
-        if (result.startsWith("[")) {
-            JSONArray array = JSONArray.parseArray(result);
-            if (!array.isEmpty()) {
-                JSONObject data = array.getJSONObject(0);
-                if (data.containsKey("text") && data.getString("text") != null && !data.getString("text").isEmpty()) {
-                    result = data.getString("text");
-                }
-            }
-        }
+		result = extractTextFromMcpResult(result);
 
 		logger.debug("McpToolCallbackAdapter#doCall - reason=原始ToolCallback调用完成, rawToolName={}, resultLength={}",
 				rawToolName, result != null ? result.length() : 0);
 
+		return result;
+	}
+
+	/**
+	 * 从 MCP 返回结果中提取文本内容。
+	 *
+	 * <p>MCP 工具返回结果可能是以下格式之一：
+	 * <ul>
+	 *   <li>JSON 数组，如 {@code [{"text":"..."}]}</li>
+	 *   <li>JSON 对象，如 {@code {"text":"..."}}</li>
+	 *   <li>普通文本字符串</li>
+	 * </ul>
+	 * 本方法会尝试按 JSON 解析，解析失败则直接返回原始文本。
+	 *
+	 * @param result MCP 工具返回的原始字符串
+	 * @return 提取后的文本内容
+	 */
+	private String extractTextFromMcpResult(String result) {
+		if (result == null || result.isEmpty()) {
+			return result;
+		}
+
+		String trimmed = result.trim();
+
+		// 尝试按 JSON 数组解析
+		if (trimmed.startsWith("[")) {
+			try {
+				JSONArray array = JSONArray.parseArray(trimmed);
+				if (!array.isEmpty()) {
+					JSONObject data = array.getJSONObject(0);
+					if (data.containsKey("text") && data.getString("text") != null
+							&& !data.getString("text").isEmpty()) {
+						return data.getString("text");
+					}
+				}
+			}
+			catch (Exception e) {
+				logger.debug("McpToolCallbackAdapter#extractTextFromMcpResult - reason=返回结果以'['开头但非合法JSON数组,按普通文本处理, rawToolName={}", rawToolName);
+			}
+		}
+
+		// 尝试按 JSON 对象解析
+		if (trimmed.startsWith("{")) {
+			try {
+				JSONObject data = JSONObject.parseObject(trimmed);
+				if (data.containsKey("text") && data.getString("text") != null
+						&& !data.getString("text").isEmpty()) {
+					return data.getString("text");
+				}
+			}
+			catch (Exception e) {
+				logger.debug("McpToolCallbackAdapter#extractTextFromMcpResult - reason=返回结果以'{{'开头但非合法JSON对象,按普通文本处理, rawToolName={}", rawToolName);
+			}
+		}
+
+		// 非 JSON 格式，直接返回原始文本
 		return result;
 	}
 

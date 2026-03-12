@@ -43,6 +43,14 @@ public final class HookPriorityConstants {
     // ==================== beforeAgent 阶段 ====================
 
     /**
+     * React 经验 Hook 优先级
+     *
+     * <p>在 beforeAgent 阶段最先执行，用于注入 React 行为策略经验
+     * 需在快速意图 Hook 之前运行，以便策略经验对后续所有 Hook 生效
+     */
+    public static final int REACT_EXPERIENCE_HOOK = 20;
+
+    /**
      * 快速意图 Hook 优先级
      * 
      * <p>在 beforeAgent 阶段最先执行，用于判断是否命中快速意图

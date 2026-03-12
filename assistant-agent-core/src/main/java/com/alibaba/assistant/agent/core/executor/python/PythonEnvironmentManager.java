@@ -21,6 +21,8 @@ import com.alibaba.assistant.agent.common.enums.Language;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -45,6 +47,7 @@ public class PythonEnvironmentManager implements RuntimeEnvironmentManager {
 		"import os",
 		"import re",
 		"import math",
+		"import base64",
 		"from typing import Any, List, Dict, Optional"
 	);
 
@@ -107,8 +110,8 @@ public class PythonEnvironmentManager implements RuntimeEnvironmentManager {
 			if (value == null) {
 				kwargs.append("None");
 			} else if (value instanceof String) {
-				// 字符串值需要引号
-				kwargs.append("'").append(value.toString().replace("'", "\\'")).append("'");
+				// 字符串值使用 Base64 编码，避免所有转义问题
+				kwargs.append(encodeStringForPython(value.toString()));
 			} else if (value instanceof Boolean) {
 				// Python 的布尔值首字母大写
 				kwargs.append(((Boolean) value) ? "True" : "False");
@@ -122,8 +125,8 @@ public class PythonEnvironmentManager implements RuntimeEnvironmentManager {
 				// Map 转换为 Python dict
 				kwargs.append(convertMapToPython((Map<?, ?>) value));
 			} else {
-				// 其他类型转为字符串并加引号
-				kwargs.append("'").append(value.toString().replace("'", "\\'")).append("'");
+				// 其他类型转为字符串，使用 Base64 编码
+				kwargs.append(encodeStringForPython(value.toString()));
 			}
 
 			i++;
@@ -156,12 +159,25 @@ public class PythonEnvironmentManager implements RuntimeEnvironmentManager {
 		int i = 0;
 		for (Map.Entry<?, ?> entry : map.entrySet()) {
 			if (i > 0) sb.append(", ");
-			sb.append("'").append(entry.getKey().toString()).append("': ");
+			sb.append(encodeStringForPython(entry.getKey().toString())).append(": ");
 			sb.append(convertValueToPython(entry.getValue()));
 			i++;
 		}
 		sb.append("}");
 		return sb.toString();
+	}
+
+	/**
+	 * Encode string to Base64 and generate Python decode expression.
+	 * This avoids all escape issues by encoding the string as Base64.
+	 * Example: "哈哈" -> base64.b64decode('5ZOI5ZOI').decode('utf-8')
+	 */
+	private String encodeStringForPython(String value) {
+		if (value == null) {
+			return "None";
+		}
+		String base64Encoded = Base64.getEncoder().encodeToString(value.getBytes(StandardCharsets.UTF_8));
+		return "base64.b64decode('" + base64Encoded + "').decode('utf-8')";
 	}
 
 	/**
@@ -171,7 +187,7 @@ public class PythonEnvironmentManager implements RuntimeEnvironmentManager {
 		if (value == null) {
 			return "None";
 		} else if (value instanceof String) {
-			return "'" + value.toString().replace("'", "\\'") + "'";
+			return encodeStringForPython(value.toString());
 		} else if (value instanceof Boolean) {
 			return ((Boolean) value) ? "True" : "False";
 		} else if (value instanceof Number) {
@@ -181,7 +197,7 @@ public class PythonEnvironmentManager implements RuntimeEnvironmentManager {
 		} else if (value instanceof Map) {
 			return convertMapToPython((Map<?, ?>) value);
 		} else {
-			return "'" + value.toString().replace("'", "\\'") + "'";
+			return encodeStringForPython(value.toString());
 		}
 	}
 

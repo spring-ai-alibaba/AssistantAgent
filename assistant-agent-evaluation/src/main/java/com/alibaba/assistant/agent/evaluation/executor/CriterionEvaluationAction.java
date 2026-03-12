@@ -41,6 +41,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -79,6 +81,7 @@ public class CriterionEvaluationAction implements Function<OverAllState, Map<Str
     @Override
     public Map<String, Object> apply(OverAllState state) {
         Map<String, Object> updates = new HashMap<>();
+        long startTime = System.currentTimeMillis();
 
         try {
             // Extract essential components directly from state
@@ -106,19 +109,50 @@ public class CriterionEvaluationAction implements Function<OverAllState, Map<Str
                 logger.debug("Conditional execution check passed for criterion: {}", criterion.getName());
             }
 
+            // Determine timeout: criterion-specific > suite default
+            long timeoutMs = criterion.getTimeoutMs() != null
+                ? criterion.getTimeoutMs()
+                : suite.getDefaultCriterionTimeoutMs();
+
             // Check if batching is enabled
             CriterionBatchingConfig batchingConfig = criterion.getBatchingConfig();
             boolean batchingEnabled = batchingConfig != null && batchingConfig.isEnabled();
 
             CriterionResult result;
-            if (batchingEnabled) {
-                // Execute with batching
-                logger.debug("Batching enabled for criterion: {}", criterion.getName());
-                result = executeWithBatching(evaluationContext, dependencyResults, batchingConfig);
-            } else {
-                // Execute without batching (original logic)
-                logger.debug("Batching not enabled for criterion: {}", criterion.getName());
-                result = executeWithoutBatching(evaluationContext, dependencyResults);
+
+            // Execute criterion with timeout protection
+            try {
+                if (executorService != null && timeoutMs > 0) {
+                    // Use CompletableFuture with timeout for criterion execution
+                    final EvaluationContext finalContext = evaluationContext;
+                    final Map<String, CriterionResult> finalDepResults = dependencyResults;
+                    final CriterionBatchingConfig finalBatchConfig = batchingConfig;
+                    final boolean finalBatchEnabled = batchingEnabled;
+
+                    result = CompletableFuture.supplyAsync(() -> {
+                        if (finalBatchEnabled) {
+                            return executeWithBatching(finalContext, finalDepResults, finalBatchConfig);
+                        } else {
+                            return executeWithoutBatching(finalContext, finalDepResults);
+                        }
+                    }, executorService).get(timeoutMs, TimeUnit.MILLISECONDS);
+                } else {
+                    // No executor or timeout disabled, execute directly
+                    if (batchingEnabled) {
+                        logger.debug("Batching enabled for criterion: {}", criterion.getName());
+                        result = executeWithBatching(evaluationContext, dependencyResults, batchingConfig);
+                    } else {
+                        logger.debug("Batching not enabled for criterion: {}", criterion.getName());
+                        result = executeWithoutBatching(evaluationContext, dependencyResults);
+                    }
+                }
+            } catch (TimeoutException te) {
+                // Criterion timed out - return timeout result with default value
+                long elapsedMs = System.currentTimeMillis() - startTime;
+                logger.warn("Criterion '{}' timed out after {}ms (timeout={}ms), using default value: {}",
+                    criterion.getName(), elapsedMs, timeoutMs, criterion.getDefaultValue());
+
+                result = buildTimeoutResult(startTime, timeoutMs);
             }
 
             // Store result as an independent state key
@@ -137,27 +171,73 @@ public class CriterionEvaluationAction implements Function<OverAllState, Map<Str
             com.alibaba.assistant.agent.evaluation.observation.EvaluationObservationLifecycleListener
                     .registerCriterionResult(criterion.getName(), result);
 
-            logger.info("Criterion {} completed with result: {}", criterion.getName(), result.getValue());
+            logger.info("Criterion {} completed with status: {}, value: {}",
+                criterion.getName(), result.getStatus(), result.getValue());
 
         } catch (Exception e) {
             logger.error("Error executing criterion {}: {}", criterion.getName(), e.getMessage(), e);
 
-            // Create error result
-            CriterionResult errorResult = new CriterionResult();
-            errorResult.setCriterionName(criterion.getName());
-            errorResult.setStatus(CriterionStatus.ERROR);
-            errorResult.setErrorMessage(e.getMessage());
-            errorResult.setStartTimeMillis(System.currentTimeMillis());
-            errorResult.setEndTimeMillis(System.currentTimeMillis());
+            // Create error result with default value if available
+            CriterionResult errorResult = buildErrorResult(startTime, e.getMessage());
 
             // Store error result as an independent state key
             updates.put(criterion.getName() + "_result", errorResult);
-            updates.put(criterion.getName() + "_status", "ERROR");
+            updates.put(criterion.getName() + "_status", errorResult.getStatus().toString());
             updates.put(criterion.getName() + "_error", e.getMessage());
+            updates.put(criterion.getName() + "_completed", true);
             updates.put("timestamp", System.currentTimeMillis());
+
+            if (errorResult.getValue() != null) {
+                updates.put(criterion.getName() + "_value", errorResult.getValue());
+            }
+
+            // Register error result for observation
+            com.alibaba.assistant.agent.evaluation.observation.EvaluationObservationLifecycleListener
+                    .registerCriterionResult(criterion.getName(), errorResult);
         }
 
         return updates;
+    }
+
+    /**
+     * Build a timeout result with the configured default value
+     */
+    private CriterionResult buildTimeoutResult(long startTime, long timeoutMs) {
+        CriterionResult result = new CriterionResult();
+        result.setCriterionName(criterion.getName());
+        result.setStatus(CriterionStatus.TIMEOUT);
+        result.setValue(criterion.getDefaultValue());
+        result.setReason(String.format("Criterion execution timed out after %dms", timeoutMs));
+        result.setStartTimeMillis(startTime);
+        result.setEndTimeMillis(System.currentTimeMillis());
+
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("timeoutMs", timeoutMs);
+        metadata.put("defaultValueUsed", true);
+        result.setMetadata(metadata);
+
+        return result;
+    }
+
+    /**
+     * Build an error result with the configured default value
+     */
+    private CriterionResult buildErrorResult(long startTime, String errorMessage) {
+        CriterionResult result = new CriterionResult();
+        result.setCriterionName(criterion.getName());
+        result.setStatus(CriterionStatus.ERROR);
+        result.setValue(criterion.getDefaultValue());
+        result.setErrorMessage(errorMessage);
+        result.setStartTimeMillis(startTime);
+        result.setEndTimeMillis(System.currentTimeMillis());
+
+        if (criterion.getDefaultValue() != null) {
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("defaultValueUsed", true);
+            result.setMetadata(metadata);
+        }
+
+        return result;
     }
 
     /**

@@ -19,6 +19,7 @@ import com.alibaba.assistant.agent.extension.search.model.SearchRequest;
 import com.alibaba.assistant.agent.extension.search.model.SearchResultItem;
 import com.alibaba.assistant.agent.extension.search.model.SearchSourceType;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -51,6 +52,20 @@ public interface SearchProvider {
 	 */
 	default String getName() {
 		return this.getClass().getSimpleName();
+	}
+
+	/**
+	 * 获取该Provider声明的扩展参数列表。
+	 *
+	 * <p>框架会将这些参数动态注册到搜索工具的 inputSchema / ParameterTree 中，
+	 * 调用时传入的值会被放入 {@link SearchRequest#getFilters()} 供 Provider 在 search 中读取。
+	 *
+	 * <p>默认返回空列表，即不声明任何扩展参数。
+	 *
+	 * @return 扩展参数列表
+	 */
+	default List<SearchExtendedParameter> getExtendedParameters() {
+		return Collections.emptyList();
 	}
 }
 

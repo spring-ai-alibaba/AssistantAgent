@@ -48,6 +48,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -142,14 +144,12 @@ public class CodeGeneratorNode implements NodeActionWithConfig {
 			List<Message> hookInjectedMessages = extractHookInjectedMessages(state);
 			logger.info("CodeGeneratorNode#apply 从state提取Hook注入的messages: count={}", hookInjectedMessages.size());
 
-            logger.info("CodeGeneratorNode#apply 构建消息: systemPrompt={}, userMessage={}",
-                    systemPrompt, userMessage);
 			// 6. 构造 messages 列表
 			List<Message> messages = new ArrayList<>();
 			messages.add(new SystemMessage(systemPrompt));
 			messages.add(new UserMessage(userMessage));
 			messages.addAll(hookInjectedMessages);
-
+			logger.info("CodeGeneratorNode#apply 构建消息: systemPrompt={}, userMessage={}, messages={}", systemPrompt.replace("\n", "\\n"), userMessage.replace("\n", "\\n"), hookInjectedMessages.toString().replace("\n", "\\n"));
 			ModelRequest modelRequest = ModelRequest.builder()
 					.messages(messages)
 					.build();
@@ -160,12 +160,13 @@ public class CodeGeneratorNode implements NodeActionWithConfig {
 			// 6. 提取生成的代码
 			String generatedCode = extractCodeFromResponse(modelResponse);
 
-			logger.info("CodeGeneratorNode#apply 代码生成成功: functionName={}, codeLength={}",
-					functionName, generatedCode.length());
+			logger.info("CodeGeneratorNode#apply 代码生成成功: functionName={}, code={}", functionName, generatedCode.replace("\n","\\n"));
 
-			// 7. 返回结果（放入outputKey）
+			// 7. 返回结果（放入outputKey），同时将messages写入state供after-model hook访问
+			// 使用专用key CodeactStateKeys.CODEACT_NODE_MESSAGES 避免与框架 "messages"(AppendStrategy) 冲突
 			Map<String, Object> result = new HashMap<>();
 			result.put(outputKey, generatedCode);
+			result.put(CodeactStateKeys.CODEACT_NODE_MESSAGES, messages);
 			return result;
 
 		} catch (Exception e) {
@@ -406,10 +407,11 @@ public class CodeGeneratorNode implements NodeActionWithConfig {
 		sb.append("2. 函数名和参数必须与要求完全一致\n");
 		sb.append("3. 调用工具使用 实例名.方法名() 格式\n");
 		sb.append("4. 只返回纯代码，不要 ```python 标记\n");
+		sb.append("5. ⚠️【禁止生成注释】不要生成任何注释，包括：函数注释（docstring）、行注释（#开头）、多行注释。直接输出纯净的可执行代码。\n");
 		if (isCondition) {
-			sb.append("5. 条件函数必须返回 True 或 False\n");
+			sb.append("6. 条件函数必须返回 True 或 False\n");
 		} else {
-			sb.append("5. 【重要】每个函数必须有 return 语句返回结果\n");
+			sb.append("6. 【重要】每个函数必须有 return 语句返回结果\n");
 			sb.append("   - 查询/搜索类：return 搜索结果\n");
 			sb.append("   - 处理/计算类：return 处理结果\n");
 			sb.append("   - 通知/回复类：先执行操作，再 return 操作结果或状态\n");
@@ -617,15 +619,15 @@ public class CodeGeneratorNode implements NodeActionWithConfig {
 
 		// 优先从 registry 获取（包含观测到的 schema）
 		if (returnSchemaRegistry != null) {
-			logger.info("CodeGeneratorNode#getReturnSchema - reason=开始查询schema, registryHashCode={}, toolName={}, allToolsWithSchema={}",
+			logger.debug("CodeGeneratorNode#getReturnSchema - reason=开始查询schema, registryHashCode={}, toolName={}, allToolsWithSchema={}",
 					System.identityHashCode(returnSchemaRegistry), toolName, returnSchemaRegistry.getToolsWithSchema());
 			ReturnSchema observed = returnSchemaRegistry.getSchema(toolName).orElse(null);
 			if (observed != null) {
-				logger.info("CodeGeneratorNode#getReturnSchema - reason=从registry获取到schema, toolName={}, sampleCount={}, hasSuccessShape={}",
+				logger.debug("CodeGeneratorNode#getReturnSchema - reason=从registry获取到schema, toolName={}, sampleCount={}, hasSuccessShape={}",
 						toolName, observed.getSampleCount(), observed.getSuccessShape() != null);
 				return observed;
 			} else {
-				logger.info("CodeGeneratorNode#getReturnSchema - reason=registry中未找到schema, toolName={}", toolName);
+				logger.debug("CodeGeneratorNode#getReturnSchema - reason=registry中未找到schema, toolName={}", toolName);
 			}
 		} else {
 			logger.warn("CodeGeneratorNode#getReturnSchema - reason=returnSchemaRegistry为null, toolName={}", toolName);
@@ -851,22 +853,71 @@ public class CodeGeneratorNode implements NodeActionWithConfig {
 			throw new IllegalStateException("Generated code is empty");
 		}
 
-		// 移除markdown标记（如果有）
-		String code = content.trim();
-		if (code.startsWith("```")) {
-			// 去掉 ```python 或 ```java 等标记
-			int firstNewLine = code.indexOf('\n');
-			if (firstNewLine > 0) {
-				code = code.substring(firstNewLine + 1);
-			}
-			// 去掉末尾的 ```
-			if (code.endsWith("```")) {
-				code = code.substring(0, code.length() - 3);
-			}
-			code = code.trim();
+		return extractCodeFromContent(content);
+	}
+
+	/**
+	 * 从 LLM 输出的原始文本中提取纯 Python 代码。
+	 *
+	 * <p>提取策略（按优先级）：
+	 * <ol>
+	 *   <li>从 {@code ```python ... ```} 或 {@code ``` ... ```} 代码块中提取（多个代码块取最后一个）</li>
+	 *   <li>整个内容以 {@code ```} 开头时剥离 markdown 标记（向后兼容）</li>
+	 *   <li>无 markdown 标记时，查找 {@code def } 函数定义位置并截取（剥离自然语言前缀）</li>
+	 *   <li>兜底：返回整个内容</li>
+	 * </ol>
+	 *
+	 * @param content LLM 输出的原始文本
+	 * @return 提取后的纯代码
+	 */
+	static String extractCodeFromContent(String content) {
+		if (content == null || content.trim().isEmpty()) {
+			return content;
 		}
 
-		return code;
+		String trimmed = content.trim();
+
+		// 1. 尝试从内容中提取 ```python ... ``` 或 ``` ... ``` 代码块
+		//    LLM 经常在代码块前输出自然语言分析文字，必须正确剥离
+		//    使用 DOTALL 让 . 匹配换行符
+		Pattern codeBlockPattern = Pattern.compile("```(?:python|py)?\\s*\\n(.*?)```", Pattern.DOTALL);
+		Matcher matcher = codeBlockPattern.matcher(trimmed);
+		if (matcher.find()) {
+			// 如果有多个代码块，取最后一个（通常最终版本在最后）
+			String lastBlock = matcher.group(1);
+			while (matcher.find()) {
+				lastBlock = matcher.group(1);
+			}
+			String code = lastBlock.trim();
+			if (!code.isEmpty()) {
+				return code;
+			}
+		}
+
+		// 2. 整个内容以 ``` 开头的情况（向后兼容）
+		if (trimmed.startsWith("```")) {
+			int firstNewLine = trimmed.indexOf('\n');
+			if (firstNewLine > 0) {
+				trimmed = trimmed.substring(firstNewLine + 1);
+			}
+			if (trimmed.endsWith("```")) {
+				trimmed = trimmed.substring(0, trimmed.length() - 3);
+			}
+			return trimmed.trim();
+		}
+
+		// 3. 没有 markdown 标记，尝试查找 def 函数定义并截取
+		//    处理 LLM 在代码前面输出自然语言但没用 ``` 包裹的情况
+		int defIndex = trimmed.indexOf("\ndef ");
+		if (defIndex < 0) {
+			defIndex = trimmed.startsWith("def ") ? 0 : -1;
+		}
+		if (defIndex >= 0) {
+			return trimmed.substring(defIndex).trim();
+		}
+
+		// 4. 兜底：返回整个内容
+		return trimmed;
 	}
 }
 
