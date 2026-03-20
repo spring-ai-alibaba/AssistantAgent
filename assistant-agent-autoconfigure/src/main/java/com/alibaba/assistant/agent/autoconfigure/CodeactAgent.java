@@ -694,6 +694,7 @@ public class CodeactAgent extends ReactAgent {
 						"'args' 参数名必须与 write_code 中指定的 'parameters' 完全匹配。" +
 						"示例：如果调用 write_code 时使用 functionName='calculate_sum' 和 parameters=['a', 'b']，" +
 						"则调用 execute_code 时必须使用 functionName='calculate_sum' 和 args={'a': 10, 'b': 20}。" +
+						"如果函数没有参数（parameters为空列表），则不要传入 args 字段，或使用 args={}。" +
 						"支持的参数值类型：字符串、数字、布尔值、列表、字典/对象。")
 					.inputType(ExecuteCodeTool.Request.class)
 					.build()

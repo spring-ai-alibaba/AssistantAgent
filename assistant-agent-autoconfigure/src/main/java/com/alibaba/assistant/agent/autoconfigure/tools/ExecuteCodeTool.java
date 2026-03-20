@@ -241,6 +241,7 @@ public class ExecuteCodeTool implements BiFunction<ExecuteCodeTool.Request, Tool
 			"参数名必须与生成函数时指定的参数完全匹配。" +
 			"示例：如果函数生成时参数为 ['a', 'b']，则使用 {\"a\": value1, \"b\": value2}。" +
 			"如果函数生成时没有指定特定参数（使用 **kwargs），可以传入任意参数。" +
+			"如果函数没有参数，请省略此字段或传入空对象 {}。" +
 			"值类型：字符串、数字（int/float）、布尔值、列表、字典/对象")
 		public Map<String, Object> args;
 

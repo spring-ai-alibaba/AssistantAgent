@@ -28,6 +28,7 @@ import com.alibaba.cloud.ai.graph.store.Store;
 import com.alibaba.cloud.ai.graph.store.StoreItem;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ToolContext;
@@ -374,7 +375,8 @@ public class WriteCodeTool implements BiFunction<WriteCodeTool.Request, ToolCont
 		public String description;
 
 		@JsonProperty
-		@JsonPropertyDescription("函数接受的参数名列表")
+		@JsonPropertyDescription("函数参数名的字符串数组")
+		@JsonDeserialize(using = FlexibleStringListDeserializer.class)
 		public List<String> parameters;
 
 		@JsonProperty(required = true)
@@ -390,6 +392,7 @@ public class WriteCodeTool implements BiFunction<WriteCodeTool.Request, ToolCont
 			this.parameters = parameters;
 			this.code = code;
 		}
+
 	}
 }
 
