@@ -26,6 +26,7 @@ import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.agent.tools.ToolContextConstants;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ToolContext;
@@ -340,6 +341,7 @@ public class WriteConditionCodeTool implements BiFunction<WriteConditionCodeTool
 
 		@JsonProperty
 		@JsonPropertyDescription("条件函数需要的参数名列表")
+		@JsonDeserialize(using = FlexibleStringListDeserializer.class)
 		public List<String> parameters;
 
 		@JsonProperty
