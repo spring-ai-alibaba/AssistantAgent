@@ -1291,6 +1291,16 @@ public class GraalCodeExecutor {
 
 		String pythonFunctionName = toSafePythonIdentifier(functionName, "tool_");
 
+		// Append **_extra_kwargs to absorb unexpected keyword arguments gracefully.
+		// This prevents TypeError when callers pass extra keys (e.g. from form data).
+		if (!parameters.equals("**kwargs")) {
+			if (parameters.isEmpty()) {
+				parameters = "**_extra_kwargs";
+			} else {
+				parameters = parameters + ", **_extra_kwargs";
+			}
+		}
+
 		// Generate method/function
 		String indent = isClassMethod ? "    " : "";
 
