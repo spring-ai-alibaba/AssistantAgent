@@ -51,6 +51,14 @@ public final class HookPriorityConstants {
     public static final int CODEACT_TOOLS_STATE_INIT_HOOK = 5;
 
     /**
+     * CodeactTool 签名注入 Hook 优先级
+     *
+     * <p>在 beforeAgent 阶段紧接 StateInit 之后执行，将 CodeactToolRegistry 中所有工具的
+     * Python 签名注入到 messages，使 LLM 在 write_code 时能正确调用这些工具。
+     */
+    public static final int CODEACT_TOOL_SIGNATURE_HOOK = 8;
+
+    /**
      * React 经验 Hook 优先级
      *
      * <p>在 beforeAgent 阶段最先执行，用于注入 React 行为策略经验

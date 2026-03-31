@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.alibaba.agent.assistant</groupId>
     <artifactId>assistant-agent</artifactId>
-    <version>0.2.1</version>
+    <version>0.2.2</version>
     <packaging>pom</packaging>
     <distributionManagement>
         <repository>
