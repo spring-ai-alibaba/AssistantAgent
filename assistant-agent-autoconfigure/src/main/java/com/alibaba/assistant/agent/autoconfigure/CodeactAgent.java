@@ -15,6 +15,7 @@
  */
 package com.alibaba.assistant.agent.autoconfigure;
 
+import com.alibaba.assistant.agent.autoconfigure.hook.CodeactToolSignatureAgentHook;
 import com.alibaba.assistant.agent.autoconfigure.hook.CodeactToolsStateInitHook;
 import com.alibaba.assistant.agent.common.enums.Language;
 import com.alibaba.assistant.agent.common.tools.CodeactTool;
@@ -163,6 +164,7 @@ public class CodeactAgent extends ReactAgent {
 		private RuntimeEnvironmentManager environmentManager;
 		private GraalCodeExecutor executor;
 		private boolean enableInitialCodeGen = true;
+		private boolean enableToolSignatureInjection = true;
 		private boolean allowIO = false;
 		private boolean allowNativeAccess = false;
 		private long executionTimeoutMs = 30000;
@@ -241,6 +243,22 @@ public class CodeactAgent extends ReactAgent {
 		 */
 		public CodeactAgentBuilder enableInitialCodeGen(boolean enable) {
 			this.enableInitialCodeGen = enable;
+			return this;
+		}
+
+		/**
+		 * Enable/disable automatic CodeactTool signature injection into the prompt.
+		 *
+		 * <p>When enabled (default), a {@link CodeactToolSignatureAgentHook} is automatically
+		 * registered, which injects Python class/function stubs for all registered CodeactTools
+		 * into the messages before the Agent starts. This allows the LLM to correctly reference
+		 * these tools when writing code in {@code write_code}.
+		 *
+		 * <p>Disable this if you provide your own tool signature injection mechanism
+		 * (e.g., a custom PromptContributor).
+		 */
+		public CodeactAgentBuilder enableToolSignatureInjection(boolean enable) {
+			this.enableToolSignatureInjection = enable;
 			return this;
 		}
 
@@ -577,6 +595,12 @@ public class CodeactAgent extends ReactAgent {
 			// 自动注册 CodeactToolsStateInitHook 到 hooks 中，确保在 Agent 执行前初始化工具状态
 			this.hooks.add(new CodeactToolsStateInitHook(this.codeactToolRegistry));
 			logger.info("CodeactAgentBuilder#build - reason=自动注册CodeactToolsStateInitHook");
+
+			// 自动注册 CodeactToolSignatureAgentHook，将工具的 Python 签名注入到 Prompt 中
+			if (this.enableToolSignatureInjection) {
+				this.hooks.add(new CodeactToolSignatureAgentHook(this.codeactToolRegistry, this.language));
+				logger.info("CodeactAgentBuilder#build - reason=自动注册CodeactToolSignatureAgentHook");
+			}
 
 			// Initialize CodeContext if not provided
 			if (this.codeContext == null) {
