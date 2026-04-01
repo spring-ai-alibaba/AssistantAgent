@@ -74,7 +74,10 @@ public class CommonSenseExperienceModelHook extends ModelHook {
                 log.info("CommonSenseExperienceModelHook#beforeModel - reason=常识经验模块未启用，跳过");
                 return CompletableFuture.completedFuture(Map.of());
             }
-
+            if (isAlreadyInjected(state)) {
+                log.info("CommonSenseExperienceModelHook#injectExperienceToMessages - reason=检测到已注入常识经验，跳过");
+                return CompletableFuture.completedFuture(Map.of());
+            }
             // 获取用户输入，用于向量搜索
             String userInput = state != null ? state.value("input", String.class).orElse(null) : null;
 
@@ -99,7 +102,7 @@ public class CommonSenseExperienceModelHook extends ModelHook {
             log.info("CommonSenseExperienceModelHook#beforeModel - reason=找到常识经验: {}", JSON.toJSONString(experiences));
 
             // 🔥 核心：参考记忆模块，直接修改messages列表
-            CompletableFuture<Map<String, Object>> result = injectExperienceToMessages(state, experiences);
+            CompletableFuture<Map<String, Object>> result = injectExperienceToMessages(experiences);
 
             // 添加日志确认返回值
             result.thenAccept(updates -> {
@@ -117,35 +120,41 @@ public class CommonSenseExperienceModelHook extends ModelHook {
     }
 
     /**
+     * 判断是否已经注入过common_sense_injection
+     * @param state overstate
+     * @return true: 已注入，false: 未注入
+     */
+    private boolean isAlreadyInjected(OverAllState state) {
+        if (state == null){
+            return false;
+        }
+        Optional<Object> messagesOpt = state.value("messages");
+        if (messagesOpt.isEmpty()){
+            log.warn("CommonSenseExperienceModelHook#injectExperienceToMessages - reason=state中没有messages，跳过");
+            return false;
+        }
+        List<Message> messages = (List<Message>) messagesOpt.get();
+        log.debug("CommonSenseExperienceModelHook#injectExperienceToMessages - reason=当前messages数量={}", messages.size());
+        for (Message msg : messages) {
+            if (msg instanceof ToolResponseMessage toolMsg) {
+                for (ToolResponseMessage.ToolResponse response : toolMsg.getResponses()) {
+                    if ("common_sense_injection".equals(response.name())) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+    /**
      * 🔥 核心方法：注入常识经验到messages
      * 使用 AssistantMessage + ToolResponseMessage 配对方式
      */
     @SuppressWarnings("unchecked")
-    private CompletableFuture<Map<String, Object>> injectExperienceToMessages(OverAllState state, List<Experience> experiences) {
+    private CompletableFuture<Map<String, Object>> injectExperienceToMessages(List<Experience> experiences) {
         log.info("CommonSenseExperienceModelHook#injectExperienceToMessages - reason=开始处理messages");
 
         try {
-            Optional<Object> messagesOpt = state.value("messages");
-            if (messagesOpt.isEmpty()) {
-                log.warn("CommonSenseExperienceModelHook#injectExperienceToMessages - reason=state中没有messages，跳过");
-                return CompletableFuture.completedFuture(Map.of());
-            }
-
-            List<Message> messages = (List<Message>) messagesOpt.get();
-            log.debug("CommonSenseExperienceModelHook#injectExperienceToMessages - reason=当前messages数量={}", messages.size());
-
-            // 🔥 检查是否已经注入过常识经验
-            for (Message msg : messages) {
-                if (msg instanceof ToolResponseMessage toolMsg) {
-                    for (ToolResponseMessage.ToolResponse response : toolMsg.getResponses()) {
-                        if ("common_sense_injection".equals(response.name())) {
-                            log.info("CommonSenseExperienceModelHook#injectExperienceToMessages - reason=检测到已注入常识经验，跳过");
-                            return CompletableFuture.completedFuture(Map.of());
-                        }
-                    }
-                }
-            }
-
             // 构建经验内容
             String experienceContent = buildExperienceContent(experiences);
             log.debug("CommonSenseExperienceModelHook#injectExperienceToMessages - reason=经验内容构建完成，长度={}", experienceContent.length());
