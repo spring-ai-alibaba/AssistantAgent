@@ -28,14 +28,14 @@
     </modules>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <graalvm.polyglot.version>24.2.1</graalvm.polyglot.version>
-        <spring-boot.version>3.4.8</spring-boot.version>
+        <spring-boot.version>3.5.13</spring-boot.version>
         <spring-ai-alibaba-extensions.version>1.1.0.0</spring-ai-alibaba-extensions.version>
         <spring-ai-alibaba.version>1.1.2.2</spring-ai-alibaba.version>
-        <spring-ai.version>1.1.0</spring-ai.version>
+        <spring-ai.version>1.1.4</spring-ai.version>
         <opentelemetry.version>1.35.0</opentelemetry.version>
     </properties>
 
@@ -149,6 +149,7 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>3.5.13</version>
                 <configuration>
                     <mainClass>com.alibaba.assistant.agent.start.AssistantAgentApplication</mainClass>
                 </configuration>
@@ -156,6 +157,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
+                <version>3.4.0</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
