@@ -172,7 +172,7 @@ public class SubscribeTriggerCodeactTool implements TriggerCodeactTool {
 				        },
 				        "schedule_value": {
 				            "type": "string",
-				            "description": "调度值：CRON模式为cron表达式；FIXED_DELAY/FIXED_RATE模式为毫秒数(如3分钟=180000)；ONE_TIME模式为ISO时间戳"
+				            "description": "调度值：CRON模式为6位cron表达式；FIXED_DELAY/FIXED_RATE模式为毫秒数(如3分钟=180000)；ONE_TIME模式为ISO时间戳"
 				        },
 				        "condition_function": {
 				            "type": "string",
@@ -225,7 +225,7 @@ public class SubscribeTriggerCodeactTool implements TriggerCodeactTool {
 			.addParameter(ParameterNode.builder()
 				.name("schedule_value")
 				.type(ParameterType.STRING)
-				.description("调度值：CRON模式为cron表达式；FIXED_DELAY/FIXED_RATE模式为毫秒数(如3分钟=180000)；ONE_TIME模式为ISO时间戳")
+				.description("调度值：CRON模式为6位cron表达式；FIXED_DELAY/FIXED_RATE模式为毫秒数(如3分钟=180000)；ONE_TIME模式为ISO时间戳")
 				.required(true)
 				.build())
 			.addParameter(ParameterNode.builder()
@@ -267,7 +267,7 @@ public class SubscribeTriggerCodeactTool implements TriggerCodeactTool {
 					result = trigger_tools.subscribe_trigger(
 					    name="daily_task",
 					    schedule_mode="CRON",
-					    schedule_value="0 0 * * *",
+					    schedule_value="0 0 0 * * ?",
 					    execute_function="print('Daily execution')"
 					)
 					print(f"Trigger ID: {result['trigger_id']}")
