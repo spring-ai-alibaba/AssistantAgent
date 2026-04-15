@@ -19,6 +19,7 @@ import com.alibaba.assistant.agent.evaluation.evaluator.RuleBasedEvaluator;
 import com.alibaba.assistant.agent.evaluation.model.CriterionExecutionContext;
 import com.alibaba.assistant.agent.evaluation.model.CriterionResult;
 import com.alibaba.assistant.agent.evaluation.model.CriterionStatus;
+import com.alibaba.assistant.agent.evaluation.util.EvaluationLogContextHelper;
 import com.alibaba.assistant.agent.extension.experience.model.Experience;
 import com.alibaba.assistant.agent.extension.experience.model.ExperienceQuery;
 import com.alibaba.assistant.agent.extension.experience.model.ExperienceQueryContext;
@@ -114,23 +115,29 @@ public class ExperienceRetrievalEvaluatorFactory {
             try {
                 // 优先使用 enhanced_user_input，否则使用原始 userInput
                 String queryText = extractEnhancedOrOriginalInput(ctx);
+                String sessionId = EvaluationLogContextHelper.getSessionId(ctx.getInputContext());
+                log.info("ExperienceRetrievalEvaluatorFactory#{} - reason=开始检索经验, sessionId={}, queryText={}, experienceTypes={}",
+                        evaluatorId, sessionId, queryText, experienceTypes);
 
                 List<Experience> experiences = queryExperiencesByStringIntersection(
                         experienceProvider,
+                        ctx,
                         queryText,
                         experienceTypes,
                         maxExperiencesPerType
                 );
 
                 if (experiences.isEmpty()) {
-                    log.info("ExperienceRetrievalEvaluatorFactory#{} - reason=未检索到经验", evaluatorId);
+                    log.info("ExperienceRetrievalEvaluatorFactory#{} - reason=未检索到经验, sessionId={}", evaluatorId, sessionId);
                     result.setStatus(CriterionStatus.SUCCESS);
                     result.setValue("");
                     result.getMetadata().put("is_empty", true);
                     return result;
                 }
 
-                log.info("ExperienceRetrievalEvaluatorFactory#{} - reason=检索到经验, count={}", evaluatorId, experiences.size());
+                log.info("ExperienceRetrievalEvaluatorFactory#{} - reason=检索到经验, sessionId={}, count={}, experienceIds={}",
+                        evaluatorId, sessionId, experiences.size(),
+                        experiences.stream().map(Experience::getId).collect(Collectors.toList()));
 
                 // 构建 ref_entries，每个经验作为一个独立的条目，experience ID 作为 ref-id
                 List<Map<String, String>> refEntries = buildRefEntries(experiences);
@@ -142,7 +149,8 @@ public class ExperienceRetrievalEvaluatorFactory {
                 result.getMetadata().put("experience_count", experiences.size());
 
             } catch (Exception e) {
-                log.error("ExperienceRetrievalEvaluatorFactory#{} - reason=经验检索失败", evaluatorId, e);
+                log.error("ExperienceRetrievalEvaluatorFactory#{} - reason=经验检索失败, sessionId={}",
+                        evaluatorId, EvaluationLogContextHelper.getSessionId(ctx.getInputContext()), e);
                 result.setStatus(CriterionStatus.ERROR);
                 result.setErrorMessage(e.getMessage());
             }
@@ -181,6 +189,7 @@ public class ExperienceRetrievalEvaluatorFactory {
      */
     private static List<Experience> queryExperiencesByStringIntersection(
             ExperienceProvider experienceProvider,
+            CriterionExecutionContext executionContext,
             String queryText,
             List<ExperienceType> types,
             int maxExperiencesPerType) {
@@ -191,6 +200,20 @@ public class ExperienceRetrievalEvaluatorFactory {
 
         ExperienceQueryContext queryContext = new ExperienceQueryContext();
         queryContext.setUserQuery(queryText);
+        if (executionContext != null && executionContext.getInputContext() != null) {
+            Object sessionId = executionContext.getInputContext().getEnvironmentValue("sessionId");
+            if (sessionId != null) {
+                queryContext.setSessionId(String.valueOf(sessionId));
+            }
+            Object tenantId = executionContext.getInputContext().getEnvironmentValue("tenantId");
+            if (tenantId != null) {
+                queryContext.setTenantId(String.valueOf(tenantId));
+            }
+            Object userId = executionContext.getInputContext().getEnvironmentValue("userId");
+            if (userId != null) {
+                queryContext.setUserId(String.valueOf(userId));
+            }
+        }
 
         List<Experience> allExperiences = new ArrayList<>();
 
@@ -318,4 +341,3 @@ public class ExperienceRetrievalEvaluatorFactory {
         return sb.toString();
     }
 }
-

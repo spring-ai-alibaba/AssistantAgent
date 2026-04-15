@@ -16,9 +16,19 @@ public class ExperienceQueryContext {
     private String userQuery;
 
     /**
+     * 会话ID
+     */
+    private String sessionId;
+
+    /**
      * 租户ID
      */
     private String tenantId;
+
+    /**
+     * 用户ID
+     */
+    private String userId;
 
     public ExperienceQueryContext() {
     }
@@ -31,6 +41,14 @@ public class ExperienceQueryContext {
         this.userQuery = userQuery;
     }
 
+    public String getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(String sessionId) {
+        this.sessionId = StringUtils.hasText(sessionId) ? sessionId.trim() : null;
+    }
+
     public String getTenantId() {
         return tenantId;
     }
@@ -39,4 +57,11 @@ public class ExperienceQueryContext {
         this.tenantId = StringUtils.hasText(tenantId) ? tenantId.trim() : null;
     }
 
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = StringUtils.hasText(userId) ? userId.trim() : null;
+    }
 }
