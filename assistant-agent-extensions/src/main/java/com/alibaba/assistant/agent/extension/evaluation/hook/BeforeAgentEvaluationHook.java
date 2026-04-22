@@ -19,6 +19,7 @@ import com.alibaba.assistant.agent.evaluation.EvaluationService;
 import com.alibaba.assistant.agent.evaluation.model.EvaluationContext;
 import com.alibaba.assistant.agent.evaluation.model.EvaluationResult;
 import com.alibaba.assistant.agent.evaluation.model.EvaluationSuite;
+import com.alibaba.assistant.agent.evaluation.util.EvaluationLogContextHelper;
 import com.alibaba.assistant.agent.extension.evaluation.store.OverAllStateEvaluationResultStore;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
@@ -152,11 +153,16 @@ public class BeforeAgentEvaluationHook extends AgentHook implements Prioritized 
             return CompletableFuture.completedFuture(Map.of());
         }
 
-        log.info("BeforeAgentEvaluationHook#beforeAgent - reason=开始执行评估, suiteId={}, async={}", suiteId, async);
+        String runnableSessionId = EvaluationLogContextHelper.getSessionId(config);
+        log.info("BeforeAgentEvaluationHook#beforeAgent - reason=开始执行评估, suiteId={}, sessionId={}, async={}",
+                suiteId, runnableSessionId, async);
 
         try {
             // 1. 构造评估上下文（支持 config）
             EvaluationContext context = contextBuilder.apply(state, config);
+            String sessionId = EvaluationLogContextHelper.getSessionId(context);
+            log.info("BeforeAgentEvaluationHook#beforeAgent - reason=评估上下文已构建, suiteId={}, sessionId={}",
+                    suiteId, sessionId);
 
             // 2. 加载评估套件
             EvaluationSuite suite = loadSuite();
@@ -172,7 +178,8 @@ public class BeforeAgentEvaluationHook extends AgentHook implements Prioritized 
             }
 
         } catch (Exception e) {
-            log.error("BeforeAgentEvaluationHook#beforeAgent - reason=评估执行失败, suiteId=" + suiteId, e);
+            log.error("BeforeAgentEvaluationHook#beforeAgent - reason=评估执行失败, suiteId={}, sessionId={}",
+                    suiteId, runnableSessionId, e);
             return CompletableFuture.completedFuture(Map.of());
         }
     }
@@ -195,10 +202,10 @@ public class BeforeAgentEvaluationHook extends AgentHook implements Prioritized 
      * 同步执行评估
      */
     private CompletableFuture<Map<String, Object>> executeSync(OverAllState state,
-                                                                EvaluationSuite suite,
-                                                                EvaluationContext context) {
+                                                                  EvaluationSuite suite,
+                                                                  EvaluationContext context) {
         EvaluationResult result = evaluationService.evaluate(suite, context);
-        return CompletableFuture.completedFuture(buildResultMap(state, result));
+        return CompletableFuture.completedFuture(buildResultMap(state, result, context));
     }
 
     /**
@@ -209,13 +216,14 @@ public class BeforeAgentEvaluationHook extends AgentHook implements Prioritized 
                                                                  EvaluationContext context) {
         return evaluationService.evaluateAsync(suite, context)
                 .orTimeout(timeoutMs, TimeUnit.MILLISECONDS)
-                .thenApply(result -> buildResultMap(state, result))
+                .thenApply(result -> buildResultMap(state, result, context))
                 .exceptionally(e -> {
                     if (e.getCause() instanceof TimeoutException) {
-                        log.warn("BeforeAgentEvaluationHook#beforeAgent - reason=评估超时, suiteId={}, timeoutMs={}",
-                                suiteId, timeoutMs);
+                        log.warn("BeforeAgentEvaluationHook#beforeAgent - reason=评估超时, suiteId={}, sessionId={}, timeoutMs={}",
+                                suiteId, EvaluationLogContextHelper.getSessionId(context), timeoutMs);
                     } else {
-                        log.error("BeforeAgentEvaluationHook#beforeAgent - reason=异步评估失败, suiteId=" + suiteId, e);
+                        log.error("BeforeAgentEvaluationHook#beforeAgent - reason=异步评估失败, suiteId={}, sessionId={}",
+                                suiteId, EvaluationLogContextHelper.getSessionId(context), e);
                     }
                     return Map.of();
                 });
@@ -224,9 +232,9 @@ public class BeforeAgentEvaluationHook extends AgentHook implements Prioritized 
     /**
      * 构建结果 Map 并记录日志
      */
-    private Map<String, Object> buildResultMap(OverAllState state, EvaluationResult result) {
-        log.info("BeforeAgentEvaluationHook#beforeAgent - reason=评估完成, suiteId={}, statistics={}",
-                suiteId, result.getStatistics());
+    private Map<String, Object> buildResultMap(OverAllState state, EvaluationResult result, EvaluationContext context) {
+        log.info("BeforeAgentEvaluationHook#beforeAgent - reason=评估完成, suiteId={}, sessionId={}, statistics={}",
+                suiteId, EvaluationLogContextHelper.getSessionId(context), result.getStatistics());
 
         OverAllStateEvaluationResultStore store = new OverAllStateEvaluationResultStore(state);
         return store.createUpdateMap(suiteId, result);
