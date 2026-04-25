@@ -30,7 +30,9 @@ import com.alibaba.assistant.agent.extension.search.tools.UnifiedSearchCodeactTo
 import com.alibaba.assistant.agent.common.enums.Language;
 import com.alibaba.assistant.agent.extension.prompt.CodeactToolSignatureInjectionToolCallback;
 import com.alibaba.assistant.agent.extension.prompt.PromptContributionToolCallback;
+import com.alibaba.assistant.agent.start.interceptor.modelInterceptor.DashScopeMultimodalEndpointInterceptor;
 import com.alibaba.cloud.ai.graph.agent.hook.Hook;
+import com.alibaba.cloud.ai.graph.agent.interceptor.ModelInterceptor;
 import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +43,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -222,6 +225,7 @@ public class CodeactAgentConfig {
 	@Bean
 	public CodeactAgent grayscaleCodeactAgent(
 			ChatModel chatModel,
+            @Autowired(required = false) Environment environment,
 			@Autowired(required = false) List<ReplyCodeactTool> replyCodeactTools,
 			@Autowired(required = false) SearchCodeactToolFactory searchCodeactToolFactory,
 			@Autowired(required = false) List<TriggerCodeactTool> triggerCodeactTools,
@@ -312,6 +316,9 @@ public class CodeactAgentConfig {
         /*---------------------准备hooks-------------------*/
         logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=统一配置 Hooks, total={}",
                 allHooks != null ? allHooks.size() : 0);
+
+        List<ModelInterceptor> modelInterceptors = new ArrayList<>();
+        modelInterceptors.add(new DashScopeMultimodalEndpointInterceptor(environment));
 
 		CodeactAgent.CodeactAgentBuilder builder = CodeactAgent.builder()
 				.name("CodeactAgent")
