@@ -126,6 +126,9 @@ public class ExperienceDisclosurePromptContributor implements PromptContributor 
     protected void appendGuidanceText(StringBuilder sb) {
         sb.append("经验分为三类：COMMON 用于解释概念/产品术语，REACT 用于提供流程与策略参考，TOOL 用于能力判断、工具选择与调用路径判断。\n");
         sb.append("披露方式分为两种：`DIRECT` 表示内容已满足高置信短文本条件，可直接利用；`PROGRESSIVE` 表示当前只给候选卡，需要完整正文时调用 `read_exp`。\n");
+        sb.append("渐进披露分三层：L1 候选卡（本块内容） → L2 `read_exp(id)` 返回 content + referenceManifest + assetManifest → L3 `read_exp_doc(id, paths)` 仅按需读取 referenceManifest 中的某些参考文档完整内容。\n");
+        sb.append("调用 `read_exp_doc` 前必须先 `read_exp(id)`，否则会返回错误：\"请先 read_exp(<id>)，再 read_exp_doc\"；单次最多读取若干个路径，超出会被截断。\n");
+        sb.append("`read_exp_doc` 仅能读取 referenceManifest 列出的文档；assetManifest 列出的脚本/资源文件不可通过 `read_exp_doc` 访问 —— 它们已被预先物化到沙箱 `/workspace/<path>` 下，仅在沙箱内通过工具执行（cat/python/bash 等）读取。\n");
         sb.append("优先复用已披露的 DIRECT 内容，再从候选中选择 id；只有当前候选明显不足或缺少方向时，再调用 `search_exp`。\n");
         sb.append("TOOL 候选如果标记为 `REACT_DIRECT`，表示它具备被直接作为 React function call 调用的资格；");
         sb.append("但只有在该单个工具即可直接完成任务时，才优先 direct call。");

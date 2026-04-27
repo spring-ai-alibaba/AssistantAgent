@@ -9,13 +9,18 @@ import com.alibaba.assistant.agent.management.controller.TenantController;
 import com.alibaba.assistant.agent.management.controller.ToolSourceController;
 import com.alibaba.assistant.agent.management.internal.InMemorySkillExchangeService;
 import com.alibaba.assistant.agent.management.internal.InMemoryToolSourceBrowser;
+import com.alibaba.assistant.agent.management.internal.LlmReferenceSummarizer;
+import com.alibaba.assistant.agent.management.internal.NoopReferenceSummarizer;
 import com.alibaba.assistant.agent.management.internal.RepositoryBackedExperienceManagementService;
 import com.alibaba.assistant.agent.management.internal.SkillPackageParser;
 import com.alibaba.assistant.agent.management.spi.ExperienceManagementService;
+import com.alibaba.assistant.agent.management.spi.ReferenceSummarizer;
 import com.alibaba.assistant.agent.management.spi.SkillExchangeService;
 import com.alibaba.assistant.agent.management.spi.TenantListProvider;
 import com.alibaba.assistant.agent.management.spi.ToolSourceBrowser;
 
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -42,8 +47,9 @@ public class ExperienceConsoleAutoConfiguration {
     @ConditionalOnMissingBean(ExperienceManagementService.class)
     public ExperienceManagementService repositoryBackedExperienceManagementService(
             ExperienceRepository repository,
-            @Autowired(required = false) ExperienceToolInvocationClassifier toolInvocationClassifier) {
-        return new RepositoryBackedExperienceManagementService(repository, toolInvocationClassifier);
+            @Autowired(required = false) ExperienceToolInvocationClassifier toolInvocationClassifier,
+            ReferenceSummarizer referenceSummarizer) {
+        return new RepositoryBackedExperienceManagementService(repository, toolInvocationClassifier, referenceSummarizer);
     }
 
     @Bean
@@ -54,8 +60,22 @@ public class ExperienceConsoleAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(SkillExchangeService.class)
-    public SkillExchangeService inMemorySkillExchangeService(ExperienceRepository repository) {
-        return new InMemorySkillExchangeService(repository);
+    public SkillExchangeService inMemorySkillExchangeService(ExperienceRepository repository,
+            ReferenceSummarizer referenceSummarizer) {
+        return new InMemorySkillExchangeService(repository, referenceSummarizer);
+    }
+
+    @Bean
+    @ConditionalOnBean(ChatModel.class)
+    @ConditionalOnMissingBean(ReferenceSummarizer.class)
+    public ReferenceSummarizer llmReferenceSummarizer(ChatModel chatModel) {
+        return new LlmReferenceSummarizer(chatModel);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(ReferenceSummarizer.class)
+    public ReferenceSummarizer noopReferenceSummarizer() {
+        return new NoopReferenceSummarizer();
     }
 
     @Bean

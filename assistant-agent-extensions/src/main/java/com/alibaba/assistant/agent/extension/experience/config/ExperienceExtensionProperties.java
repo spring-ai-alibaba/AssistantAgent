@@ -75,6 +75,11 @@ public class ExperienceExtensionProperties {
     private int maxContentLength = 2000;
 
     /**
+     * {@code read_exp_doc} 单次允许读取的路径数量上限。
+     */
+    private int readExpDocMaxPaths = 6;
+
+    /**
      * 内存实现相关配置
      */
     private InMemoryConfig inMemory = new InMemoryConfig();
@@ -268,6 +273,14 @@ public class ExperienceExtensionProperties {
 
     public void setMaxContentLength(int maxContentLength) {
         this.maxContentLength = maxContentLength;
+    }
+
+    public int getReadExpDocMaxPaths() {
+        return readExpDocMaxPaths;
+    }
+
+    public void setReadExpDocMaxPaths(int readExpDocMaxPaths) {
+        this.readExpDocMaxPaths = readExpDocMaxPaths;
     }
 
     public InMemoryConfig getInMemory() {

@@ -1,24 +1,33 @@
 package com.alibaba.assistant.agent.extension.experience.disclosure;
 
 import com.alibaba.assistant.agent.extension.experience.config.ExperienceExtensionProperties;
-import com.alibaba.assistant.agent.extension.experience.disclosure.ExperienceDisclosurePayloads.ExperienceCandidateCard;
+import com.alibaba.assistant.agent.extension.experience.disclosure.ExperienceDisclosurePayloads.AssetManifestEntry;
 import com.alibaba.assistant.agent.extension.experience.disclosure.ExperienceDisclosurePayloads.DirectExperienceGrounding;
+import com.alibaba.assistant.agent.extension.experience.disclosure.ExperienceDisclosurePayloads.ExperienceCandidateCard;
 import com.alibaba.assistant.agent.extension.experience.disclosure.ExperienceDisclosurePayloads.GroupedExperienceCandidates;
 import com.alibaba.assistant.agent.extension.experience.disclosure.ExperienceDisclosurePayloads.PrefetchedExperienceSnapshot;
+import com.alibaba.assistant.agent.extension.experience.disclosure.ExperienceDisclosurePayloads.ReadExpDocError;
+import com.alibaba.assistant.agent.extension.experience.disclosure.ExperienceDisclosurePayloads.ReadExpDocResponse;
+import com.alibaba.assistant.agent.extension.experience.disclosure.ExperienceDisclosurePayloads.ReadExpDocument;
 import com.alibaba.assistant.agent.extension.experience.disclosure.ExperienceDisclosurePayloads.ReadExpResponse;
+import com.alibaba.assistant.agent.extension.experience.disclosure.ExperienceDisclosurePayloads.ReferenceManifestEntry;
 import com.alibaba.assistant.agent.extension.experience.disclosure.ExperienceDisclosurePayloads.SearchExpResponse;
+import com.alibaba.assistant.agent.extension.experience.model.AssetEntry;
 import com.alibaba.assistant.agent.extension.experience.model.DisclosureStrategy;
 import com.alibaba.assistant.agent.extension.experience.model.Experience;
 import com.alibaba.assistant.agent.extension.experience.model.ExperienceQuery;
 import com.alibaba.assistant.agent.extension.experience.model.ExperienceQueryContext;
 import com.alibaba.assistant.agent.extension.experience.model.ExperienceType;
+import com.alibaba.assistant.agent.extension.experience.model.ReferenceEntry;
 import com.alibaba.assistant.agent.extension.experience.spi.ExperienceProvider;
 import com.alibaba.assistant.agent.extension.experience.spi.ExperienceRepository;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static com.alibaba.assistant.agent.extension.experience.disclosure.ExperienceDisclosurePayloads.PrefetchStatus;
 
@@ -107,12 +116,122 @@ public class ExperienceDisclosureService {
         response.setAssociatedTools(new ArrayList<>(experience.getAssociatedTools()));
         response.setRelatedExperiences(new ArrayList<>(experience.getRelatedExperiences()));
         response.setArtifact(experience.getArtifact());
+        response.setReferenceManifest(buildReferenceManifest(experience));
+        response.setAssetManifest(buildAssetManifest(experience));
 
         if (experience.getType() == ExperienceType.TOOL) {
             response.setToolInvocationPath(toolInvocationClassifier.classify(experience));
             response.setCallableToolName(toolInvocationClassifier.resolveCallableToolName(experience));
         }
         return response;
+    }
+
+    /**
+     * L3 渐进披露：为 {@code read_exp_doc} 工具提供 reference 内容读取。
+     *
+     * <p>仅接受 {@link Experience#getReferences()} 中声明的路径；asset 路径会被拒绝，
+     * 提示调用方在沙箱内以 {@code /workspace/<path>} 读取。
+     *
+     * @param id     经验 ID
+     * @param paths  本次希望读取的路径列表（最多 {@code maxPaths} 个）
+     * @return 包含已命中文档及错误列表的响应
+     */
+    public ReadExpDocResponse readDocs(String id, List<String> paths, int maxPaths) {
+        ReadExpDocResponse response = new ReadExpDocResponse();
+        response.setId(id);
+        if (!StringUtils.hasText(id) || paths == null || paths.isEmpty()) {
+            response.getErrors().add(new ReadExpDocError(null, "id 和 paths 均为必填"));
+            return response;
+        }
+        if (maxPaths > 0 && paths.size() > maxPaths) {
+            response.getErrors().add(new ReadExpDocError(null,
+                    "paths 数量超过上限 " + maxPaths + "；请分多次调用"));
+            return response;
+        }
+        Optional<Experience> opt = experienceRepository.findById(id);
+        if (opt.isEmpty()) {
+            response.getErrors().add(new ReadExpDocError(null, "Experience not found: " + id));
+            return response;
+        }
+        Experience experience = opt.get();
+        Set<String> refPaths = new LinkedHashSet<>();
+        if (experience.getReferences() != null) {
+            for (ReferenceEntry r : experience.getReferences()) {
+                if (r.getPath() != null) {
+                    refPaths.add(r.getPath());
+                }
+            }
+        }
+        Set<String> assetPaths = new LinkedHashSet<>();
+        if (experience.getAssets() != null) {
+            for (AssetEntry a : experience.getAssets()) {
+                if (a.getPath() != null) {
+                    assetPaths.add(a.getPath());
+                }
+            }
+        }
+        for (String requested : paths) {
+            if (requested == null || requested.isBlank()) {
+                response.getErrors().add(new ReadExpDocError(requested, "path 为空"));
+                continue;
+            }
+            if (assetPaths.contains(requested)) {
+                response.getErrors().add(new ReadExpDocError(requested,
+                        "path is an asset; access it inside the sandbox workspace instead"));
+                continue;
+            }
+            if (!refPaths.contains(requested)) {
+                response.getErrors().add(new ReadExpDocError(requested,
+                        "unknown path; available references: " + String.join(", ", refPaths)));
+                continue;
+            }
+            ReferenceEntry ref = experience.getReferences().stream()
+                    .filter(r -> requested.equals(r.getPath()))
+                    .findFirst()
+                    .orElse(null);
+            if (ref == null) {
+                continue;
+            }
+            ReadExpDocument doc = new ReadExpDocument();
+            doc.setPath(ref.getPath());
+            doc.setMediaType(ref.getMediaType());
+            doc.setContent(ref.getContent());
+            response.getDocuments().add(doc);
+        }
+        return response;
+    }
+
+    private List<ReferenceManifestEntry> buildReferenceManifest(Experience experience) {
+        List<ReferenceManifestEntry> out = new ArrayList<>();
+        if (experience.getReferences() == null) {
+            return out;
+        }
+        for (ReferenceEntry r : experience.getReferences()) {
+            ReferenceManifestEntry m = new ReferenceManifestEntry();
+            m.setPath(r.getPath());
+            m.setMediaType(r.getMediaType());
+            m.setDescription(r.getDescription());
+            m.setSize(r.getSize());
+            out.add(m);
+        }
+        return out;
+    }
+
+    private List<AssetManifestEntry> buildAssetManifest(Experience experience) {
+        List<AssetManifestEntry> out = new ArrayList<>();
+        if (experience.getAssets() == null) {
+            return out;
+        }
+        for (AssetEntry a : experience.getAssets()) {
+            AssetManifestEntry m = new AssetManifestEntry();
+            m.setPath(a.getPath());
+            m.setMediaType(a.getMediaType());
+            m.setRole(a.getRole());
+            m.setDescription(a.getDescription());
+            m.setSize(a.getSize());
+            out.add(m);
+        }
+        return out;
     }
 
     private GroupedExperienceCandidates searchGrouped(List<Experience> commonExperiences,
