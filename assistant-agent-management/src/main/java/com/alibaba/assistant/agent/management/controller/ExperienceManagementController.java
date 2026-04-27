@@ -111,6 +111,45 @@ public class ExperienceManagementController {
         return ResponseEntity.ok(vo);
     }
 
+    /**
+     * 返回指定 asset 的原始内容（文本或 base64），供管理后台 UI 懒加载。
+     * 路径支持多级，如 /{id}/assets/scripts/cmd.sh。
+     */
+    @GetMapping("/{id}/assets/**")
+    public ResponseEntity<Map<String, Object>> getAssetContent(
+            @PathVariable("id") String id,
+            jakarta.servlet.http.HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        int p = uri.indexOf("/assets/");
+        if (p < 0) {
+            return ResponseEntity.badRequest().body(Map.of("error", "invalid path"));
+        }
+        String assetPath = uri.substring(p + "/assets/".length());
+        com.alibaba.assistant.agent.extension.experience.model.AssetEntry match =
+                service.loadAsset(id, assetPath);
+        if (match == null) {
+            return ResponseEntity.notFound().build();
+        }
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("path", match.getPath());
+        body.put("mediaType", match.getMediaType());
+        body.put("role", match.getRole());
+        body.put("size", match.getSize());
+        body.put("content", match.getContent());
+        body.put("contentRef", match.getContentRef());
+        return ResponseEntity.ok(body);
+    }
+
+    /**
+     * 重新生成指定经验下所有 reference 的 description（通常在 LLM summarizer 不可用时先导入、
+     * 事后配置好 ChatModel 之后再批量补齐）。
+     */
+    @PostMapping("/{id}/resummarize")
+    public ResponseEntity<Map<String, Object>> resummarize(@PathVariable("id") String id) {
+        int updated = service.resummarizeReferences(id);
+        return ResponseEntity.ok(Map.of("updated", updated));
+    }
+
     @PostMapping
     public ResponseEntity<Map<String, String>> create(@RequestBody ExperienceCreateRequest request) {
         String id = service.create(request);

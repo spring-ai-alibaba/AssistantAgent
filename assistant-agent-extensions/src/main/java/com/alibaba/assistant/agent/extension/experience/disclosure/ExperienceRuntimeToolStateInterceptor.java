@@ -55,6 +55,23 @@ public class ExperienceRuntimeToolStateInterceptor extends ToolInterceptor {
         return response;
     }
 
+    private void recordReadExpId(OverAllState state, String id) {
+        if (state == null || id == null || id.isBlank()) {
+            return;
+        }
+        LinkedHashSet<String> ids = new LinkedHashSet<>();
+        Object existing = state.value(CodeactStateKeys.EXPERIENCE_READ_EXP_IDS).orElse(null);
+        if (existing instanceof List<?> list) {
+            for (Object item : list) {
+                if (item != null) {
+                    ids.add(String.valueOf(item));
+                }
+            }
+        }
+        ids.add(id);
+        state.updateState(Map.of(CodeactStateKeys.EXPERIENCE_READ_EXP_IDS, new ArrayList<>(ids)));
+    }
+
     private void mergeDirectToolNames(OverAllState state, String json, String toolName) {
         LinkedHashSet<String> merged = new LinkedHashSet<>();
         Object existing = state.value(CodeactStateKeys.EXPERIENCE_ALLOWED_REACT_TOOL_NAMES).orElse(null);
@@ -120,6 +137,7 @@ public class ExperienceRuntimeToolStateInterceptor extends ToolInterceptor {
         }
         cache.put(response.getId(), response);
         state.updateState(Map.of(CodeactStateKeys.EXPERIENCE_DETAIL_CACHE, cache));
+        recordReadExpId(state, response.getId());
     }
 
     private void mergeDirectGroundings(OverAllState state, String json, String toolName) {

@@ -85,8 +85,10 @@ public class ExperienceDisclosureAutoConfiguration {
     @ConditionalOnMissingBean
     public ExperienceRuntimeModelInterceptor experienceRuntimeModelInterceptor(ExperienceDisclosureService service,
                                                                                ExperienceDisclosureContextResolver contextResolver,
-                                                                               ExperienceToolInvocationClassifier classifier) {
-        return new ExperienceRuntimeModelInterceptor(service, contextResolver, classifier);
+                                                                               ExperienceToolInvocationClassifier classifier,
+                                                                               ExperienceExtensionProperties properties) {
+        return new ExperienceRuntimeModelInterceptor(service, contextResolver, classifier,
+                properties.getReadExpDocMaxPaths());
     }
 
     /**

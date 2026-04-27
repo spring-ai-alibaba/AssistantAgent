@@ -6,6 +6,8 @@ import com.alibaba.assistant.agent.extension.experience.model.ExperienceArtifact
 import com.alibaba.assistant.agent.extension.experience.model.ExperienceMetadata;
 import com.alibaba.assistant.agent.extension.experience.model.ExperienceType;
 import com.alibaba.assistant.agent.extension.experience.model.FastIntentConfig;
+import com.alibaba.assistant.agent.extension.experience.model.ReferenceEntry;
+import com.alibaba.assistant.agent.extension.experience.model.AssetEntry;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -36,6 +38,8 @@ public class ExperienceVO {
     private Instant updatedAt;
     private Map<String, Object> properties = new HashMap<>();
     private String toolInvocationPath;
+    private List<ReferenceEntry> references = new ArrayList<>();
+    private List<AssetView> assets = new ArrayList<>();
 
     public static ExperienceVO fromExperience(Experience exp) {
         ExperienceVO vo = new ExperienceVO();
@@ -52,6 +56,16 @@ public class ExperienceVO {
         vo.setFastIntentConfig(exp.getFastIntentConfig());
         vo.setCreatedAt(exp.getCreatedAt());
         vo.setUpdatedAt(exp.getUpdatedAt());
+        if (exp.getReferences() != null) {
+            vo.setReferences(new ArrayList<>(exp.getReferences()));
+        }
+        if (exp.getAssets() != null) {
+            List<AssetView> assetViews = new ArrayList<>();
+            for (AssetEntry asset : exp.getAssets()) {
+                assetViews.add(AssetView.fromAsset(asset));
+            }
+            vo.setAssets(assetViews);
+        }
 
         ExperienceMetadata metadata = exp.getMetadata();
         if (metadata != null) {
@@ -277,5 +291,56 @@ public class ExperienceVO {
 
     public void setToolInvocationPath(String toolInvocationPath) {
         this.toolInvocationPath = toolInvocationPath;
+    }
+
+    public List<ReferenceEntry> getReferences() {
+        return references;
+    }
+
+    public void setReferences(List<ReferenceEntry> references) {
+        this.references = references;
+    }
+
+    public List<AssetView> getAssets() {
+        return assets;
+    }
+
+    public void setAssets(List<AssetView> assets) {
+        this.assets = assets;
+    }
+
+    /** Public asset projection that hides raw content by default. */
+    public static class AssetView {
+        private String path;
+        private String mediaType;
+        private String role;
+        private String description;
+        private Long size;
+        private boolean contentAvailable;
+
+        public static AssetView fromAsset(AssetEntry entry) {
+            AssetView v = new AssetView();
+            v.path = entry.getPath();
+            v.mediaType = entry.getMediaType();
+            v.role = entry.getRole();
+            v.description = entry.getDescription();
+            v.size = entry.getSize();
+            v.contentAvailable = (entry.getContent() != null && !entry.getContent().isEmpty())
+                    || (entry.getContentRef() != null && !entry.getContentRef().isEmpty());
+            return v;
+        }
+
+        public String getPath() { return path; }
+        public void setPath(String path) { this.path = path; }
+        public String getMediaType() { return mediaType; }
+        public void setMediaType(String mediaType) { this.mediaType = mediaType; }
+        public String getRole() { return role; }
+        public void setRole(String role) { this.role = role; }
+        public String getDescription() { return description; }
+        public void setDescription(String description) { this.description = description; }
+        public Long getSize() { return size; }
+        public void setSize(Long size) { this.size = size; }
+        public boolean isContentAvailable() { return contentAvailable; }
+        public void setContentAvailable(boolean contentAvailable) { this.contentAvailable = contentAvailable; }
     }
 }
