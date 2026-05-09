@@ -56,18 +56,20 @@ public class ExperienceEvaluationCriterionProvider implements EvaluationCriterio
     public List<EvaluationCriterion> getCriteria() {
         log.info("ExperienceEvaluationCriterionProvider#getCriteria - reason=提供评估 Criteria");
 
-        // 1. 用户输入增强 Criterion（作为 experience_retrieval 的依赖）
+        // 1. 用户输入增强 Criterion：提纯用户表达，去掉口语化水词，不做扩写
         EvaluationCriterion enhancedUserInput = EvaluationCriterionBuilder
             .create("enhanced_user_input")
-            .description("改写用户输入，使其更加清晰、完整")
+            .description("提纯用户输入，去掉口语化表达和冗余措辞，保留核心任务意图")
             .resultType(ResultType.TEXT)
             .workingMechanism(
-                "你是一个用户输入优化专家。请根据用户输入，改写并完善需求。" +
-                "改写要求：" +
-                "1. 补全隐含的约束条件" +
-                "2. 明确输入输出格式" +
-                "3. 保持原始意图不变" +
-                "4. 直接输出改写后的内容，不要添加任何解释"
+                "你是一个用户输入提纯专家。请将用户输入压缩为更短、更直接的任务表达。" +
+                "处理要求：" +
+                "1. 删除“帮我、看下、请问、一下、是不是、多少、帮忙”等口语化或礼貌性水词" +
+                "2. 保留领域术语、关键对象、关键参数和动作意图" +
+                "3. 不要补充用户未明确提供的新约束、新解释或新问题" +
+                "4. 不要改写成澄清问题，不要添加背景分析" +
+                "5. 输出应比原句更短或相当，像检索查询词而不是解释段落" +
+                "6. 直接输出提纯后的结果，不要添加任何解释"
             )
             .reasoningPolicy(ReasoningPolicy.NONE)
             .evaluatorType(EvaluatorType.LLM_BASED)
@@ -75,24 +77,28 @@ public class ExperienceEvaluationCriterionProvider implements EvaluationCriterio
             .contextBindings("context.input.userInput")
             .build();
 
-        // 2. 模糊程度判断 Criterion
+        // 2. 模糊程度判断 Criterion：对齐 meow-agent-server，使用三档枚举
         EvaluationCriterion isFuzzy = EvaluationCriterionBuilder
             .create("is_fuzzy")
             .description("判断用户输入是否模糊，是否需要向用户澄清")
             .resultType(ResultType.ENUM)
-            .options("模糊", "清晰")
+            .options("模糊", "一般", "清晰")
             .workingMechanism(
-                "你是一个用户意图清晰度判断专家。请判断用户输入是否明确。\n\n" +
+                "你是一个用户意图清晰度判断专家。请判断用户输入属于“模糊 / 一般 / 清晰”哪一档。\n\n" +
                 "【模糊】的特征：\n" +
-                "- 没有具体指明要做什么操作\n" +
-                "- 使用模糊词汇如'帮我看看'、'处理一下'\n" +
-                "- 请求可能有多种理解方式\n" +
-                "- 缺少必要的参数或信息\n\n" +
+                "- 只有名词、短语、代词或残缺描述\n" +
+                "- 没有明确动作或目标对象\n" +
+                "- 存在严重指代不明、上下文缺失\n" +
+                "- 在当前信息下无法决定下一步动作\n\n" +
+                "【一般】的特征：\n" +
+                "- 用户任务方向基本明确，但仍存在一定开放性\n" +
+                "- 可以先检索、阅读经验、分析问题，必要时再确认关键细节\n" +
+                "- 例如“为什么流水线失败了”“帮我创建一个应用”“计算2和3的小明系数是多少”\n\n" +
                 "【清晰】的特征：\n" +
-                "- 明确提到要查询、搜索、获取某个具体信息\n" +
-                "- 提供了具体的查询关键词或目标\n" +
-                "- 意图明确，执行路径清晰\n\n" +
-                "请直接输出'模糊'或'清晰'，不要添加任何解释。"
+                "- 目标对象、动作和关键参数都已明确\n" +
+                "- 执行路径基本确定，可以直接执行\n" +
+                "- 例如“查询知识库中与无人值守相关的知识”“计算123加456”\n\n" +
+                "请直接输出“模糊”“一般”或“清晰”，不要添加任何解释。"
             )
             .reasoningPolicy(ReasoningPolicy.NONE)
             .evaluatorType(EvaluatorType.LLM_BASED)
@@ -100,16 +106,6 @@ public class ExperienceEvaluationCriterionProvider implements EvaluationCriterio
             .contextBindings("context.input.userInput")
             .build();
 
-        EvaluationCriterion experienceRetrieval = EvaluationCriterionBuilder
-            .create("experience_retrieval")
-            .description("基于增强后的用户输入检索相关经验")
-            .resultType(ResultType.TEXT)
-            .evaluatorType(EvaluatorType.RULE_BASED)
-            .evaluatorRef("experience-retrieval")
-            .dependsOn("enhanced_user_input")
-            .contextBindings("context.input.userInput")
-            .build();
-
-        return List.of(enhancedUserInput, isFuzzy, experienceRetrieval);
+        return List.of(enhancedUserInput, isFuzzy);
     }
 }

@@ -1,10 +1,6 @@
 package com.alibaba.assistant.agent.extension.experience.config;
 
-import com.alibaba.assistant.agent.extension.experience.hook.CommonSenseExperienceModelHook;
 import com.alibaba.assistant.agent.extension.experience.hook.FastIntentReactHook;
-import com.alibaba.assistant.agent.extension.experience.hook.ReactExperienceAgentHook;
-import com.alibaba.assistant.agent.extension.experience.tool.CommonSenseInjectionTool;
-import com.alibaba.assistant.agent.extension.experience.tool.ReactStrategyInjectionTool;
 import com.alibaba.assistant.agent.extension.experience.fastintent.FastIntentService;
 import com.alibaba.assistant.agent.extension.experience.internal.InMemoryExperienceProvider;
 import com.alibaba.assistant.agent.extension.experience.internal.InMemoryExperienceRepository;
@@ -24,6 +20,10 @@ import java.util.List;
 
 /**
  * 经验模块自动配置类
+ *
+ * <p>提供经验仓库、经验提供者、快速意图等基础 Bean。
+ * 旧版的 ReactExperienceAgentHook / CommonSenseExperienceModelHook 已在 4.2
+ * 重构中被渐进式披露系统（ExperienceDisclosureAutoConfiguration）取代并移除。
  *
  * @author Assistant Agent Team
  */
@@ -76,7 +76,7 @@ public class ExperienceExtensionAutoConfiguration {
      */
     @Bean
     @ConditionalOnProperty(prefix = "spring.ai.alibaba.codeact.extension.experience",
-                          name = "react-experience-enabled",
+                          name = "fast-intent-react-enabled",
                           havingValue = "true",
                           matchIfMissing = true)
     public FastIntentReactHook fastIntentReactHook(ExperienceProvider experienceProvider,
@@ -84,69 +84,5 @@ public class ExperienceExtensionAutoConfiguration {
                                                    FastIntentService fastIntentService) {
         log.info("ExperienceExtensionAutoConfiguration#fastIntentReactHook - reason=creating fast intent react hook bean");
         return new FastIntentReactHook(experienceProvider, properties, fastIntentService);
-    }
-
-    /**
-     * 配置React经验Agent Hook
-     */
-    @Bean
-    @ConditionalOnProperty(prefix = "spring.ai.alibaba.codeact.extension.experience",
-                          name = "react-experience-enabled",
-                          havingValue = "true",
-                          matchIfMissing = true)
-    public ReactExperienceAgentHook reactExperienceAgentHook(ExperienceProvider experienceProvider,
-                                                            ExperienceExtensionProperties properties) {
-        log.info("ExperienceExtensionAutoConfiguration#reactExperienceAgentHook - reason=creating react experience agent hook bean");
-        return new ReactExperienceAgentHook(experienceProvider, properties);
-    }
-
-    /**
-     * 配置常识经验提示模型Hook
-     */
-    @Bean
-    @ConditionalOnProperty(prefix = "spring.ai.alibaba.codeact.extension.experience",
-                          name = "common-experience-enabled",
-                          havingValue = "true",
-                          matchIfMissing = true)
-    public CommonSenseExperienceModelHook commonSenseExperienceModelHook(ExperienceProvider experienceProvider,
-                                                                         ExperienceExtensionProperties properties) {
-        log.info("ExperienceExtensionAutoConfiguration#commonSenseExperienceModelHook - reason=creating common sense prompt model hook bean");
-        return new CommonSenseExperienceModelHook(experienceProvider, properties);
-    }
-
-    /**
-     * 配置常识经验注入假工具
-     *
-     * <p>这个工具与 CommonSenseExperienceModelHook 配套使用。
-     * Hook 会注入 AssistantMessage + ToolResponseMessage 配对来模拟工具调用，
-     * 注册这个工具可以让 ReactAgent 的路由逻辑正确识别和处理。
-     */
-    @Bean
-    @ConditionalOnProperty(prefix = "spring.ai.alibaba.codeact.extension.experience",
-                          name = "common-experience-enabled",
-                          havingValue = "true",
-                          matchIfMissing = true)
-    public CommonSenseInjectionTool commonSenseInjectionTool() {
-        log.info("ExperienceExtensionAutoConfiguration#commonSenseInjectionTool - reason=creating common sense injection tool bean");
-        return new CommonSenseInjectionTool();
-    }
-
-    /**
-     * 配置React策略经验注入假工具
-     *
-     * <p>这个工具与 ReactExperienceAgentHook 配套使用。
-     * Hook 会注入 AssistantMessage + ToolResponseMessage 配对来模拟工具调用，
-     * 注册这个工具可以让 ReactAgent 的路由逻辑正确识别和处理。
-     *
-     * <p>如果 LLM 错误地尝试调用这个工具，会返回错误提示。
-     */
-    @Bean
-    @ConditionalOnProperty(prefix = "spring.ai.alibaba.codeact.extension.experience",
-                          name = "react-experience-enabled",
-                          havingValue = "true",
-                          matchIfMissing = true)
-    public ReactStrategyInjectionTool reactStrategyInjectionTool() {
-        log.info("ExperienceExtensionAutoConfiguration#reactStrategyInjectionTool - reason=creating react strategy injection tool bean");
-        return new ReactStrategyInjectionTool();
     }
 }

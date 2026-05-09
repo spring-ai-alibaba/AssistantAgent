@@ -1,7 +1,7 @@
 package com.alibaba.assistant.agent.extension.experience.internal;
 
 import com.alibaba.assistant.agent.extension.experience.model.Experience;
-import com.alibaba.assistant.agent.extension.experience.model.ExperienceScope;
+import com.alibaba.assistant.agent.extension.experience.model.ExperienceMetadata;
 import com.alibaba.assistant.agent.extension.experience.model.ExperienceType;
 import com.alibaba.assistant.agent.extension.experience.spi.ExperienceRepository;
 import org.slf4j.Logger;
@@ -112,19 +112,17 @@ public class InMemoryExperienceRepository implements ExperienceRepository {
     }
 
     @Override
-    public List<Experience> findByTypeAndScope(ExperienceType type, ExperienceScope scope, String ownerId, String projectId) {
-        log.debug("InMemoryExperienceRepository#findByTypeAndScope - reason=start finding experiences type={}, scope={}, ownerId={}, projectId={}",
-                type, scope, ownerId, projectId);
+    public List<Experience> findByTypeAndTenantId(ExperienceType type, String tenantId) {
+        log.debug("InMemoryExperienceRepository#findByTypeAndTenantId - reason=start finding experiences type={}, tenantId={}",
+                type, tenantId);
 
         List<Experience> results = experienceStore.values().stream()
                 .filter(experience -> type == null || type.equals(experience.getType()))
-                .filter(experience -> scope == null || scope.equals(experience.getScope()))
-                .filter(experience -> ownerId == null || ownerId.equals(experience.getOwnerId()))
-                .filter(experience -> projectId == null || projectId.equals(experience.getProjectId()))
+                .filter(experience -> matchesTenantId(experience, tenantId))
                 .sorted((e1, e2) -> e2.getUpdatedAt().compareTo(e1.getUpdatedAt())) // 按更新时间倒序
                 .collect(Collectors.toList());
 
-        log.info("InMemoryExperienceRepository#findByTypeAndScope - reason=find completed, found {} experiences",
+        log.info("InMemoryExperienceRepository#findByTypeAndTenantId - reason=find completed, found {} experiences",
                 results.size());
 
         return results;
@@ -138,17 +136,40 @@ public class InMemoryExperienceRepository implements ExperienceRepository {
     }
 
     @Override
-    public long countByTypeAndScope(ExperienceType type, ExperienceScope scope) {
-        log.debug("InMemoryExperienceRepository#countByTypeAndScope - reason=start counting experiences type={}, scope={}",
-                type, scope);
+    public long countByType(ExperienceType type) {
+        log.debug("InMemoryExperienceRepository#countByType - reason=start counting experiences type={}", type);
 
         long count = experienceStore.values().stream()
                 .filter(experience -> type == null || type.equals(experience.getType()))
-                .filter(experience -> scope == null || scope.equals(experience.getScope()))
                 .count();
 
-        log.debug("InMemoryExperienceRepository#countByTypeAndScope - reason=count completed, result={}", count);
+        log.debug("InMemoryExperienceRepository#countByType - reason=count completed, result={}", count);
 
         return count;
+    }
+
+    @Override
+    public List<Experience> findAllByType(ExperienceType type) {
+        log.debug("InMemoryExperienceRepository#findAllByType - reason=start finding all experiences type={}", type);
+
+        if (type == null) {
+            log.warn("InMemoryExperienceRepository#findAllByType - reason=type is null, return all");
+            return new ArrayList<>(experienceStore.values());
+        }
+
+        List<Experience> results = experienceStore.values().stream()
+                .filter(experience -> type.equals(experience.getType()))
+                .sorted((e1, e2) -> e2.getUpdatedAt().compareTo(e1.getUpdatedAt()))
+                .collect(Collectors.toList());
+
+        log.info("InMemoryExperienceRepository#findAllByType - reason=find completed, type={}, found {} experiences",
+                type, results.size());
+
+        return results;
+    }
+
+    private boolean matchesTenantId(Experience experience, String tenantId) {
+        ExperienceMetadata metadata = experience.getMetadata() != null ? experience.getMetadata() : new ExperienceMetadata();
+        return metadata.matchesTenantId(tenantId);
     }
 }

@@ -55,7 +55,7 @@ public class CodeactEvaluationContextFactory {
 		Map<String, Object> executionResult = new HashMap<>();
 
 		// 提取用户输入 - 从 state 的 messages key 中获取
-		// 注意：由于其他 Hook（如 ReactExperienceAgentHook）可能已经向 messages 中注入了
+		// 注意：由于其他 Hook（如 ExperiencePrefetchHook）可能已经向 messages 中注入了
 		// AssistantMessage 和 ToolResponseMessage，这里需要遍历查找最后一条 UserMessage
 		Optional<List<Message>> messagesOpt = state.value("messages");
 		if (messagesOpt.isPresent()) {
@@ -265,7 +265,7 @@ public class CodeactEvaluationContextFactory {
 	/**
 	 * 从消息列表中查找最后一条 UserMessage 的内容
 	 *
-	 * <p>由于其他 Hook（如 ReactExperienceAgentHook）可能在 beforeAgent 阶段向 messages 中
+	 * <p>由于其他 Hook（如 ExperiencePrefetchHook）可能在 beforeAgent 阶段向 messages 中
 	 * 注入 AssistantMessage 和 ToolResponseMessage，直接取最后一条消息可能不是用户输入。
 	 * 此方法从后往前遍历，找到最后一条 UserMessage。
 	 *

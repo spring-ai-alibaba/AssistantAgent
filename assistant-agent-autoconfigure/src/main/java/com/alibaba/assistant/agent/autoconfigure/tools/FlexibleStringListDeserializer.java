@@ -53,14 +53,8 @@ public class FlexibleStringListDeserializer extends StdDeserializer<List<String>
 
 		if (token == JsonToken.START_ARRAY) {
 			List<String> result = new ArrayList<>();
-			while (p.nextToken() != JsonToken.END_ARRAY) {
-				String item = p.getValueAsString();
-				if (item != null) {
-					item = item.trim();
-					if (!item.isEmpty()) {
-						result.add(item);
-					}
-				}
+			while ((token = p.nextToken()) != JsonToken.END_ARRAY) {
+				collectArrayValue(p, token, result);
 			}
 			return result;
 		}
@@ -86,6 +80,30 @@ public class FlexibleStringListDeserializer extends StdDeserializer<List<String>
 
 		// Fallback for any other token type
 		return new ArrayList<>();
+	}
+
+	private void collectArrayValue(JsonParser p, JsonToken token, List<String> result) throws IOException {
+		if (token == JsonToken.START_ARRAY) {
+			while ((token = p.nextToken()) != JsonToken.END_ARRAY) {
+				collectArrayValue(p, token, result);
+			}
+			return;
+		}
+
+		if (token == JsonToken.START_OBJECT) {
+			p.skipChildren();
+			return;
+		}
+
+		String item = p.getValueAsString();
+		if (item == null) {
+			return;
+		}
+
+		item = item.trim();
+		if (!item.isEmpty()) {
+			result.add(item);
+		}
 	}
 
 	@Override

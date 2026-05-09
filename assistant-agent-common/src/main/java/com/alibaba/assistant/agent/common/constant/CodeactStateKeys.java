@@ -49,22 +49,10 @@ public final class CodeactStateKeys {
 	public static final String CURRENT_EXECUTION = "current_execution";
 
 	/**
-	 * Key for storing the current programming language
-	 * Type: Language
-	 */
-	public static final String CURRENT_LANGUAGE = "current_language";
-
-	/**
 	 * Key for storing user ID (for Store namespace)
 	 * Type: String
 	 */
 	public static final String USER_ID = "user_id";
-
-	/**
-	 * Key for storing whether initial code generation is complete
-	 * Type: Boolean
-	 */
-	public static final String INITIAL_CODE_GEN_DONE = "initial_code_gen_done";
 
 	// ==================== 工具白名单配置 ====================
 
@@ -80,29 +68,6 @@ public final class CodeactStateKeys {
 	 * 如果评估时 LLM 输出的是缩写/简短 ID，上层应用需要在写入 state 前将 ID 转换为对应的工具 name。
 	 */
 	public static final String AVAILABLE_TOOL_NAMES = "available_tool_names";
-
-	/**
-	 * 可用工具组白名单
-	 *
-	 * <p>类型：List&lt;String&gt;
-	 * <p>示例：["search", "reply", "app_helper"]
-	 * <p>用途：按工具组筛选，组名对应 CodeactToolMetadata.targetClassName()
-	 * <p>为空或不存在时：不按组筛选
-	 */
-	public static final String AVAILABLE_TOOL_GROUPS = "available_tool_groups";
-
-	/**
-	 * 白名单模式
-	 *
-	 * <p>类型：String
-	 * <p>可选值：
-	 *   - "INTERSECTION"（默认）：名称白名单和组白名单取交集
-	 *   - "UNION"：名称白名单和组白名单取并集
-	 *   - "NAME_ONLY"：仅使用名称白名单
-	 *   - "GROUP_ONLY"：仅使用组白名单
-	 * <p>为空或不存在时：默认为 INTERSECTION
-	 */
-	public static final String WHITELIST_MODE = "tool_whitelist_mode";
 
 	// ==================== 工具上下文（只读） ====================
 
@@ -138,28 +103,6 @@ public final class CodeactStateKeys {
 	public static final String CODEACT_TOOL_METADATA_LIST = "codeact_tool_metadata_list";
 
 	/**
-	 * 注入的全部 codeact 工具列表
-	 *
-	 * <p>类型：List&lt;CodeactTool&gt;
-	 * <p>由 CodeGeneratorSubAgent.init_context 节点注入
-	 * <p>上层应用可读取此列表进行评估
-	 * 
-	 * @deprecated 由于 CodeactTool 包含不可序列化的组件，不应将其写入 State。
-	 *             请使用 {@link #CODEACT_TOOL_NAMES} 存储工具名称，并通过 CodeactToolRegistry 获取完整工具对象。
-	 */
-	@Deprecated
-	public static final String CODEACT_TOOLS = "codeact_tools";
-
-	/**
-	 * 筛选后的 codeact 工具列表
-	 *
-	 * <p>类型：List&lt;CodeactTool&gt;
-	 * <p>由 CodeGeneratorNode 筛选后写入（可选）
-	 * <p>用于调试和审计
-	 */
-	public static final String FILTERED_CODEACT_TOOLS = "filtered_codeact_tools";
-
-	/**
 	 * 编程语言
 	 *
 	 * <p>类型：String
@@ -168,17 +111,58 @@ public final class CodeactStateKeys {
 	 */
 	public static final String LANGUAGE = "language";
 
-	// ==================== Hook 通信 ====================
+	// ==================== Experience progressive disclosure ====================
 
 	/**
-	 * CodeGeneratorNode 执行时传入的 messages 列表（含 beforeModel Hook 注入的内容）
+	 * 首轮预取使用的 disclosure query。
 	 *
-	 * <p>类型：List&lt;org.springframework.ai.chat.messages.Message&gt;
-	 * <p>由 CodeGeneratorNode 在调用模型后写入，供 afterModel Hook 读取与审计。
-	 * <p>写端：CodeGeneratorNode#apply（key = "codeact_node_messages"）
-	 * <p>读端：afterModel Hook（如需访问本次代码生成的完整 messages 上下文）
+	 * <p>类型：String
 	 */
-	public static final String CODEACT_NODE_MESSAGES = "codeact_node_messages";
+	public static final String EXPERIENCE_PREFETCH_QUERY = "experience_prefetch_query";
+
+	/**
+	 * 首轮预取状态。
+	 *
+	 * <p>类型：String
+	 * <p>取值：NOT_RUN / SKIPPED / COMPLETED
+	 */
+	public static final String EXPERIENCE_PREFETCH_STATUS = "experience_prefetch_status";
+
+	/**
+	 * 首轮预取得到的 grouped experience candidate cards。
+	 *
+	 * <p>类型：GroupedExperienceCandidates
+	 */
+	public static final String EXPERIENCE_PREFETCHED_CANDIDATES = "experience_prefetched_candidates";
+
+	/**
+	 * {@code read_exp} 返回的 detail cache。
+	 *
+	 * <p>类型：Map&lt;String, ReadExpResponse&gt;
+	 */
+	public static final String EXPERIENCE_DETAIL_CACHE = "experience_detail_cache";
+
+	/**
+	 * 已满足 DIRECT 披露条件、可直接注入 prompt 的经验内容。
+	 *
+	 * <p>类型：List&lt;DirectExperienceGrounding&gt;
+	 */
+	public static final String EXPERIENCE_DIRECT_GROUNDINGS = "experience_direct_groundings";
+
+	/**
+	 * 当前轮允许以 React 直调方式暴露的工具名集合。
+	 *
+	 * <p>类型：List&lt;String&gt;
+	 */
+	public static final String EXPERIENCE_ALLOWED_REACT_TOOL_NAMES = "experience_allowed_react_tool_names";
+
+	/**
+	 * 本 session 中已成功调用过 {@code read_exp} 的 experience id 集合；
+	 * {@code read_exp_doc} 的 session gate 依赖该状态。
+	 *
+	 * <p>类型：List&lt;String&gt;
+	 */
+	public static final String EXPERIENCE_READ_EXP_IDS = "experience_read_exp_ids";
 
 	// ==================== Session级别代码存储 ====================
 
@@ -192,4 +176,3 @@ public final class CodeactStateKeys {
 	 */
 	public static final String SESSION_GENERATED_CODES = "session_generated_codes";
 }
-

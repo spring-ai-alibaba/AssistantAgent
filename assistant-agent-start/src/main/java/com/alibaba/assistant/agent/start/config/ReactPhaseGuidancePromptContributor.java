@@ -15,6 +15,8 @@
  */
 package com.alibaba.assistant.agent.start.config;
 
+import com.alibaba.assistant.agent.common.constant.CodeactStateKeys;
+import com.alibaba.assistant.agent.extension.experience.disclosure.ExperienceDisclosurePayloads.GroupedExperienceCandidates;
 import com.alibaba.assistant.agent.evaluation.model.EvaluationResult;
 import com.alibaba.assistant.agent.extension.prompt.EvaluationBasedPromptContributor;
 import com.alibaba.assistant.agent.prompt.PromptContribution;
@@ -24,12 +26,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 /**
  * Prompt 指导提供者
  *
  * <p>根据评估结果生成 prompt 指导：
  * <ul>
  *   <li>is_fuzzy=模糊：需要让用户明确需求</li>
+ *   <li>is_fuzzy=一般：可以先分析或检索，必要时确认关键点</li>
  *   <li>is_fuzzy=清晰：按照用户的要求进行操作</li>
  * </ul>
  *
@@ -43,21 +48,45 @@ import org.springframework.stereotype.Component;
  * @since 1.0.0
  */
 @Component
-public class ReactPhasePromptGuidanceProvider extends EvaluationBasedPromptContributor {
+public class ReactPhaseGuidancePromptContributor extends EvaluationBasedPromptContributor {
 
-    private static final Logger log = LoggerFactory.getLogger(ReactPhasePromptGuidanceProvider.class);
+    private static final Logger log = LoggerFactory.getLogger(ReactPhaseGuidancePromptContributor.class);
 
     private static final String CRITERION_IS_FUZZY = "is_fuzzy";
     private static final String SUITE_ID = "default-suite";
 
-    public ReactPhasePromptGuidanceProvider() {
+    public ReactPhaseGuidancePromptContributor() {
         super("PromptGuidanceProvider", SUITE_ID, 10);
     }
 
     @Override
     protected boolean shouldContributeBasedOnResult(EvaluationResult result, PromptContributorContext context) {
-        // 只要有 is_fuzzy 评估结果就处理
-        return result.getCriterionResult(CRITERION_IS_FUZZY) != null;
+        if (result.getCriterionResult(CRITERION_IS_FUZZY) == null) {
+            return false;
+        }
+
+        Object isFuzzyValue = getCriterionValue(result, CRITERION_IS_FUZZY).orElse(null);
+        String isFuzzy = isFuzzyValue != null ? isFuzzyValue.toString() : null;
+        if (!"模糊".equals(isFuzzy)) {
+            return true;
+        }
+
+        boolean hasExperienceCandidates = context
+                .getAttribute(CodeactStateKeys.EXPERIENCE_PREFETCHED_CANDIDATES, GroupedExperienceCandidates.class)
+                .map(this::hasAnyCandidates)
+                .orElse(false);
+        boolean hasDirectGroundings = context
+                .getAttribute(CodeactStateKeys.EXPERIENCE_DIRECT_GROUNDINGS, List.class)
+                .map(list -> !list.isEmpty())
+                .orElse(false);
+
+        if (hasExperienceCandidates || hasDirectGroundings) {
+            log.info("PromptGuidanceProvider#shouldContributeBasedOnResult - reason=检测到经验候选，跳过模糊意图澄清指导, hasCandidates={}, hasDirectGroundings={}",
+                    hasExperienceCandidates, hasDirectGroundings);
+            return false;
+        }
+
+        return true;
     }
 
     @Override
@@ -78,6 +107,13 @@ public class ReactPhasePromptGuidanceProvider extends EvaluationBasedPromptContr
             sb.append("3. 可以提供几个可能的理解方向，让用户选择\n");
             sb.append("4. 等用户明确需求后，再进行下一步操作\n\n");
             sb.append("示例回复：「我注意到您的需求还不太明确，请问您是想要...还是...？」\n");
+        } else if ("一般".equals(isFuzzy)) {
+            sb.append("【一般意图处理策略】\n");
+            sb.append("当前用户意图被识别为**一般**，请按以下策略处理：\n\n");
+            sb.append("1. 任务方向基本明确，可以先分析、检索经验或尝试执行\n");
+            sb.append("2. 不要因为存在少量开放信息就立刻要求用户澄清\n");
+            sb.append("3. 只有当执行所需关键参数确实缺失时，再补充确认\n");
+            sb.append("4. 如果已有经验候选、工具线索或上下文信息，优先利用这些信息推进\n");
         } else if ("清晰".equals(isFuzzy)) {
             sb.append("【清晰意图处理策略】\n");
             sb.append("当前用户意图被识别为**清晰**，请按以下策略处理：\n\n");
@@ -96,5 +132,12 @@ public class ReactPhasePromptGuidanceProvider extends EvaluationBasedPromptContr
         return PromptContribution.builder()
                 .append(new UserMessage(sb.toString()))
                 .build();
+    }
+
+    private boolean hasAnyCandidates(GroupedExperienceCandidates candidates) {
+        return candidates != null
+                && (!(candidates.getCommonCandidates() == null || candidates.getCommonCandidates().isEmpty())
+                || !(candidates.getReactCandidates() == null || candidates.getReactCandidates().isEmpty())
+                || !(candidates.getToolCandidates() == null || candidates.getToolCandidates().isEmpty()));
     }
 }

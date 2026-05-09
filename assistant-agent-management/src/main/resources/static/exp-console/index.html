@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title id="page-title">Experience Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ─── Header ─── -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="logo-mark" aria-hidden="true">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+          <rect width="28" height="28" rx="6" fill="#3B82F6"/>
+          <path d="M8 10h12M8 14h8M8 18h10" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h1 class="header-title" id="header-title">Experience Console</h1>
+    </div>
+    <div class="header-center">
+      <div class="search-box">
+        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="search-input" class="search-input" placeholder="Search experiences..." autocomplete="off" spellcheck="false">
+        <kbd class="search-hint">/</kbd>
+      </div>
+    </div>
+    <div class="header-filters" id="header-filters">
+      <label class="header-filter-label" for="tenant-filter" id="tenant-filter-label">Tenant</label>
+      <select id="tenant-filter" class="header-filter-select">
+        <option value="">All Tenants</option>
+      </select>
+      <label class="header-filter-checkbox" for="include-global-filter">
+        <input type="checkbox" id="include-global-filter" checked>
+        <span id="include-global-filter-text">Include Global</span>
+      </label>
+    </div>
+    <div class="header-right">
+      <button class="btn btn-ghost" id="btn-language-toggle" title="Switch language">
+        <span id="btn-language-toggle-text">中文</span>
+      </button>
+      <button class="btn btn-ghost" id="btn-import-skill" title="Import SKILL">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <span id="btn-import-skill-text">Import SKILL</span>
+      </button>
+      <button class="btn btn-primary" id="btn-create">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        <span id="btn-create-text">New Experience</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ─── Tab Navigation ─── -->
+  <nav class="tab-bar">
+    <div class="tab-bar-inner">
+      <button class="tab active" data-tab="ALL">
+        <span id="tab-all-text">All</span> <span class="tab-count" id="count-all">0</span>
+      </button>
+      <button class="tab" data-tab="REACT">
+        <span class="type-dot type-dot--react"></span>
+        <span id="tab-react-text">React</span> <span class="tab-count" id="count-react">0</span>
+      </button>
+      <button class="tab" data-tab="COMMON">
+        <span class="type-dot type-dot--common"></span>
+        <span id="tab-common-text">Common</span> <span class="tab-count" id="count-common">0</span>
+      </button>
+      <button class="tab" data-tab="TOOL">
+        <span class="type-dot type-dot--tool"></span>
+        <span id="tab-tool-text">Tool</span> <span class="tab-count" id="count-tool">0</span>
+      </button>
+      <button class="tab tab--sources" data-tab="SOURCES">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.7"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        <span id="tab-sources-text">Tool Sources</span>
+      </button>
+      <div class="tab-indicator" id="tab-indicator"></div>
+    </div>
+    <div class="tab-bar-actions">
+      <button class="btn btn-ghost btn-sm" id="btn-export-all" title="Export all as SKILL">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <span id="btn-export-all-text">Export All</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ─── Main Content ─── -->
+  <main class="main-content">
+    <section id="experience-list" class="experience-list">
+      <!-- Cards rendered by JS -->
+    </section>
+
+    <div id="pagination" class="pagination" hidden>
+      <button class="btn btn-ghost btn-sm" id="btn-prev" disabled>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        <span id="btn-prev-text">Prev</span>
+      </button>
+      <span class="page-info" id="page-info">Page 1 of 1</span>
+      <button class="btn btn-ghost btn-sm" id="btn-next" disabled>
+        <span id="btn-next-text">Next</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+
+    <!-- Tool Sources (TOOL tab only) -->
+    <section id="tool-sources" class="tool-sources" hidden>
+      <h2 class="section-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+        </svg>
+        <span id="tool-sources-section-title">Tool Sources</span>
+      </h2>
+      <div id="tool-sources-list" class="tool-sources-grid">
+        <!-- Tool source cards rendered by JS -->
+      </div>
+    </section>
+  </main>
+
+  <!-- ─── Create / Edit Modal ─── -->
+  <div class="modal-overlay" id="edit-modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modal-title">New Experience</h2>
+        <button class="btn-icon modal-close" id="modal-close" aria-label="Close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <form id="experience-form" class="modal-body" autocomplete="off">
+        <input type="hidden" id="form-id">
+        <div class="form-row">
+          <div class="form-group" id="form-group-type">
+            <label class="form-label" for="form-type" id="form-label-type">Type</label>
+            <select id="form-type" class="form-select" required>
+              <option value="" id="form-type-option-empty">Select type...</option>
+              <option value="REACT">REACT</option>
+              <option value="COMMON">COMMON</option>
+              <option value="TOOL">TOOL</option>
+            </select>
+          </div>
+          <div class="form-group flex-1">
+            <label class="form-label" for="form-name" id="form-label-name">Name</label>
+            <input type="text" id="form-name" class="form-input" placeholder="Experience name" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="form-description" id="form-label-description">Description</label>
+          <textarea id="form-description" class="form-textarea" rows="2" placeholder="Brief description…"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="form-content" id="form-label-content">Content</label>
+          <textarea id="form-content" class="form-textarea form-textarea--mono" rows="10" placeholder="Experience content…" required></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="form-tags"><span id="form-label-tags">Tags</span> <span class="form-hint" id="form-hint-comma-separated">comma-separated</span></label>
+          <input type="text" id="form-tags" class="form-input" placeholder="e.g. debugging, best-practice, java">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="form-tenant-ids"><span id="form-label-tenant-ids">Tenant ID(s)</span> <span class="form-hint" id="form-hint-tenant">comma-separated, empty means global</span></label>
+          <div id="form-tenant-multiselect" class="tenant-multiselect" tabindex="0">
+            <button type="button" id="form-tenant-trigger" class="tenant-multiselect-trigger" aria-haspopup="listbox" aria-expanded="false">
+              <div id="form-tenant-tags" class="tenant-multiselect-tags"></div>
+              <span id="form-tenant-placeholder" class="tenant-multiselect-placeholder">Select tenant(s)...</span>
+              <span class="tenant-multiselect-arrow">▾</span>
+            </button>
+            <div id="form-tenant-dropdown" class="tenant-multiselect-dropdown" hidden>
+              <input type="text" id="form-tenant-search" class="tenant-multiselect-search" placeholder="Search tenant...">
+              <div id="form-tenant-options" class="tenant-multiselect-options"></div>
+            </div>
+            <select id="form-tenant-ids" class="form-select form-select--multi" multiple hidden></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-1" id="form-group-disclosure-strategy">
+            <label class="form-label" for="form-disclosure-strategy" id="form-label-disclosure-strategy">Disclosure Strategy</label>
+            <select id="form-disclosure-strategy" class="form-select">
+              <option value="" id="form-disclosure-option-default">Default / None</option>
+              <option value="PROGRESSIVE">PROGRESSIVE</option>
+              <option value="DIRECT">DIRECT</option>
+            </select>
+          </div>
+          <div class="form-group flex-1" id="form-group-tool-invocation-path" hidden>
+            <label class="form-label" for="form-tool-invocation-path" id="form-label-tool-invocation-path">Tool Invocation Path</label>
+            <select id="form-tool-invocation-path" class="form-select">
+              <option value="CODE_ONLY">CODE_ONLY</option>
+              <option value="REACT_DIRECT">REACT_DIRECT</option>
+            </select>
+          </div>
+          <div class="form-group flex-1" id="form-group-associated-tools">
+            <label class="form-label" for="form-associated-tools"><span id="form-label-associated-tools">Associated Tools</span> <span class="form-hint" id="form-hint-comma-separated-2">comma-separated</span></label>
+            <input type="text" id="form-associated-tools" class="form-input" placeholder="e.g. reply_tools.send_message, search_tools.query">
+          </div>
+        </div>
+        <div class="form-group" id="form-group-related-experiences">
+          <label class="form-label" for="form-related-experiences"><span id="form-label-related-experiences">Related Experiences</span> <span class="form-hint" id="form-hint-related-experiences">comma-separated IDs</span></label>
+          <input type="text" id="form-related-experiences" class="form-input" placeholder="e.g. exp-001, exp-002">
+        </div>
+        <div class="form-group" id="form-fastintent-section">
+          <label class="form-label" id="form-label-fast-intent">Fast Intent</label>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label class="form-label" for="form-fastintent-enabled" id="form-label-fastintent-enabled">Enabled</label>
+              <select id="form-fastintent-enabled" class="form-select">
+                <option value="false" id="form-fastintent-enabled-false">Disabled</option>
+                <option value="true" id="form-fastintent-enabled-true">Enabled</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label class="form-label" for="form-fastintent-priority" id="form-label-fastintent-priority">Priority</label>
+              <input type="number" id="form-fastintent-priority" class="form-input" value="0">
+            </div>
+            <div class="form-group flex-1">
+              <label class="form-label" for="form-fastintent-mode" id="form-label-fastintent-mode">Mode</label>
+              <select id="form-fastintent-mode" class="form-select">
+                <option value="FASTPATH">FASTPATH</option>
+                <option value="FASTPATH_THEN_REFERENCE">FASTPATH_THEN_REFERENCE</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label class="form-label" for="form-fastintent-fallback" id="form-label-fastintent-fallback">Fallback</label>
+              <select id="form-fastintent-fallback" class="form-select">
+                <option value="REFERENCE_ONLY">REFERENCE_ONLY</option>
+                <option value="FAIL_FAST">FAIL_FAST</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="form-fastintent-match" id="form-label-fastintent-match">Fast Intent Match JSON</label>
+            <textarea id="form-fastintent-match" class="form-textarea form-textarea--mono" rows="8" placeholder='{"condition":{"type":"message_prefix","value":"帮我"}}'></textarea>
+          </div>
+        </div>
+        <div class="form-group" id="form-group-artifact-json">
+          <label class="form-label" for="form-artifact-json" id="form-label-artifact-json">Artifact JSON</label>
+          <textarea id="form-artifact-json" class="form-textarea form-textarea--mono" rows="10" placeholder='{"react":{"assistantText":"...","plan":{"toolCalls":[]}}}'></textarea>
+        </div>
+        <div class="form-group" id="form-group-references" hidden>
+          <label class="form-label" id="form-label-references">References <button type="button" id="btn-resummarize" class="btn btn--ghost" style="margin-left:8px;font-size:12px;padding:2px 8px;">Re-summarize</button></label>
+          <div id="form-references-list" class="form-textarea form-textarea--mono" style="min-height:80px;max-height:240px;overflow:auto;padding:8px;white-space:pre-wrap;"></div>
+        </div>
+        <div class="form-group" id="form-group-assets" hidden>
+          <label class="form-label" id="form-label-assets">Assets</label>
+          <div id="form-assets-list" class="form-textarea form-textarea--mono" style="min-height:80px;max-height:240px;overflow:auto;padding:8px;white-space:pre-wrap;"></div>
+        </div>
+        <div class="form-group" id="form-group-properties-json">
+          <label class="form-label" for="form-properties-json" id="form-label-properties-json">Metadata Properties JSON</label>
+          <textarea id="form-properties-json" class="form-textarea form-textarea--mono" rows="6" placeholder='{"scenario":"新建变更"}'></textarea>
+        </div>
+      </form>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="modal-cancel">Cancel</button>
+        <button class="btn btn-primary" id="modal-save">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <span id="modal-save-text">Save</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SKILL Import Modal ─── -->
+  <div class="modal-overlay" id="skill-import-modal" hidden>
+    <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="skill-import-title">
+      <div class="modal-header">
+        <h2 class="modal-title" id="skill-import-title">Import SKILL</h2>
+        <button class="btn-icon modal-close" data-close="skill-import-modal" aria-label="Close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- Import mode tabs -->
+        <div class="import-tabs">
+          <button class="import-tab active" id="tab-upload-file" data-tab="upload">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <span id="tab-upload-file-text">Upload Package</span>
+          </button>
+          <button class="import-tab" id="tab-paste-text" data-tab="paste">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+              <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+            </svg>
+            <span id="tab-paste-text-text">Paste Markdown</span>
+          </button>
+        </div>
+
+        <!-- Upload tab content -->
+        <div class="import-tab-content" id="import-tab-upload">
+          <div class="upload-dropzone" id="skill-upload-dropzone">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="upload-icon">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <p class="upload-text" id="upload-dropzone-text">Drag & drop a .tgz or .zip skill package here</p>
+            <p class="upload-hint" id="upload-dropzone-hint">or click to browse</p>
+            <input type="file" id="skill-upload-input" accept=".tgz,.tar.gz,.zip" hidden>
+            <div id="upload-file-info" class="upload-file-info" hidden>
+              <span id="upload-file-name"></span>
+              <button class="btn-icon btn-icon--sm" id="upload-file-clear" title="Remove">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Paste tab content (original) -->
+        <div class="import-tab-content" id="import-tab-paste" hidden>
+          <div class="form-group">
+            <label class="form-label" for="skill-import-content" id="skill-import-content-label">Paste SKILL markdown content</label>
+            <textarea id="skill-import-content" class="form-textarea form-textarea--mono" rows="12" placeholder="# SKILL: My Experience&#10;&#10;## Description&#10;..."></textarea>
+          </div>
+        </div>
+
+        <!-- Preview area (shared) -->
+        <div id="skill-preview-area" class="skill-preview" hidden>
+          <h3 class="skill-preview-title" id="skill-preview-title">Preview</h3>
+          <div id="skill-preview-content" class="skill-preview-card"></div>
+        </div>
+
+        <!-- Import result details -->
+        <div id="skill-import-result-area" class="skill-import-result" hidden>
+          <h3 class="skill-preview-title" id="skill-import-result-title">Import Result</h3>
+          <div id="skill-import-result-content"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-close="skill-import-modal" id="skill-import-cancel">Cancel</button>
+        <button class="btn btn-ghost" id="btn-skill-preview">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+          </svg>
+          <span id="btn-skill-preview-text">Preview</span>
+        </button>
+        <button class="btn btn-primary" id="btn-skill-import-submit">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          <span id="btn-skill-import-submit-text">Import</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SKILL Export Modal ─── -->
+  <div class="modal-overlay" id="skill-export-modal" hidden>
+    <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="skill-export-title">
+      <div class="modal-header">
+        <h2 class="modal-title" id="skill-export-title">Export SKILL</h2>
+        <button class="btn-icon modal-close" data-close="skill-export-modal" aria-label="Close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <textarea id="skill-export-content" class="form-textarea form-textarea--mono" rows="16" readonly></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-close="skill-export-modal" id="skill-export-close">Close</button>
+        <button class="btn btn-primary" id="btn-copy-skill">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+          <span id="btn-copy-skill-text">Copy to Clipboard</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Confirm Dialog ─── -->
+  <div class="modal-overlay" id="confirm-dialog" hidden>
+    <div class="modal modal--sm" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">
+      <div class="modal-header modal-header--danger">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <h2 class="modal-title" id="confirm-title">Confirm Delete</h2>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-message" class="confirm-text"></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="confirm-cancel">Cancel</button>
+        <button class="btn btn-danger" id="confirm-ok">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Toast Container ─── -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

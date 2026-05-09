@@ -19,9 +19,6 @@ import com.alibaba.assistant.agent.core.context.CodeContext;
 import com.alibaba.assistant.agent.core.context.SessionCodeManager;
 import com.alibaba.assistant.agent.core.executor.RuntimeEnvironmentManager;
 import com.alibaba.assistant.agent.core.model.GeneratedCode;
-import com.alibaba.assistant.agent.extension.experience.fastintent.CodeFastIntentSupport;
-import com.alibaba.assistant.agent.extension.experience.model.Experience;
-import com.alibaba.assistant.agent.extension.experience.model.FastIntentConfig;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.agent.tools.ToolContextConstants;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -35,8 +32,6 @@ import org.springframework.ai.tool.function.FunctionToolCallback;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.util.function.BiFunction;
 
 /**
@@ -65,18 +60,10 @@ public class WriteConditionCodeTool implements BiFunction<WriteConditionCodeTool
 	private final CodeContext codeContext;
 	private final RuntimeEnvironmentManager environmentManager;
 
-	private final CodeFastIntentSupport codeFastIntentSupport;
-
 	public WriteConditionCodeTool(CodeContext codeContext,
-								  RuntimeEnvironmentManager environmentManager,
-								  CodeFastIntentSupport codeFastIntentSupport) {
+								  RuntimeEnvironmentManager environmentManager) {
 		this.codeContext = codeContext;
 		this.environmentManager = environmentManager;
-		this.codeFastIntentSupport = codeFastIntentSupport;
-	}
-
-	public WriteConditionCodeTool(CodeContext codeContext, RuntimeEnvironmentManager environmentManager) {
-		this(codeContext, environmentManager, null);
 	}
 
 	@Override
@@ -84,12 +71,6 @@ public class WriteConditionCodeTool implements BiFunction<WriteConditionCodeTool
 		logger.info("WriteConditionCodeTool#apply 注册条件判断代码: functionName={}", request.functionName);
 
 		try {
-			// 0. FastPath Intent (CODE): hit => skip validation
-			String fastIntentResult = tryFastIntent(request, toolContext);
-			if (fastIntentResult != null) {
-				return fastIntentResult;
-			}
-
 			// 1. 验证必填参数
 			if (request.functionName == null || request.functionName.trim().isEmpty()) {
 				return "Error: functionName is required";
@@ -118,50 +99,6 @@ public class WriteConditionCodeTool implements BiFunction<WriteConditionCodeTool
 		} catch (Exception e) {
 			logger.error("WriteConditionCodeTool#apply 条件判断代码注册失败", e);
 			return "Error: " + e.getMessage();
-		}
-	}
-
-	@SuppressWarnings("unchecked")
-	private String tryFastIntent(Request request, ToolContext toolContext) {
-		try {
-			if (codeFastIntentSupport == null || toolContext == null) {
-				return null;
-			}
-
-			String language = (codeContext != null && codeContext.getLanguage() != null) ? codeContext.getLanguage().name() : null;
-			Map<String, Object> toolReq = CodeFastIntentSupport.toolReqOf(request.description, request.functionName, request.parameters);
-			Optional<CodeFastIntentSupport.Hit> hitOpt = codeFastIntentSupport.tryHit(toolContext, toolReq, language);
-			if (hitOpt.isEmpty()) {
-				return null;
-			}
-
-			Experience best = hitOpt.get().experience();
-			String code = hitOpt.get().code();
-			if (code == null) {
-				return null;
-			}
-
-			try {
-				registerCode(request, code, toolContext);
-			} catch (Exception e) {
-				String err = e.getMessage();
-				logger.warn("WriteConditionCodeTool#tryFastIntent - reason=fast-intent register failed, expId={}, error={}",
-						best != null ? best.getId() : "unknown", err);
-
-				FastIntentConfig.FastIntentFallback fb = CodeFastIntentSupport.getOnRegisterFallback(best);
-				if (fb == FastIntentConfig.FastIntentFallback.FAIL_FAST) {
-					return "Error: FastIntent(Code) register failed: " + err;
-				}
-				return null;
-			}
-
-			logger.info("WriteConditionCodeTool#tryFastIntent - reason=fast-intent HIT (skip codegen), expId={}",
-					best != null ? best.getId() : "unknown");
-			return "FastIntent(Code) hit: " + (best != null ? best.getTitle() : "matched") + "\n```python\n" + code + "\n```";
-
-		} catch (Exception e) {
-			logger.warn("WriteConditionCodeTool#tryFastIntent - reason=fast-intent failed, fallback to normal flow, error={}", e.getMessage());
-			return null;
 		}
 	}
 
@@ -307,19 +244,6 @@ public class WriteConditionCodeTool implements BiFunction<WriteConditionCodeTool
 			RuntimeEnvironmentManager environmentManager) {
 
 		WriteConditionCodeTool tool = new WriteConditionCodeTool(codeContext, environmentManager);
-
-		return FunctionToolCallback.builder("write_condition_code", tool)
-				.description(WRITE_CONDITION_CODE_DESCRIPTION)
-				.inputType(Request.class)
-				.build();
-	}
-
-	public static ToolCallback createWriteConditionCodeToolCallback(
-			CodeContext codeContext,
-			RuntimeEnvironmentManager environmentManager,
-			CodeFastIntentSupport codeFastIntentSupport) {
-
-		WriteConditionCodeTool tool = new WriteConditionCodeTool(codeContext, environmentManager, codeFastIntentSupport);
 
 		return FunctionToolCallback.builder("write_condition_code", tool)
 				.description(WRITE_CONDITION_CODE_DESCRIPTION)

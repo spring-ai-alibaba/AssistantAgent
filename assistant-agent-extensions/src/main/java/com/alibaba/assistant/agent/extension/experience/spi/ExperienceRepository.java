@@ -1,7 +1,6 @@
 package com.alibaba.assistant.agent.extension.experience.spi;
 
 import com.alibaba.assistant.agent.extension.experience.model.Experience;
-import com.alibaba.assistant.agent.extension.experience.model.ExperienceScope;
 import com.alibaba.assistant.agent.extension.experience.model.ExperienceType;
 
 import java.util.Collection;
@@ -49,15 +48,13 @@ public interface ExperienceRepository {
     Optional<Experience> findById(String id);
 
     /**
-     * 根据类型和范围查找经验
+     * 根据类型和租户查找经验
      *
      * @param type 经验类型
-     * @param scope 生效范围
-     * @param ownerId 所有者ID，可为null
-     * @param projectId 项目ID，可为null
+     * @param tenantId 当前请求租户ID；为空时仅返回全局经验
      * @return 经验列表
      */
-    List<Experience> findByTypeAndScope(ExperienceType type, ExperienceScope scope, String ownerId, String projectId);
+    List<Experience> findByTypeAndTenantId(ExperienceType type, String tenantId);
 
     /**
      * 统计经验数量
@@ -67,11 +64,18 @@ public interface ExperienceRepository {
     long count();
 
     /**
-     * 根据条件统计经验数量
+     * 根据类型统计经验数量
      *
      * @param type 经验类型，可为null
-     * @param scope 生效范围，可为null
      * @return 符合条件的经验数量
      */
-    long countByTypeAndScope(ExperienceType type, ExperienceScope scope);
+    long countByType(ExperienceType type);
+
+    /**
+     * 根据类型获取所有经验（用于启动时全量加载 TOOL 经验）
+     *
+     * @param type 经验类型
+     * @return 该类型的所有经验列表
+     */
+    List<Experience> findAllByType(ExperienceType type);
 }

@@ -29,7 +29,6 @@ import com.alibaba.assistant.agent.core.tool.DefaultCodeactToolRegistry;
 import com.alibaba.assistant.agent.core.tool.ToolRegistryBridgeFactory;
 import com.alibaba.assistant.agent.core.tool.schema.ReturnSchemaRegistry;
 import com.alibaba.assistant.agent.extension.experience.config.ExperienceExtensionProperties;
-import com.alibaba.assistant.agent.extension.experience.fastintent.CodeFastIntentSupport;
 import com.alibaba.assistant.agent.extension.experience.fastintent.FastIntentService;
 import com.alibaba.assistant.agent.extension.experience.spi.ExperienceProvider;
 import com.alibaba.assistant.agent.autoconfigure.tools.ExecuteCodeTool;
@@ -627,11 +626,6 @@ public class CodeactAgent extends ReactAgent {
 				this.executionTimeoutMs
 			);
 
-			CodeFastIntentSupport codeFastIntentSupport = 
-				(experienceProvider != null && experienceExtensionProperties != null && fastIntentService != null)
-					? new CodeFastIntentSupport(experienceProvider, experienceExtensionProperties, fastIntentService)
-					: null;
-			
 			ExecuteCodeTool executeCodeTool = new ExecuteCodeTool(this.executor, this.codeContext, this.variableProvider);
 
 			// Manually create the components like DefaultBuilder does
@@ -706,10 +700,10 @@ public class CodeactAgent extends ReactAgent {
 			}
 
 			allTools.add(WriteCodeTool.createWriteCodeToolCallback(
-				this.codeContext, this.environmentManager, codeFastIntentSupport));
+				this.codeContext, this.environmentManager));
 			
 			allTools.add(WriteConditionCodeTool.createWriteConditionCodeToolCallback(
-				this.codeContext, this.environmentManager, codeFastIntentSupport));
+				this.codeContext, this.environmentManager));
 			
 			allTools.add(
 				FunctionToolCallback.builder("execute_code", executeCodeTool)

@@ -15,6 +15,8 @@
  */
 package com.alibaba.assistant.agent.extension.prompt.config;
 
+import com.alibaba.assistant.agent.extension.prompt.CodeactToolSignatureInjectionToolCallback;
+import com.alibaba.assistant.agent.extension.prompt.PromptContributionToolCallback;
 import com.alibaba.assistant.agent.extension.prompt.ReactPromptContributorModelHook;
 import com.alibaba.assistant.agent.prompt.DefaultPromptContributorManager;
 import com.alibaba.assistant.agent.prompt.PromptContributor;
@@ -30,7 +32,7 @@ import java.util.List;
 
 /**
  * Prompt Contributor 自动配置类
- * 负责创建 PromptContributorManager 和 PromptContributorModelHook
+ * 负责创建 PromptContributorManager、PromptContributorModelHook 和占位 ToolCallback
  *
  * @author Assistant Agent Team
  */
@@ -60,5 +62,24 @@ public class PromptContributorAutoConfiguration {
         log.info("PromptContributorAutoConfiguration#promptContributorModelHook - reason=创建 PromptContributorModelHook");
         return new ReactPromptContributorModelHook(manager);
     }
-}
 
+    /**
+     * 占位 ToolCallback：防止 LLM 看到 __prompt_contribution__ tool call 后困惑。
+     * <p>需要在 Agent Builder 中通过 {@code .tools(promptContributionToolCallback)} 注册。
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "spring.ai.alibaba.codeact.extension.prompt.react", name = "enabled", havingValue = "true")
+    public PromptContributionToolCallback promptContributionToolCallback() {
+        log.info("PromptContributorAutoConfiguration - reason=创建 PromptContributionToolCallback 占位工具");
+        return PromptContributionToolCallback.getInstance();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "spring.ai.alibaba.codeact.extension.prompt.react", name = "enabled", havingValue = "true")
+    public CodeactToolSignatureInjectionToolCallback codeactToolSignatureInjectionToolCallback() {
+        log.info("PromptContributorAutoConfiguration - reason=创建 CodeactToolSignatureInjectionToolCallback 占位工具");
+        return CodeactToolSignatureInjectionToolCallback.getInstance();
+    }
+}

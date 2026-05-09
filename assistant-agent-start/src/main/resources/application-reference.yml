@@ -30,8 +30,6 @@ spring.ai.dashscope:
 spring.ai.alibaba.codeact.extension.experience:
   enabled: true                       # Master switch
   code-experience-enabled: true       # Code generation experiences
-  react-experience-enabled: true      # ReAct pattern experiences
-  common-experience-enabled: true     # Common sense experiences
 
   # FastIntent - Quick response without full agent execution
   fast-intent-enabled: false          # Default: disabled
@@ -56,6 +54,16 @@ spring.ai.alibaba.codeact.extension.experience:
 
   logging:
     enabled: true
+
+# ============================================================================
+# Experience Management Console
+# Default: disabled unless the management module is on the classpath
+# ============================================================================
+experience:
+  console:
+    enabled: false                    # Enable /exp-console/
+    default-page-size: 20
+    base-path: /exp-console
 
 # ============================================================================
 # Learning Module
@@ -172,4 +180,3 @@ logging:
     com.alibaba.assistant.agent: INFO
     # com.alibaba.assistant.agent: DEBUG
     # org.springframework.ai: DEBUG
-

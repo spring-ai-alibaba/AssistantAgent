@@ -3,13 +3,11 @@ package com.alibaba.assistant.agent.extension.experience.internal;
 import com.alibaba.assistant.agent.extension.experience.model.Experience;
 import com.alibaba.assistant.agent.extension.experience.model.ExperienceQuery;
 import com.alibaba.assistant.agent.extension.experience.model.ExperienceQueryContext;
-import com.alibaba.assistant.agent.extension.experience.model.ExperienceScope;
-import com.alibaba.assistant.agent.extension.experience.model.*;
+import com.alibaba.assistant.agent.extension.experience.model.ExperienceType;
 import com.alibaba.assistant.agent.extension.experience.spi.ExperienceProvider;
 import com.alibaba.assistant.agent.extension.experience.spi.ExperienceRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
@@ -41,23 +39,9 @@ public class InMemoryExperienceProvider implements ExperienceProvider {
             return new ArrayList<>();
         }
 
-        List<Experience> candidates = new ArrayList<>();
-
-        // 根据scope优先级查询
-        List<ExperienceScope> scopes = determinePriorityScopes(query, context);
-
-        for (ExperienceScope scope : scopes) {
-            String ownerId = getOwnerIdForScope(scope, context);
-            String projectId = getProjectIdForScope(scope, context);
-
-            List<Experience> scopedExperiences = experienceRepository.findByTypeAndScope(
-                    query.getType(), scope, ownerId, projectId);
-
-            candidates.addAll(scopedExperiences);
-
-            log.debug("InMemoryExperienceProvider#query - reason=found {} experiences for scope={}",
-                    scopedExperiences.size(), scope);
-        }
+        List<Experience> candidates = experienceRepository.findByTypeAndTenantId(
+                query.getType(),
+                context != null ? context.getTenantId() : null);
 
         // 应用过滤条件
         List<Experience> filtered = applyFilters(candidates, query, context);
@@ -72,98 +56,15 @@ public class InMemoryExperienceProvider implements ExperienceProvider {
     }
 
     /**
-     * 根据查询条件和上下文确定scope优先级
-     */
-    private List<ExperienceScope> determinePriorityScopes(ExperienceQuery query, ExperienceQueryContext context) {
-        if (!CollectionUtils.isEmpty(query.getScopes())) {
-            return query.getScopes();
-        }
-
-        // 默认优先级: USER+PROJECT -> USER -> TEAM+PROJECT -> TEAM -> PROJECT -> GLOBAL
-        List<ExperienceScope> scopes = new ArrayList<>();
-
-        if (context != null && StringUtils.hasText(context.getUserId())) {
-            if (StringUtils.hasText(context.getProjectId())) {
-                // USER + PROJECT 优先级最高，这里通过多次查询实现
-                scopes.add(ExperienceScope.USER);
-            }
-            scopes.add(ExperienceScope.USER);
-            scopes.add(ExperienceScope.TEAM);
-        }
-
-        if (context != null && StringUtils.hasText(context.getProjectId())) {
-            scopes.add(ExperienceScope.PROJECT);
-        }
-
-        scopes.add(ExperienceScope.GLOBAL);
-
-        return scopes.stream().distinct().collect(Collectors.toList());
-    }
-
-    /**
-     * 根据scope确定查询用的ownerId
-     */
-    private String getOwnerIdForScope(ExperienceScope scope, ExperienceQueryContext context) {
-        if (context == null) {
-            return null;
-        }
-
-        return switch (scope) {
-            case USER -> context.getUserId();
-            case TEAM ->
-                // TODO: 从context中获取团队ID，这里暂时使用userId的前缀
-                    StringUtils.hasText(context.getUserId()) ?
-                            context.getUserId().split("@")[0] : null;
-            default -> null;
-        };
-    }
-
-    /**
-     * 根据scope确定查询用的projectId
-     */
-    private String getProjectIdForScope(ExperienceScope scope, ExperienceQueryContext context) {
-        if (context == null) {
-            return null;
-        }
-
-        if (scope == ExperienceScope.PROJECT || scope == ExperienceScope.USER || scope == ExperienceScope.TEAM) {
-            return context.getProjectId();
-        }
-
-        return null;
-    }
-
-    /**
      * 应用过滤条件
      */
     private List<Experience> applyFilters(List<Experience> experiences, ExperienceQuery query, ExperienceQueryContext context) {
         return experiences.stream()
-                .filter(experience -> matchesLanguage(experience, query, context))
                 .filter(experience -> matchesTags(experience, query))
                 .filter(experience -> matchesText(experience, query))
-                .distinct() // 去重，可能同一经验在不同scope下被找到
+                .filter(experience -> matchesDisclosureStrategy(experience, query))
+                .distinct()
                 .collect(Collectors.toList());
-    }
-
-    /**
-     * 语言匹配检查
-     */
-    private boolean matchesLanguage(Experience experience, ExperienceQuery query, ExperienceQueryContext context) {
-        String queryLanguage = query.getLanguage();
-        if (!StringUtils.hasText(queryLanguage) && context != null) {
-            queryLanguage = context.getLanguage();
-        }
-
-        if (!StringUtils.hasText(queryLanguage)) {
-            return true; // 没有语言限制
-        }
-
-        String experienceLanguage = experience.getLanguage();
-        if (!StringUtils.hasText(experienceLanguage)) {
-            return true; // 经验没有语言限制
-        }
-
-        return queryLanguage.equalsIgnoreCase(experienceLanguage);
     }
 
     /**
@@ -171,12 +72,12 @@ public class InMemoryExperienceProvider implements ExperienceProvider {
      */
     private boolean matchesTags(Experience experience, ExperienceQuery query) {
         Set<String> queryTags = query.getTags();
-        if (CollectionUtils.isEmpty(queryTags)) {
+        if (queryTags == null || queryTags.isEmpty()) {
             return true; // 没有标签限制
         }
 
         Set<String> experienceTags = experience.getTags();
-        if (CollectionUtils.isEmpty(experienceTags)) {
+        if (experienceTags == null || experienceTags.isEmpty()) {
             return false; // 经验没有标签，但查询有标签要求
         }
 
@@ -186,6 +87,7 @@ public class InMemoryExperienceProvider implements ExperienceProvider {
 
     /**
      * 文本匹配检查 (基于子串匹配数量)
+     * 要求匹配分数达到最低阈值，避免仅靠 "结果"/"是多" 等常见 2 字词就命中。
      */
     private boolean matchesText(Experience experience, ExperienceQuery query) {
         String queryText = query.getText();
@@ -193,13 +95,35 @@ public class InMemoryExperienceProvider implements ExperienceProvider {
             return true; // 没有文本限制
         }
 
+        int minScore = Math.max(3, queryText.length() / 3);
+
         String content = experience.getContent();
-        if (!StringUtils.hasText(content)) {
-            return false;
+        String name = experience.getName();
+        String description = experience.getDescription();
+
+        // 匹配 content、name 或 description 任一
+        boolean hasMatch = false;
+        if (StringUtils.hasText(content) && calculateMatchScore(content, queryText) >= minScore) {
+            hasMatch = true;
+        }
+        if (!hasMatch && StringUtils.hasText(name) && calculateMatchScore(name, queryText) >= minScore) {
+            hasMatch = true;
+        }
+        if (!hasMatch && StringUtils.hasText(description) && calculateMatchScore(description, queryText) >= minScore) {
+            hasMatch = true;
         }
 
-        // 只要有任意子串匹配，就认为匹配（由排序决定相关性）
-        return calculateMatchScore(content, queryText) > 0;
+        return hasMatch;
+    }
+
+    /**
+     * 披露策略匹配检查
+     */
+    private boolean matchesDisclosureStrategy(Experience experience, ExperienceQuery query) {
+        if (query.getDisclosureStrategy() == null) {
+            return true;
+        }
+        return query.getDisclosureStrategy().equals(experience.getDisclosureStrategy());
     }
 
     /**
@@ -261,8 +185,8 @@ public class InMemoryExperienceProvider implements ExperienceProvider {
         }
 
         return switch (query.getOrderBy()) {
-            case CREATED_AT -> (e1, e2) -> e2.getCreatedAt().compareTo(e1.getCreatedAt());
-            case UPDATED_AT -> (e1, e2) -> e2.getUpdatedAt().compareTo(e1.getUpdatedAt());
+            case CREATED_AT -> Comparator.comparing(Experience::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder()));
+            case UPDATED_AT -> Comparator.comparing(Experience::getUpdatedAt, Comparator.nullsLast(Comparator.reverseOrder()));
             case SCORE ->
                 // TODO: 实现基于置信度的评分排序
                     (e1, e2) -> {

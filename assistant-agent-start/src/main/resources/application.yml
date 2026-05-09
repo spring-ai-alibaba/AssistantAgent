@@ -37,6 +37,10 @@ spring.ai.alibaba.codeact.extension.experience:
   logging:
     enabled: true
 
+experience:
+  console:
+    enabled: true
+
 # ============================================================================
 # Learning Module - with after-agent learning
 # ============================================================================

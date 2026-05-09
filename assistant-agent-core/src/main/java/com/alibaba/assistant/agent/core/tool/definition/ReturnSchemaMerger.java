@@ -16,6 +16,7 @@
 package com.alibaba.assistant.agent.core.tool.definition;
 
 import com.alibaba.assistant.agent.common.tools.definition.ArrayShapeNode;
+import com.alibaba.assistant.agent.common.tools.definition.MapShapeNode;
 import com.alibaba.assistant.agent.common.tools.definition.ObjectShapeNode;
 import com.alibaba.assistant.agent.common.tools.definition.PrimitiveShapeNode;
 import com.alibaba.assistant.agent.common.tools.definition.ReturnSchema;
@@ -141,6 +142,10 @@ public class ReturnSchemaMerger {
 			return existing;
 		}
 
+		if (existing instanceof MapShapeNode existingMap && observed instanceof MapShapeNode observedMap) {
+			return mergeMapShapes(existingMap, observedMap);
+		}
+
 		if (existing instanceof ObjectShapeNode existingObj && observed instanceof ObjectShapeNode observedObj) {
 			return mergeObjectShapes(existingObj, observedObj);
 		}
@@ -154,6 +159,17 @@ public class ReturnSchemaMerger {
 		}
 
 		return existing;
+	}
+
+	/**
+	 * 合并两个 MapShapeNode：value shape 合并一次，observed keys 做并集。
+	 */
+	private static MapShapeNode mergeMapShapes(MapShapeNode existing, MapShapeNode observed) {
+		ShapeNode mergedValue = mergeShapes(existing.getValueShape(), observed.getValueShape());
+		MapShapeNode result = new MapShapeNode(mergedValue);
+		result.addObservedKeys(existing.getObservedKeys());
+		result.addObservedKeys(observed.getObservedKeys());
+		return result;
 	}
 
 	/**
@@ -287,4 +303,3 @@ public class ReturnSchemaMerger {
 	}
 
 }
-

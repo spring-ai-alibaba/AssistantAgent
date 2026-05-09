@@ -16,8 +16,8 @@
 
 package com.alibaba.assistant.agent.extension.learning.extractor;
 
+import com.alibaba.assistant.agent.common.constant.CodeactStateKeys;
 import com.alibaba.assistant.agent.extension.experience.model.Experience;
-import com.alibaba.assistant.agent.extension.experience.model.ExperienceScope;
 import com.alibaba.assistant.agent.extension.experience.model.ExperienceType;
 import com.alibaba.assistant.agent.extension.learning.model.LearningContext;
 import com.alibaba.assistant.agent.extension.learning.spi.LearningExtractor;
@@ -54,10 +54,6 @@ public class ExperienceLearningExtractor implements LearningExtractor<Experience
 	private static final Logger log = LoggerFactory.getLogger(ExperienceLearningExtractor.class);
 
 	private static final String LEARNING_TYPE = "experience";
-
-	// State keys for extracting information
-	private static final String GENERATED_CODES = "generated_codes";
-	private static final String EXECUTION_HISTORY = "execution_history";
 
 	/**
 	 * LLM模型（必需）
@@ -104,9 +100,9 @@ public class ExperienceLearningExtractor implements LearningExtractor<Experience
 		OverAllState state = (OverAllState) stateObj;
 
 		// 基础检查：是否有可学习内容
-		boolean hasGeneratedCode = state.value(GENERATED_CODES).isPresent();
+		boolean hasGeneratedCode = state.value(CodeactStateKeys.GENERATED_CODES).isPresent();
 		boolean hasToolCalls = context.getToolCallRecords() != null && !context.getToolCallRecords().isEmpty();
-		boolean hasExecutionHistory = state.value(EXECUTION_HISTORY).isPresent();
+		boolean hasExecutionHistory = state.value(CodeactStateKeys.EXECUTION_HISTORY).isPresent();
 		boolean hasConversation = context.getConversationHistory() != null && !context.getConversationHistory().isEmpty();
 
 		if (!hasGeneratedCode && !hasToolCalls && !hasExecutionHistory && !hasConversation) {
@@ -202,15 +198,15 @@ public class ExperienceLearningExtractor implements LearningExtractor<Experience
 				你是智能学习系统的提取器。从Agent执行中提取可复用经验。
 				
 				提取类型：
-				1. CODE：代码实现模式、算法方法、可复用代码
-				2. COMMON：需求理解、解决思路、最佳实践
-				3. REACT：工具使用策略、决策流程、处理模式
+				1. COMMON：需求理解、通用知识、解决思路、最佳实践、安全边界
+				2. REACT：多步处理策略、决策流程、代码生成模式、任务编排方法
+				3. TOOL：单个工具的使用前提、调用方式、适用边界、常见注意事项
 				
 				JSON格式输出：
 				```json
 				[
 				  {
-				    "type": "CODE|COMMON|REACT",
+				    "type": "COMMON|REACT|TOOL",
 				    "title": "简短标题（10字内）",
 				    "summary": "核心要点（50字内）",
 				    "content": "详细内容（200字内，重点可复用性）",
@@ -261,7 +257,7 @@ public class ExperienceLearningExtractor implements LearningExtractor<Experience
 		);
 
 		// 代码生成
-		if (state.value(GENERATED_CODES).isPresent()) {
+		if (state.value(CodeactStateKeys.GENERATED_CODES).isPresent()) {
 			summary.append("生成了代码\n");
 		}
 
@@ -295,7 +291,7 @@ public class ExperienceLearningExtractor implements LearningExtractor<Experience
 			});
 
 			// 生成的代码
-			state.value(GENERATED_CODES).ifPresent(codes -> {
+			state.value(CodeactStateKeys.GENERATED_CODES).ifPresent(codes -> {
 				details.append("## 生成的代码\n");
 				details.append(summarizeCodes(codes)).append("\n\n");
 			});
@@ -379,7 +375,7 @@ public class ExperienceLearningExtractor implements LearningExtractor<Experience
 	@SuppressWarnings("unchecked")
 	private Experience buildExperienceFromMap(Map<String, Object> item) {
 		String typeStr = (String) item.get("type");
-		ExperienceType type = ExperienceType.valueOf(typeStr.toUpperCase());
+		ExperienceType type = resolveExperienceType(typeStr);
 
 		String title = (String) item.get("title");
 		String summary = (String) item.getOrDefault("summary", "");
@@ -394,11 +390,10 @@ public class ExperienceLearningExtractor implements LearningExtractor<Experience
 		String fullContent = summary.isEmpty() ? content : summary + "\n\n" + content;
 
 		// 使用构造函数创建Experience
-		Experience experience = new Experience(type, title, fullContent, ExperienceScope.GLOBAL);
-
-		// 设置标签
-		for (String tag : tags) {
-			experience.addTag(tag);
+		Experience experience = new Experience(type, title, fullContent);
+        // 设置标签
+        for (String tag : tags) {
+            experience.addTag(tag);
 		}
 
 		// 设置时间
@@ -406,6 +401,14 @@ public class ExperienceLearningExtractor implements LearningExtractor<Experience
 		experience.setUpdatedAt(Instant.now());
 
 		return experience;
+	}
+
+	private ExperienceType resolveExperienceType(String typeStr) {
+		if (typeStr == null || typeStr.isBlank()) {
+			throw new IllegalArgumentException("Experience type is required");
+		}
+		String normalized = typeStr.trim().toUpperCase(Locale.ROOT);
+		return ExperienceType.valueOf(normalized);
 	}
 
 	/**

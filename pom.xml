@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.alibaba.agent.assistant</groupId>
     <artifactId>assistant-agent</artifactId>
-    <version>0.2.4</version>
+    <version>0.2.6</version>
     <packaging>pom</packaging>
     <distributionManagement>
         <repository>
@@ -22,6 +22,7 @@
         <module>assistant-agent-common</module>
         <module>assistant-agent-core</module>
         <module>assistant-agent-extensions</module>
+        <module>assistant-agent-management</module>
         <module>assistant-agent-prompt-builder</module>
         <module>assistant-agent-evaluation</module>
         <module>assistant-agent-start</module>
@@ -67,6 +68,12 @@
             <dependency>
                 <groupId>com.alibaba.agent.assistant</groupId>
                 <artifactId>assistant-agent-extensions</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.alibaba.agent.assistant</groupId>
+                <artifactId>assistant-agent-management</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -146,6 +153,13 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <parameters>true</parameters>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

@@ -83,13 +83,9 @@ public abstract class AbstractDynamicCodeactTool implements CodeactTool {
 	private CodeactToolDefinition buildCodeactDefinition(ToolDefinition toolDef) {
 		String inputSchema = toolDef.inputSchema();
 		ParameterTree parameterTree = parseParameterTree(inputSchema);
-        String desc = toolDef.description();
-        if (desc.contains("\nReturn schema: \n")) {
-            desc = desc.substring(0, desc.indexOf("\nReturn schema: \n"));
-        }
 		return DefaultCodeactToolDefinition.builder()
 			.name(toolDef.name())
-			.description(desc)
+			.description(toolDef.description())
 			.inputSchema(inputSchema)
 			.parameterTree(parameterTree)
 			.returnDescription("工具执行结果")

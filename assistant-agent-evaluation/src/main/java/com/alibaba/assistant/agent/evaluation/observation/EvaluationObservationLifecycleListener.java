@@ -16,6 +16,7 @@
 package com.alibaba.assistant.agent.evaluation.observation;
 
 import com.alibaba.assistant.agent.evaluation.model.CriterionResult;
+import com.alibaba.assistant.agent.evaluation.util.EvaluationLogContextHelper;
 import com.alibaba.cloud.ai.graph.GraphLifecycleListener;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import io.opentelemetry.api.trace.Span;
@@ -164,7 +165,8 @@ public class EvaluationObservationLifecycleListener implements GraphLifecycleLis
     public void onStart(String nodeId, Map<String, Object> state, RunnableConfig config) {
         // 评估 Graph 开始时不需要特殊处理
         if (nodeId != null && nodeId.equalsIgnoreCase("__start__")) {
-            log.debug("EvaluationObservationLifecycleListener#onStart - reason=评估Graph开始");
+            log.debug("EvaluationObservationLifecycleListener#onStart - reason=评估Graph开始, sessionId={}",
+                    EvaluationLogContextHelper.getSessionId(config));
         }
     }
 
@@ -172,13 +174,15 @@ public class EvaluationObservationLifecycleListener implements GraphLifecycleLis
     public void onComplete(String nodeId, Map<String, Object> state, RunnableConfig config) {
         // 评估 Graph 完成时不需要特殊处理
         if (nodeId != null && nodeId.equalsIgnoreCase("__end__")) {
-            log.debug("EvaluationObservationLifecycleListener#onComplete - reason=评估Graph完成");
+            log.debug("EvaluationObservationLifecycleListener#onComplete - reason=评估Graph完成, sessionId={}",
+                    EvaluationLogContextHelper.getSessionId(config));
         }
     }
 
     @Override
     public void onError(String nodeId, Map<String, Object> state, Throwable ex, RunnableConfig config) {
-        log.error("EvaluationObservationLifecycleListener#onError - reason=评估执行出错, nodeId={}", nodeId, ex);
+        log.error("EvaluationObservationLifecycleListener#onError - reason=评估执行出错, nodeId={}, sessionId={}",
+                nodeId, EvaluationLogContextHelper.getSessionId(config), ex);
 
         // 停止对应节点的 Span
         String nodeKey = getNodeKey(nodeId, config);
@@ -223,7 +227,8 @@ public class EvaluationObservationLifecycleListener implements GraphLifecycleLis
         nodeSpans.put(nodeKey, span);
         nodeScopes.put(nodeKey, scope);
 
-        log.debug("EvaluationObservationLifecycleListener#before - reason=评估项开始执行, criterionName={}", nodeId);
+        log.debug("EvaluationObservationLifecycleListener#before - reason=评估项开始执行, criterionName={}, sessionId={}",
+                nodeId, EvaluationLogContextHelper.getSessionId(config));
     }
 
     /**
@@ -309,10 +314,11 @@ public class EvaluationObservationLifecycleListener implements GraphLifecycleLis
                 }
 
                 log.info("EvaluationObservationLifecycleListener#after - reason=评估项执行完成, " +
-                                "criterionName={}, status={}, durationMs={}",
-                        nodeId, result.getStatus(), durationMs);
+                                "criterionName={}, sessionId={}, status={}, durationMs={}",
+                        nodeId, EvaluationLogContextHelper.getSessionId(config), result.getStatus(), durationMs);
             } else {
-                log.warn("EvaluationObservationLifecycleListener#after - reason=评估结果未找到, criterionName={}", nodeId);
+                log.warn("EvaluationObservationLifecycleListener#after - reason=评估结果未找到, criterionName={}, sessionId={}",
+                        nodeId, EvaluationLogContextHelper.getSessionId(config));
             }
 
             span.end();
@@ -360,4 +366,3 @@ public class EvaluationObservationLifecycleListener implements GraphLifecycleLis
         return str.substring(0, maxLength) + "...[truncated]";
     }
 }
-

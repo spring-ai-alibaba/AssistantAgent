@@ -1,7 +1,9 @@
 package com.alibaba.assistant.agent.extension.experience.model;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -23,14 +25,34 @@ public class Experience {
     private ExperienceType type;
 
     /**
-     * 简要标题或名称
+     * 简要名称（原 title 字段，重命名对齐 SKILLS 标准）
      */
-    private String title;
+    private String name;
+
+    /**
+     * 经验摘要描述（用于搜索结果预览，对齐 SKILLS 标准 Level 1）
+     */
+    private String description;
 
     /**
      * 经验主体内容
      */
     private String content;
+
+    /**
+     * 披露策略（对齐 SKILLS 标准渐进式披露机制）
+     */
+    private DisclosureStrategy disclosureStrategy;
+
+    /**
+     * 关联工具名列表（CodeactTool 名称）
+     */
+    private List<String> associatedTools = new ArrayList<>();
+
+    /**
+     * 关联经验ID列表
+     */
+    private List<String> relatedExperiences = new ArrayList<>();
 
     /**
      * 可执行产物（FastPath Intent 使用）；不影响既有 prompt 注入逻辑
@@ -41,31 +63,6 @@ public class Experience {
      * FastPath Intent 配置（每条经验可选）
      */
     private FastIntentConfig fastIntentConfig;
-
-    /**
-     * 经验生效范围
-     */
-    private ExperienceScope scope;
-
-    /**
-     * 经验所属用户或主体标识
-     */
-    private String ownerId;
-
-    /**
-     * 经验所属的项目或仓库
-     */
-    private String projectId;
-
-    /**
-     * 仓库ID
-     */
-    private String repoId;
-
-    /**
-     * 编程语言或自然语言
-     */
-    private String language;
 
     /**
      * 标签
@@ -87,6 +84,16 @@ public class Experience {
      */
     private ExperienceMetadata metadata;
 
+    /**
+     * 渐进披露第三层（L3）面向 LLM 的参考文档。仅通过 {@code read_exp_doc} 按路径读取。
+     */
+    private List<ReferenceEntry> references = new ArrayList<>();
+
+    /**
+     * 仅在沙箱内使用的附件（脚本/静态资源/评估数据）。不会通过 {@code read_exp_doc} 披露。
+     */
+    private List<AssetEntry> assets = new ArrayList<>();
+
     public Experience() {
         this.id = UUID.randomUUID().toString();
         this.createdAt = Instant.now();
@@ -94,12 +101,11 @@ public class Experience {
         this.metadata = new ExperienceMetadata();
     }
 
-    public Experience(ExperienceType type, String title, String content, ExperienceScope scope) {
+    public Experience(ExperienceType type, String name, String content) {
         this();
         this.type = type;
-        this.title = title;
+        this.name = name;
         this.content = content;
-        this.scope = scope;
     }
 
     public String getId() {
@@ -118,12 +124,34 @@ public class Experience {
         this.type = type;
     }
 
-    public String getTitle() {
-        return title;
+    public String getName() {
+        return name;
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    /**
+     * 兼容别名：返回 name 字段值
+     */
+    public String getTitle() {
+        return name;
+    }
+
+    /**
+     * 兼容别名：设置 name 字段值
+     */
     public void setTitle(String title) {
-        this.title = title;
+        this.name = title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public String getContent() {
@@ -131,53 +159,10 @@ public class Experience {
     }
 
     /**
-     * 获取有效内容：合并 content 与 artifact.code，两者均有值时拼接返回
-     * <p>
-     * 先拼接 content（如有），再拼接从 artifact.code 生成的内容（如有）
+     * 获取有效内容：直接返回 content
      */
     public String getEffectiveContent() {
-        StringBuilder result = new StringBuilder();
-
-        // 1. 追加 content
-        if (content != null && !content.isBlank()) {
-            result.append(content);
-        }
-
-        // 2. 追加 artifact.code 生成的内容
-        if (artifact != null && artifact.getCode() != null) {
-            ExperienceArtifact.CodeArtifact codeArtifact = artifact.getCode();
-            if (codeArtifact.getCode() != null && !codeArtifact.getCode().isBlank()) {
-                if (!result.isEmpty()) {
-                    result.append("\n\n");
-                }
-                result.append(buildContentFromCodeArtifact(codeArtifact));
-            }
-        }
-
-        return result.isEmpty() ? content : result.toString();
-    }
-
-    /**
-     * 从 CodeArtifact 自动生成 content
-     */
-    private String buildContentFromCodeArtifact(ExperienceArtifact.CodeArtifact codeArtifact) {
-        StringBuilder sb = new StringBuilder();
-
-        // 添加描述
-        if (codeArtifact.getDescription() != null && !codeArtifact.getDescription().isBlank()) {
-            sb.append(codeArtifact.getDescription()).append("\n\n");
-        }
-
-        // 添加代码块
-        String lang = codeArtifact.getLanguage() != null ? codeArtifact.getLanguage() : "python";
-        sb.append("```").append(lang).append("\n");
-        sb.append(codeArtifact.getCode());
-        if (!codeArtifact.getCode().endsWith("\n")) {
-            sb.append("\n");
-        }
-        sb.append("```");
-
-        return sb.toString();
+        return content;
     }
 
     public void setContent(String content) {
@@ -198,46 +183,6 @@ public class Experience {
 
     public void setFastIntentConfig(FastIntentConfig fastIntentConfig) {
         this.fastIntentConfig = fastIntentConfig;
-    }
-
-    public ExperienceScope getScope() {
-        return scope;
-    }
-
-    public void setScope(ExperienceScope scope) {
-        this.scope = scope;
-    }
-
-    public String getOwnerId() {
-        return ownerId;
-    }
-
-    public void setOwnerId(String ownerId) {
-        this.ownerId = ownerId;
-    }
-
-    public String getProjectId() {
-        return projectId;
-    }
-
-    public void setProjectId(String projectId) {
-        this.projectId = projectId;
-    }
-
-    public String getRepoId() {
-        return repoId;
-    }
-
-    public void setRepoId(String repoId) {
-        this.repoId = repoId;
-    }
-
-    public String getLanguage() {
-        return language;
-    }
-
-    public void setLanguage(String language) {
-        this.language = language;
     }
 
     public Set<String> getTags() {
@@ -272,12 +217,52 @@ public class Experience {
         this.updatedAt = updatedAt;
     }
 
+    public DisclosureStrategy getDisclosureStrategy() {
+        return disclosureStrategy;
+    }
+
+    public void setDisclosureStrategy(DisclosureStrategy disclosureStrategy) {
+        this.disclosureStrategy = disclosureStrategy;
+    }
+
+    public List<String> getAssociatedTools() {
+        return associatedTools;
+    }
+
+    public void setAssociatedTools(List<String> associatedTools) {
+        this.associatedTools = associatedTools != null ? associatedTools : new ArrayList<>();
+    }
+
+    public List<String> getRelatedExperiences() {
+        return relatedExperiences;
+    }
+
+    public void setRelatedExperiences(List<String> relatedExperiences) {
+        this.relatedExperiences = relatedExperiences != null ? relatedExperiences : new ArrayList<>();
+    }
+
     public ExperienceMetadata getMetadata() {
         return metadata;
     }
 
     public void setMetadata(ExperienceMetadata metadata) {
         this.metadata = metadata != null ? metadata : new ExperienceMetadata();
+    }
+
+    public List<ReferenceEntry> getReferences() {
+        return references;
+    }
+
+    public void setReferences(List<ReferenceEntry> references) {
+        this.references = references != null ? references : new ArrayList<>();
+    }
+
+    public List<AssetEntry> getAssets() {
+        return assets;
+    }
+
+    public void setAssets(List<AssetEntry> assets) {
+        this.assets = assets != null ? assets : new ArrayList<>();
     }
 
     /**

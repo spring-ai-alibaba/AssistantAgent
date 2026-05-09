@@ -54,6 +54,17 @@ public class ExperienceExtensionProperties {
     private List<String> fastIntentAllowedTools = new ArrayList<>();
 
     /**
+     * Progressive disclosure 下允许直接以 React function call 形式暴露的工具名白名单。
+     *
+     * <p>首版采用显式 allowlist：
+     * <ul>
+     *     <li>未配置的 TOOL 经验仍然只能通过 write_code / execute_code 走 CodeAct 路径</li>
+     *     <li>已配置的工具会额外注册到 React 阶段，但运行时仍会根据预取/检索结果做二次裁剪</li>
+     * </ul>
+     */
+    private List<String> reactDirectToolNames = new ArrayList<>();
+
+    /**
      * 单次查询最大返回经验条数
      */
     private int maxItemsPerQuery = 5;
@@ -62,6 +73,11 @@ public class ExperienceExtensionProperties {
      * 单条经验最大长度（用于控制Prompt）
      */
     private int maxContentLength = 2000;
+
+    /**
+     * {@code read_exp_doc} 单次允许读取的路径数量上限。
+     */
+    private int readExpDocMaxPaths = 6;
 
     /**
      * 内存实现相关配置
@@ -234,6 +250,15 @@ public class ExperienceExtensionProperties {
     public void setFastIntentAllowedTools(List<String> fastIntentAllowedTools) {
         this.fastIntentAllowedTools = fastIntentAllowedTools != null ? fastIntentAllowedTools : new ArrayList<>();
     }
+
+    public List<String> getReactDirectToolNames() {
+        return reactDirectToolNames;
+    }
+
+    public void setReactDirectToolNames(List<String> reactDirectToolNames) {
+        this.reactDirectToolNames = reactDirectToolNames != null ? reactDirectToolNames : new ArrayList<>();
+    }
+
     public int getMaxItemsPerQuery() {
         return maxItemsPerQuery;
     }
@@ -248,6 +273,14 @@ public class ExperienceExtensionProperties {
 
     public void setMaxContentLength(int maxContentLength) {
         this.maxContentLength = maxContentLength;
+    }
+
+    public int getReadExpDocMaxPaths() {
+        return readExpDocMaxPaths;
+    }
+
+    public void setReadExpDocMaxPaths(int readExpDocMaxPaths) {
+        this.readExpDocMaxPaths = readExpDocMaxPaths;
     }
 
     public InMemoryConfig getInMemory() {

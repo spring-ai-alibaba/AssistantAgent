@@ -243,13 +243,12 @@ public class FastIntentReactHook extends AgentHook implements Prioritized {
             context.setUserQuery(userQuery);
         }
         if (state != null) {
-            state.value("user_id", String.class).ifPresent(context::setUserId);
-            state.value("project_id", String.class).ifPresent(context::setProjectId);
-            state.value("task_type", String.class).ifPresent(context::setTaskType);
+            state.value("tenant_id", String.class).ifPresent(context::setTenantId);
+            state.value("user_id", String.class).ifPresent(context::setTenantId);
         }
         if (config != null) {
-            config.metadata("agent_name").ifPresent(name -> context.setAgentName(name.toString()));
-            config.metadata("task_type").ifPresent(type -> context.setTaskType(type.toString()));
+            config.metadata("tenant_id").ifPresent(id -> context.setTenantId(String.valueOf(id)));
+            config.metadata("user_id").ifPresent(id -> context.setTenantId(String.valueOf(id)));
         }
         return context;
     }

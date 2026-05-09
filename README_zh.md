@@ -13,8 +13,9 @@
 - 🚀 **代码即行动（Code-as-Action）**：Agent 通过生成并执行代码来完成任务，而非仅仅调用预定义工具，可以在代码中灵活组合多个工具，实现复杂流程
 - 🔒 **安全沙箱**：AI 生成的代码在 GraalVM 多语言沙箱中安全运行，具备资源隔离能力
 - 📊 **多维评估**：通过评估图（Graph）进行多层次意图识别，精准指导 Agent 行为
-- 🔄 **Prompt 动态组装**：根据场景及前置评估结果动态注入上下文（经验、知识等）到 Prompt 中，灵活处理不同任务
-- 🧠 **经验学习**：自动积累成功经验，持续提升后续任务的表现
+- 🔄 **Prompt 动态组装**：根据场景及前置评估结果，动态注入运行时上下文、预取经验候选和稳定指导信息到 Prompt 中，灵活处理不同任务
+- 🧠 **统一经验体系**：以统一模型管理 COMMON / REACT / TOOL 三类经验，支持与 Skills 模型互相转化，并通过渐进式披露思想提高经验使用效率与效果
+- 🗂️ **管理后台**：通过独立管理模块提供经验检索、CRUD、统计，以及 SKILL 预览 / 导入 / 导出等能力，便于统一维护可复用经验与技能资产
 - ⚡ **快速响应**：熟悉场景下，跳过 LLM 推理过程，基于经验快速响应
 
 ## 📖 简介
@@ -26,9 +27,10 @@
 Assistant Agent 是一个功能完整的智能助手，具备以下核心能力：
 
 - 🔍 **智能问答**：支持多数据源统一检索架构（通过 SPI 可扩展知识库、Web 等数据源），提供准确、可溯源的答案
-- 🛠️ **工具调用**：支持 MCP、HTTP API（OpenAPI）等协议，灵活接入海量工具，可组合调用实现复杂业务流程
+- 🛠️ **工具调用**：支持 MCP、HTTP API（OpenAPI）等协议，既可在 React 阶段直接调用工具，也可在生成代码中组合多个工具完成复杂业务流程
 - ⏰ **主动服务**：支持定时任务、延迟执行、事件回调，让助手主动为你服务
 - 📬 **多渠道触达**：内置 IDE 回复，通过 SPI 可扩展钉钉、飞书、企微、Webhook 等渠道
+- 🧩 **运维与经验管理**：支持经验管理、租户维度检索，以及经验模型与 SKILL 包之间的双向转换，方便沉淀并复用业务能力
 
 ### 为什么选择 Assistant Agent？
 
@@ -64,7 +66,7 @@ AssistantAgent/
 ├── assistant-agent-core            # 核心引擎：GraalVM 执行器、工具注册表
 ├── assistant-agent-extensions      # 扩展模块：
 │   ├── dynamic/               #   - 动态工具（MCP、HTTP API）
-│   ├── experience/            #   - 经验管理与快速意图配置
+│   ├── experience/            #   - 统一经验运行时、经验披露与快速意图配置
 │   ├── learning/              #   - 学习提取与存储
 │   ├── search/                #   - 统一搜索能力
 │   ├── reply/                 #   - 多渠道回复
@@ -72,6 +74,7 @@ AssistantAgent/
 │   └── evaluation/            #   - 评估集成
 ├── assistant-agent-prompt-builder  # Prompt 动态组装
 ├── assistant-agent-evaluation      # 评估引擎
+├── assistant-agent-management      # 经验管理与 SKILL 转换 API
 ├── assistant-agent-autoconfigure   # Spring Boot 自动配置
 └── assistant-agent-start           # 启动模块
 ```
@@ -223,8 +226,8 @@ public class MyKnowledgeSearchProvider implements SearchProvider {
 
 | 模块 | 说明 | 文档 |
 |------|------|------|
-| **经验模块** | 积累和复用历史成功执行经验，支持快速意图响应 | [快速开始](https://java2ai.com/agents/assistantagent/features/experience/quickstart) ｜ [高级特性](https://java2ai.com/agents/assistantagent/features/experience/advanced) |
-| **学习模块** | 从 Agent 执行历史中自动提取有价值的经验 | [快速开始](https://java2ai.com/agents/assistantagent/features/learning/quickstart) ｜ [高级特性](https://java2ai.com/agents/assistantagent/features/learning/advanced) |
+| **经验模块** | 基于统一 COMMON / REACT / TOOL 模型管理经验，支持快速意图、与 Skills 模型互转、渐进式披露，以及通过 `search_exp` / `read_exp` 进行运行时检索 | [快速开始](https://java2ai.com/agents/assistantagent/features/experience/quickstart) ｜ [高级特性](https://java2ai.com/agents/assistantagent/features/experience/advanced) |
+| **学习模块** | 从 Agent 执行历史中自动提取有价值的 COMMON / REACT / TOOL 经验 | [快速开始](https://java2ai.com/agents/assistantagent/features/learning/quickstart) ｜ [高级特性](https://java2ai.com/agents/assistantagent/features/learning/advanced) |
 | **搜索模块** | 多数据源统一检索引擎，支持知识问答 | [快速开始](https://java2ai.com/agents/assistantagent/features/search/quickstart) ｜ [高级特性](https://java2ai.com/agents/assistantagent/features/search/advanced) |
 
 ### 交互能力
@@ -233,6 +236,13 @@ public class MyKnowledgeSearchProvider implements SearchProvider {
 |------|------|------|
 | **回复渠道** | 多渠道消息回复，支持渠道路由 | [快速开始](https://java2ai.com/agents/assistantagent/features/reply/quickstart) ｜ [高级特性](https://java2ai.com/agents/assistantagent/features/reply/advanced) |
 | **触发器** | 定时任务、延迟执行、事件回调触发 | [快速开始](https://java2ai.com/agents/assistantagent/features/trigger/quickstart) ｜ [高级特性](https://java2ai.com/agents/assistantagent/features/trigger/advanced) |
+
+### 管理能力
+
+| 能力               | 说明                                         | 入口 |
+|------------------|--------------------------------------------|------|
+| **经验管理 API**     | 提供面向租户的经验列表、搜索、统计与 CRUD 能力                 | [ExperienceManagementController](assistant-agent-management/src/main/java/com/alibaba/assistant/agent/management/controller/ExperienceManagementController.java) |
+| **SKILL 转换 API** | 提供与 SKILL 的转换能力，支撑 Skills 模型与统一经验模型之间的双向转换 | [SkillExchangeController](assistant-agent-management/src/main/java/com/alibaba/assistant/agent/management/controller/SkillExchangeController.java) |
 
 ### 更多资源
 

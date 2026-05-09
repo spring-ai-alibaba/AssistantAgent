@@ -54,8 +54,8 @@ public class ExperienceTestValidator implements CommandLineRunner {
 
     private void testExperienceCount() {
         long totalCount = experienceRepository.count();
-        long reactCount = experienceRepository.countByTypeAndScope(ExperienceType.REACT, null);
-        long commonCount = experienceRepository.countByTypeAndScope(ExperienceType.COMMON, null);
+        long reactCount = experienceRepository.countByType(ExperienceType.REACT);
+        long commonCount = experienceRepository.countByType(ExperienceType.COMMON);
 
         log.info("ExperienceTestValidator#testExperienceCount - reason=Experience stats: total={}, react={}, common={}",
                 totalCount, reactCount, commonCount);
@@ -66,7 +66,7 @@ public class ExperienceTestValidator implements CommandLineRunner {
 
         ExperienceQuery query = new ExperienceQuery(ExperienceType.COMMON);
         ExperienceQueryContext context = new ExperienceQueryContext();
-        context.setUserId("test-user");
+        context.setTenantId("test-user");
 
         List<Experience> experiences = experienceProvider.query(query, context);
 

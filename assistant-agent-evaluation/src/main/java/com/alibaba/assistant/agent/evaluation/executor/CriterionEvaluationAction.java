@@ -28,6 +28,7 @@ import com.alibaba.assistant.agent.evaluation.model.EvaluationContext;
 import com.alibaba.assistant.agent.evaluation.model.EvaluationCriterion;
 import com.alibaba.assistant.agent.evaluation.model.EvaluationSuite;
 import com.alibaba.assistant.agent.evaluation.model.ExecutionContextFactory;
+import com.alibaba.assistant.agent.evaluation.util.EvaluationLogContextHelper;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,7 +93,8 @@ public class CriterionEvaluationAction implements Function<OverAllState, Map<Str
                 throw new IllegalStateException("Required components not found in OverAllState");
             }
 
-            logger.info("Executing criterion: {}", criterion.getName());
+            String sessionId = EvaluationLogContextHelper.getSessionId(evaluationContext);
+            logger.info("Executing criterion: {}, sessionId={}", criterion.getName(), sessionId);
 
             // Build dependency results map from individual state keys
             Map<String, CriterionResult> dependencyResults = buildDependencyResults(state);
@@ -103,10 +105,10 @@ public class CriterionEvaluationAction implements Function<OverAllState, Map<Str
                 CriterionResult skipResult = checkConditionalExecution(conditionalConfig, dependencyResults);
                 if (skipResult != null) {
                     // Condition not met, return skipped result
-                    logger.info("Criterion '{}' skipped: {}", criterion.getName(), conditionalConfig.getSkipReason());
+                    logger.info("Criterion '{}' skipped, sessionId={}: {}", criterion.getName(), sessionId, conditionalConfig.getSkipReason());
                     return buildSkippedResultUpdates(skipResult);
                 }
-                logger.debug("Conditional execution check passed for criterion: {}", criterion.getName());
+                logger.debug("Conditional execution check passed for criterion: {}, sessionId={}", criterion.getName(), sessionId);
             }
 
             // Determine timeout: criterion-specific > suite default
@@ -139,18 +141,18 @@ public class CriterionEvaluationAction implements Function<OverAllState, Map<Str
                 } else {
                     // No executor or timeout disabled, execute directly
                     if (batchingEnabled) {
-                        logger.debug("Batching enabled for criterion: {}", criterion.getName());
+                        logger.debug("Batching enabled for criterion: {}, sessionId={}", criterion.getName(), sessionId);
                         result = executeWithBatching(evaluationContext, dependencyResults, batchingConfig);
                     } else {
-                        logger.debug("Batching not enabled for criterion: {}", criterion.getName());
+                        logger.debug("Batching not enabled for criterion: {}, sessionId={}", criterion.getName(), sessionId);
                         result = executeWithoutBatching(evaluationContext, dependencyResults);
                     }
                 }
             } catch (TimeoutException te) {
                 // Criterion timed out - return timeout result with default value
                 long elapsedMs = System.currentTimeMillis() - startTime;
-                logger.warn("Criterion '{}' timed out after {}ms (timeout={}ms), using default value: {}",
-                    criterion.getName(), elapsedMs, timeoutMs, criterion.getDefaultValue());
+                logger.warn("Criterion '{}' timed out after {}ms (timeout={}ms), sessionId={}, using default value: {}",
+                        criterion.getName(), elapsedMs, timeoutMs, sessionId, criterion.getDefaultValue());
 
                 result = buildTimeoutResult(startTime, timeoutMs);
             }
@@ -171,11 +173,11 @@ public class CriterionEvaluationAction implements Function<OverAllState, Map<Str
             com.alibaba.assistant.agent.evaluation.observation.EvaluationObservationLifecycleListener
                     .registerCriterionResult(criterion.getName(), result);
 
-            logger.info("Criterion {} completed with status: {}, value: {}",
-                criterion.getName(), result.getStatus(), result.getValue());
+            logger.info("Criterion {} completed, sessionId={}, status={}, result={}",
+                    criterion.getName(), sessionId, result.getStatus(), result.getValue());
 
         } catch (Exception e) {
-            logger.error("Error executing criterion {}: {}", criterion.getName(), e.getMessage(), e);
+            logger.error("Error executing criterion {}, sessionId={}: {}", criterion.getName(), extractSessionIdFromState(state), e.getMessage(), e);
 
             // Create error result with default value if available
             CriterionResult errorResult = buildErrorResult(startTime, e.getMessage());
@@ -259,6 +261,14 @@ public class CriterionEvaluationAction implements Function<OverAllState, Map<Str
         return dependencyResults;
     }
 
+    private String extractSessionIdFromState(OverAllState state) {
+        Object evaluationContext = state != null ? state.data().get("evaluationContext") : null;
+        if (evaluationContext instanceof EvaluationContext context) {
+            return EvaluationLogContextHelper.getSessionId(context);
+        }
+        return null;
+    }
+
     /**
      * Execute criterion without batching (original logic).
      */
@@ -298,23 +308,27 @@ public class CriterionEvaluationAction implements Function<OverAllState, Map<Str
 
             // Check if source is a collection
             if (!SourcePathResolver.isCollection(sourceObject)) {
-                logger.warn("Source path '{}' did not resolve to a collection for criterion '{}', falling back to non-batching execution",
-                    batchingConfig.getSourcePath(), criterion.getName());
+                logger.warn("Source path '{}' did not resolve to a collection for criterion '{}', sessionId={}, falling back to non-batching execution",
+                    batchingConfig.getSourcePath(), criterion.getName(), EvaluationLogContextHelper.getSessionId(evaluationContext));
                 return executeWithoutBatching(evaluationContext, dependencyResults);
             }
 
             Collection<?> sourceCollection = SourcePathResolver.toCollection(sourceObject);
             if (sourceCollection == null || sourceCollection.isEmpty()) {
-                logger.debug("Source collection is empty for criterion '{}', returning empty result", criterion.getName());
+                logger.debug("Source collection is empty for criterion '{}', sessionId={}, returning empty result",
+                        criterion.getName(), EvaluationLogContextHelper.getSessionId(evaluationContext));
                 return createEmptyCollectionResult();
             }
 
-            logger.info("Criterion '{}': processing {} items with batchSize={}, maxConcurrentBatches={}",
-                criterion.getName(), sourceCollection.size(), batchingConfig.getBatchSize(), batchingConfig.getMaxConcurrentBatches());
+            logger.info("Criterion '{}': processing {} items with batchSize={}, maxConcurrentBatches={}, sessionId={}",
+                criterion.getName(), sourceCollection.size(), batchingConfig.getBatchSize(), batchingConfig.getMaxConcurrentBatches(),
+                EvaluationLogContextHelper.getSessionId(evaluationContext));
 
             // Split into batches
             List<List<Object>> batches = splitIntoBatches(sourceCollection, batchingConfig.getBatchSize());
-            logger.debug("Split {} items into {} batches", sourceCollection.size(), batches.size());
+            logger.debug("Split {} items into {} batches, criterion={}, sessionId={}",
+                    sourceCollection.size(), batches.size(), criterion.getName(),
+                    EvaluationLogContextHelper.getSessionId(evaluationContext));
 
             // Process batches
             List<CriterionResult> allBatchResults = processBatches(
@@ -328,7 +342,8 @@ public class CriterionEvaluationAction implements Function<OverAllState, Map<Str
             return aggregateResults(evaluationContext, dependencyResults, batchingConfig, allBatchResults);
 
         } catch (Exception e) {
-            logger.error("Error during batching execution for criterion '{}': {}", criterion.getName(), e.getMessage(), e);
+            logger.error("Error during batching execution for criterion '{}', sessionId={}: {}",
+                    criterion.getName(), EvaluationLogContextHelper.getSessionId(evaluationContext), e.getMessage(), e);
             CriterionResult errorResult = new CriterionResult();
             errorResult.setCriterionName(criterion.getName());
             errorResult.setStatus(CriterionStatus.ERROR);

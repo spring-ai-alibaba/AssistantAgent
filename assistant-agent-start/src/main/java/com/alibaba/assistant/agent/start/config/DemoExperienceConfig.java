@@ -2,7 +2,6 @@ package com.alibaba.assistant.agent.start.config;
 
 import com.alibaba.assistant.agent.extension.experience.model.Experience;
 import com.alibaba.assistant.agent.extension.experience.model.ExperienceArtifact;
-import com.alibaba.assistant.agent.extension.experience.model.ExperienceScope;
 import com.alibaba.assistant.agent.extension.experience.model.ExperienceType;
 import com.alibaba.assistant.agent.extension.experience.model.FastIntentConfig;
 import com.alibaba.assistant.agent.extension.experience.spi.ExperienceRepository;
@@ -75,6 +74,7 @@ public class DemoExperienceConfig implements CommandLineRunner {
         experience.setId("exp-common-molihong-" + UUID.randomUUID().toString().substring(0, 8));
         experience.setType(ExperienceType.COMMON);
         experience.setTitle("魔力红身份介绍");
+        experience.setDescription("关于魔力红智能研发助手的身份、定位和核心能力的概念介绍");
         experience.setContent(
             "【魔力红】是一个智能研发助手。\n\n" +
             "魔力红的定位和能力：\n" +
@@ -84,7 +84,6 @@ public class DemoExperienceConfig implements CommandLineRunner {
             "4. 可以理解复杂的技术需求并给出专业的解决方案\n\n" +
             "当用户询问'魔力红是什么'或'你是谁'时，应该介绍魔力红是魔礼海团队的 AI 研发助手。"
         );
-        experience.setScope(ExperienceScope.GLOBAL);
         experience.setTags(Set.of("魔力红", "身份", "介绍", "助手"));
         experience.setCreatedAt(Instant.now());
         experience.setUpdatedAt(Instant.now());
@@ -101,6 +100,7 @@ public class DemoExperienceConfig implements CommandLineRunner {
         experience.setId("exp-common-molihai-" + UUID.randomUUID().toString().substring(0, 8));
         experience.setType(ExperienceType.COMMON);
         experience.setTitle("魔礼海平台介绍");
+        experience.setDescription("关于魔礼海智能研发平台的定位、核心能力和与魔力红关系的概念介绍");
         experience.setContent(
             "【魔礼海】是一个智能研发平台。\n\n" +
             "魔礼海的定位和能力：\n" +
@@ -110,7 +110,6 @@ public class DemoExperienceConfig implements CommandLineRunner {
             "4. 魔力红是魔礼海平台的核心 AI 助手\n\n" +
             "当用户询问'魔礼海是什么'时，应该介绍魔礼海是一个智能研发平台，而魔力红是该平台的 AI 助手。"
         );
-        experience.setScope(ExperienceScope.GLOBAL);
         experience.setTags(Set.of("魔礼海", "平台", "研发", "介绍"));
         experience.setCreatedAt(Instant.now());
         experience.setUpdatedAt(Instant.now());
@@ -127,6 +126,7 @@ public class DemoExperienceConfig implements CommandLineRunner {
         experience.setId("exp-react-whoareyou-" + UUID.randomUUID().toString().substring(0, 8));
         experience.setType(ExperienceType.REACT);
         experience.setTitle("身份询问响应策略");
+        experience.setDescription("当用户询问'你是谁'等身份问题时，直接回复介绍魔力红身份，无需调用工具");
         experience.setContent(
             "【用户询问身份时的响应策略】\n\n" +
             "当用户询问'你是谁'、'你是什么'、'介绍一下你自己'等身份相关问题时：\n\n" +
@@ -136,7 +136,6 @@ public class DemoExperienceConfig implements CommandLineRunner {
             "示例响应：\n" +
             "'我是魔力红，魔礼海团队的 AI 研发助手。我可以帮助你编写代码、分析问题、查询知识等。请问有什么我可以帮助你的吗？'"
         );
-        experience.setScope(ExperienceScope.GLOBAL);
         experience.setTags(Set.of("你是谁", "身份", "介绍", "反问"));
         experience.setCreatedAt(Instant.now());
         experience.setUpdatedAt(Instant.now());
@@ -146,24 +145,40 @@ public class DemoExperienceConfig implements CommandLineRunner {
     }
 
     /**
-     * React 经验：用户想计算小明系数时的响应策略
+     * React 经验：小明系数计算策略
+     * 设计为多步骤工作流，description 只给简要摘要，content 包含完整的计算规则和分支逻辑，
+     * 使得 LLM 必须 read_exp 才能正确执行。
      */
     private void initializeReactExperienceXiaomingCoefficient() {
         Experience experience = new Experience();
         experience.setId("exp-react-xiaoming-" + UUID.randomUUID().toString().substring(0, 8));
         experience.setType(ExperienceType.REACT);
         experience.setTitle("小明系数计算策略");
+        experience.setDescription("小明系数是一种自定义的复合运算，包含多步计算规则和特殊边界处理");
         experience.setContent(
-            "【小明系数计算的响应策略】\n\n" +
-            "当用户想要计算'小明系数'时：\n\n" +
-            "1. 首先编写一个计算小明系数的代码框架\n" +
-            "2. 然后反问用户需要计算的乘方系数是多少\n" +
-            "3. 等用户提供系数后再执行计算\n\n" +
-            "示例响应：\n" +
-            "'我已经准备好计算小明系数的代码了。小明系数本质上是乘方运算，请问你需要计算多少次方？例如：2次方（平方）、3次方（立方）等。'"
+            "【小明系数计算的完整策略】\n\n" +
+            "小明系数是一种自定义的复合数学运算，不是简单的乘方。其完整计算规则如下：\n\n" +
+            "## 计算公式\n" +
+            "给定两个参数 a 和 b，小明系数 XM(a, b) 的计算分三步：\n" +
+            "1. 第一步：计算基础值 base_val = a * b + (a + b)\n" +
+            "2. 第二步：计算调整因子 factor = (a % 7 + b % 7) / 7.0\n" +
+            "3. 第三步：最终结果 = round(base_val * (1 + factor), 2)\n\n" +
+            "## 特殊规则\n" +
+            "- 如果 a 和 b 都是负数，结果取绝对值\n" +
+            "- 如果 a 或 b 为 0，直接返回 0，并附带提示「零值参数导致系数为零」\n" +
+            "- 如果结果超过 10000，返回结果的同时附带警告「结果较大，请注意数值溢出」\n\n" +
+            "## 输出格式\n" +
+            "返回字典必须包含以下字段：\n" +
+            "- success: True/False\n" +
+            "- xiaoming_coefficient: 最终计算结果\n" +
+            "- steps: 包含 base_val、factor、final 三个中间值的字典，便于用户验证\n" +
+            "- warnings: 警告信息列表（可为空）\n\n" +
+            "## 响应策略\n" +
+            "1. 使用 write_code 编写完整的计算函数，必须包含所有特殊规则\n" +
+            "2. 使用 execute_code 执行计算\n" +
+            "3. 将 steps 中间值展示给用户，让用户了解计算过程"
         );
-        experience.setScope(ExperienceScope.GLOBAL);
-        experience.setTags(Set.of("小明系数", "计算", "乘方", "反问"));
+        experience.setTags(Set.of("小明系数", "计算", "复合运算", "自定义公式"));
 
         // 配置快速意图：匹配用户消息包含"小明系数"时，直接跳过思考和工具调用，进入代码执行
         FastIntentConfig fastIntentConfig = new FastIntentConfig();
@@ -189,21 +204,22 @@ public class DemoExperienceConfig implements CommandLineRunner {
         toolCall.setToolName("write_code");
         toolCall.setArguments(Map.of(
             "functionName", "calculate_xiaoming_coefficient",
-            "description", "计算小明系数（乘方运算），传入底数base和指数exponent，返回base的exponent次方",
-            "parameters", List.of("base", "exponent"),
-            "code", """
-                def calculate_xiaoming_coefficient(base, exponent):
-                    \"\"\"计算小明系数（乘方运算）
-                    
-                    Args:
-                        base: 底数
-                        exponent: 指数（乘方系数）
-                    
-                    Returns:
-                        base的exponent次方
-                    \"\"\"
-                    return base ** exponent
-                """
+            "description", "计算小明系数（复合运算），传入参数a和b，按照小明系数公式计算",
+            "parameters", List.of("a", "b"),
+            "code", String.join("\n", List.of(
+                "def calculate_xiaoming_coefficient(a, b):",
+                "    warnings = []",
+                "    if a == 0 or b == 0:",
+                "        return {\"success\": True, \"xiaoming_coefficient\": 0, \"steps\": {}, \"warnings\": [\"零值参数导致系数为零\"]}",
+                "    base_val = a * b + (a + b)",
+                "    factor = (a % 7 + b % 7) / 7.0",
+                "    result = round(base_val * (1 + factor), 2)",
+                "    if a < 0 and b < 0:",
+                "        result = abs(result)",
+                "    if result > 10000:",
+                "        warnings.append(\"结果较大，请注意数值溢出\")",
+                "    return {\"success\": True, \"xiaoming_coefficient\": result, \"steps\": {\"base_val\": base_val, \"factor\": round(factor, 4), \"final\": result}, \"warnings\": warnings}"
+            ))
         ));
         plan.setToolCalls(List.of(toolCall));
         reactArtifact.setPlan(plan);
@@ -217,4 +233,3 @@ public class DemoExperienceConfig implements CommandLineRunner {
         log.info("DemoExperienceConfig#initializeReactExperienceXiaomingCoefficient - reason=Created xiaoming coefficient react experience with fast intent, id={}", experience.getId());
     }
 }
-

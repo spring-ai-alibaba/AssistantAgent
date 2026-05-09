@@ -8,14 +8,14 @@ package com.alibaba.assistant.agent.extension.experience.model;
 public enum ExperienceType {
 
     /**
-     * 代码经验 - 包含代码片段、风格规范与最佳实践
-     */
-    CODE,
-
-    /**
-     * React经验 - Agent行为经验与策略建议
+     * React经验 - Agent行为经验与策略建议（流程经验）
      */
     REACT,
+
+    /**
+     * 工具经验 - 单个工具的使用经验（MCP/A2A/HTTP工具）
+     */
+    TOOL,
 
     /**
      * 通用常识经验 - 规范、注意事项、安全提示等

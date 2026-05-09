@@ -16,6 +16,7 @@
 package com.alibaba.assistant.agent.core.tool.definition;
 
 import com.alibaba.assistant.agent.common.tools.definition.ArrayShapeNode;
+import com.alibaba.assistant.agent.common.tools.definition.MapShapeNode;
 import com.alibaba.assistant.agent.common.tools.definition.ObjectShapeNode;
 import com.alibaba.assistant.agent.common.tools.definition.PrimitiveShapeNode;
 import com.alibaba.assistant.agent.common.tools.definition.PrimitiveType;
@@ -26,7 +27,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -130,25 +133,124 @@ public class ShapeExtractor {
 	}
 
 	/**
-	 * 从对象节点提取 ObjectShapeNode。
+	 * 从对象节点提取 ShapeNode。
+	 * <p>
+	 * 若 JSON object 的 key 包含非标识符字符（如连字符 {@code -}、点 {@code .}、空格等），
+	 * 说明 key 是运行时动态数据（应用名、ID 等），整体应视为 {@link MapShapeNode}；
+	 * 否则视为固定 schema 字段，返回 {@link ObjectShapeNode}。
+	 *
 	 * @param objectNode 对象节点
-	 * @return ObjectShapeNode
+	 * @return ObjectShapeNode 或 MapShapeNode
 	 */
-	private static ObjectShapeNode extractObjectShape(JsonNode objectNode) {
-		ObjectShapeNode shapeNode = new ObjectShapeNode();
+	private static ShapeNode extractObjectShape(JsonNode objectNode) {
+		if (objectNode.isEmpty()) {
+			return new ObjectShapeNode();
+		}
 
+		if (isMapLikeObject(objectNode)) {
+			return extractMapShape(objectNode);
+		}
+
+		ObjectShapeNode shapeNode = new ObjectShapeNode();
 		Iterator<Map.Entry<String, JsonNode>> fields = objectNode.fields();
 		while (fields.hasNext()) {
 			Map.Entry<String, JsonNode> field = fields.next();
-			String fieldName = field.getKey();
-			JsonNode fieldValue = field.getValue();
-
-			ShapeNode fieldShape = extractFromJsonNode(fieldValue);
-			shapeNode.putField(fieldName, fieldShape);
+			ShapeNode fieldShape = extractFromJsonNode(field.getValue());
+			shapeNode.putField(field.getKey(), fieldShape);
 		}
-
 		return shapeNode;
 	}
 
-}
+	/**
+	 * 从 map-like 对象节点提取 MapShapeNode，合并所有 value 的 shape。
+	 */
+	private static MapShapeNode extractMapShape(JsonNode objectNode) {
+		MapShapeNode mapShape = new MapShapeNode();
+		ShapeNode valueShape = null;
+		Iterator<Map.Entry<String, JsonNode>> fields = objectNode.fields();
+		while (fields.hasNext()) {
+			Map.Entry<String, JsonNode> field = fields.next();
+			mapShape.addObservedKey(field.getKey());
+			ShapeNode current = extractFromJsonNode(field.getValue());
+			valueShape = (valueShape == null) ? current : ReturnSchemaMerger.mergeShapes(valueShape, current);
+		}
+		mapShape.setValueShape(valueShape != null ? valueShape : new UnknownShapeNode());
+		return mapShape;
+	}
 
+	/**
+	 * 判断 JSON object 是否为 map-like（key 为动态数据而非固定 schema 字段）。
+	 * <p>
+	 * 判断依据：
+	 * <ul>
+	 *     <li>若 key 含有非标识符字符，则认为 key 本身就是动态数据</li>
+	 *     <li>否则若多个字段的 value shape 一致/可合并，则也视为 Map；
+	 *     此时 key 只是数据实例，schema 只需保留一份 value 结构</li>
+	 * </ul>
+	 */
+	private static boolean isMapLikeObject(JsonNode objectNode) {
+		List<Map.Entry<String, JsonNode>> entries = new ArrayList<>();
+		Iterator<Map.Entry<String, JsonNode>> fields = objectNode.fields();
+		while (fields.hasNext()) {
+			Map.Entry<String, JsonNode> entry = fields.next();
+			entries.add(entry);
+			if (!isIdentifierKey(entry.getKey())) {
+				return true;
+			}
+		}
+		return hasHomogeneousValueShapes(entries);
+	}
+
+	private static boolean hasHomogeneousValueShapes(List<Map.Entry<String, JsonNode>> entries) {
+		if (entries.size() < 2) {
+			return false;
+		}
+		ShapeNode merged = null;
+		for (Map.Entry<String, JsonNode> entry : entries) {
+			ShapeNode current = extractFromJsonNode(entry.getValue());
+			if (merged == null) {
+				merged = current;
+				continue;
+			}
+			if (!isCompatibleMapValueShape(merged, current)) {
+				return false;
+			}
+			merged = ReturnSchemaMerger.mergeShapes(merged, current);
+		}
+		return true;
+	}
+
+	private static boolean isCompatibleMapValueShape(ShapeNode left, ShapeNode right) {
+		if (left == null || right == null) {
+			return false;
+		}
+		if (left.isUnknown() || right.isUnknown()) {
+			return true;
+		}
+		if (left instanceof PrimitiveShapeNode leftPrimitive && right instanceof PrimitiveShapeNode rightPrimitive) {
+			return leftPrimitive.getType() == rightPrimitive.getType();
+		}
+		return left.getClass().equals(right.getClass());
+	}
+
+	/**
+	 * 判断字符串是否是合法的标识符格式（仅含字母、数字、下划线、$，且不以数字开头）。
+	 */
+	private static boolean isIdentifierKey(String key) {
+		if (key == null || key.isEmpty()) {
+			return false;
+		}
+		char first = key.charAt(0);
+		if (!Character.isLetter(first) && first != '_' && first != '$') {
+			return false;
+		}
+		for (int i = 1; i < key.length(); i++) {
+			char c = key.charAt(i);
+			if (!Character.isLetterOrDigit(c) && c != '_' && c != '$') {
+				return false;
+			}
+		}
+		return true;
+	}
+
+}

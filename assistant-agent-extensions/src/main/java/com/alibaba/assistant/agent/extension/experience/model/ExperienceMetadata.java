@@ -1,6 +1,12 @@
 package com.alibaba.assistant.agent.extension.experience.model;
 
+import org.springframework.util.StringUtils;
+
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -77,5 +83,75 @@ public class ExperienceMetadata {
 
     public Object getProperty(String key) {
         return this.properties.get(key);
+    }
+
+    public List<String> getTenantIdList() {
+        Object val = properties.get("tenantIdList");
+        if (val instanceof Collection<?> collection) {
+            return normalizeTenantIdList(collection);
+        }
+        return new ArrayList<>();
+    }
+
+    public void setTenantIdList(Collection<String> tenantIdList) {
+        List<String> normalized = normalizeTenantIdList(tenantIdList);
+        if (normalized.isEmpty()) {
+            properties.remove("tenantIdList");
+            return;
+        }
+        properties.put("tenantIdList", normalized);
+    }
+
+    public void addTenantId(String tenantId) {
+        if (!StringUtils.hasText(tenantId)) {
+            return;
+        }
+        List<String> current = new ArrayList<>(getTenantIdList());
+        current.add(tenantId);
+        setTenantIdList(current);
+    }
+
+    public void clearTenantIdList() {
+        properties.remove("tenantIdList");
+    }
+
+    public boolean isGlobal() {
+        return getTenantIdList().isEmpty();
+    }
+
+    public boolean matchesTenantId(String tenantId) {
+        return matchesTenantId(tenantId, true);
+    }
+
+    public boolean matchesTenantId(String tenantId, boolean includeGlobal) {
+        List<String> experienceTenantIdList = getTenantIdList();
+        if ("global".equalsIgnoreCase(tenantId != null ? tenantId.trim() : null)) {
+            return experienceTenantIdList.isEmpty();
+        }
+        if (experienceTenantIdList.isEmpty()) {
+            return includeGlobal;
+        }
+        if (!StringUtils.hasText(tenantId)) {
+            return false;
+        }
+        return experienceTenantIdList.contains(tenantId.trim());
+    }
+
+    private List<String> normalizeTenantIdList(Collection<?> rawTenantIds) {
+        if (rawTenantIds == null || rawTenantIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        LinkedHashSet<String> normalized = new LinkedHashSet<>();
+        for (Object rawTenantId : rawTenantIds) {
+            if (rawTenantId == null) {
+                continue;
+            }
+            String tenantId = String.valueOf(rawTenantId).trim();
+            if (!StringUtils.hasText(tenantId) || "global".equalsIgnoreCase(tenantId)) {
+                continue;
+            }
+            normalized.add(tenantId);
+        }
+        return new ArrayList<>(normalized);
     }
 }

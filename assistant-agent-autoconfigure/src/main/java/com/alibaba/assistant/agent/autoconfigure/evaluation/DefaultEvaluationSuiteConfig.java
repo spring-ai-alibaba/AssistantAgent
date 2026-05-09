@@ -18,15 +18,13 @@ package com.alibaba.assistant.agent.autoconfigure.evaluation;
 import com.alibaba.assistant.agent.evaluation.DefaultEvaluationService;
 import com.alibaba.assistant.agent.evaluation.EvaluationService;
 import com.alibaba.assistant.agent.evaluation.builder.EvaluationSuiteBuilder;
+import com.alibaba.assistant.agent.evaluation.evaluator.Evaluator;
 import com.alibaba.assistant.agent.evaluation.evaluator.EvaluatorRegistry;
 import com.alibaba.assistant.agent.evaluation.evaluator.LLMBasedEvaluator;
-import com.alibaba.assistant.agent.evaluation.evaluator.RuleBasedEvaluator;
 import com.alibaba.assistant.agent.evaluation.model.EvaluationCriterion;
 import com.alibaba.assistant.agent.evaluation.model.EvaluationSuite;
 import com.alibaba.assistant.agent.extension.evaluation.config.CodeactEvaluationContextFactory;
-import com.alibaba.assistant.agent.extension.evaluation.experience.ExperienceRetrievalEvaluatorFactory;
 import com.alibaba.assistant.agent.extension.evaluation.hook.ReactBeforeModelEvaluationHook;
-import com.alibaba.assistant.agent.extension.experience.spi.ExperienceProvider;
 import com.alibaba.assistant.agent.extension.prompt.ReactPromptContributorModelHook;
 import com.alibaba.assistant.agent.prompt.PromptContributorManager;
 import com.alibaba.cloud.ai.graph.agent.hook.Hook;
@@ -74,18 +72,18 @@ public class DefaultEvaluationSuiteConfig {
     private final DefaultEvaluationProperties properties;
     private final ChatModel chatModel;
     private final List<EvaluationCriterionProvider> criterionProviders;
-    private final ExperienceProvider experienceProvider;
+    private final List<Evaluator> customEvaluators;
 
     public DefaultEvaluationSuiteConfig(
             DefaultEvaluationProperties properties,
             ChatModel chatModel,
             @Autowired(required = false) List<EvaluationCriterionProvider> criterionProviders,
-            @Autowired(required = false) ExperienceProvider experienceProvider) {
+            @Autowired(required = false) List<Evaluator> customEvaluators) {
         this.properties = properties;
         this.chatModel = chatModel;
         this.criterionProviders = criterionProviders;
-        this.experienceProvider = experienceProvider;
-        log.info("DefaultEvaluationSuiteConfig#<init> - reason=初始化默认评估套件配置, experienceProviderAvailable={}", experienceProvider != null);
+        this.customEvaluators = customEvaluators;
+        log.info("DefaultEvaluationSuiteConfig#<init> - reason=初始化默认评估套件配置");
     }
 
     /**
@@ -178,9 +176,7 @@ public class DefaultEvaluationSuiteConfig {
     /**
      * 创建默认的评估器注册表
      *
-     * <p>Starter 层自动装配：
-     * - LLM 评估器
-     * - 经验检索评估器（如果 ExperienceProvider 可用）
+     * <p>Starter 层自动装配 LLM 评估器。
      */
     private EvaluatorRegistry createDefaultEvaluatorRegistry() {
         EvaluatorRegistry registry = new EvaluatorRegistry();
@@ -189,14 +185,15 @@ public class DefaultEvaluationSuiteConfig {
         LLMBasedEvaluator llmEvaluator = new LLMBasedEvaluator(chatModel, "llm-based");
         registry.registerEvaluator(llmEvaluator);
 
-
-        // 自动注册经验检索评估器（如果 ExperienceProvider 可用）
-        if (experienceProvider != null && properties.getExperience().isEnabled()) {
-            int maxExperiences = properties.getExperience().getMaxExperiencesPerType();
-            RuleBasedEvaluator expEvaluator = ExperienceRetrievalEvaluatorFactory.createExperienceEvaluator(
-                    experienceProvider, maxExperiences);
-            registry.registerEvaluator(expEvaluator);
-            log.info("DefaultEvaluationSuiteConfig#createDefaultEvaluatorRegistry - reason=注册经验检索评估器");
+        if (customEvaluators != null) {
+            for (Evaluator evaluator : customEvaluators) {
+                if (evaluator == null || "llm-based".equals(evaluator.getEvaluatorId())) {
+                    continue;
+                }
+                registry.registerEvaluator(evaluator);
+                log.info("DefaultEvaluationSuiteConfig#createDefaultEvaluatorRegistry - reason=注册自定义评估器, evaluatorId={}",
+                        evaluator.getEvaluatorId());
+            }
         }
 
         return registry;
@@ -216,4 +213,3 @@ public class DefaultEvaluationSuiteConfig {
         return createDefaultEvaluatorRegistry();
     }
 }
-

@@ -2,7 +2,6 @@ package com.alibaba.assistant.agent.extension.experience;
 
 import com.alibaba.assistant.agent.extension.experience.model.Experience;
 import com.alibaba.assistant.agent.extension.experience.model.ExperienceArtifact;
-import com.alibaba.assistant.agent.extension.experience.model.ExperienceScope;
 import com.alibaba.assistant.agent.extension.experience.model.ExperienceType;
 import com.alibaba.assistant.agent.extension.experience.model.FastIntentConfig;
 import com.alibaba.assistant.agent.extension.experience.model.*;
@@ -39,20 +38,19 @@ public class ExperienceDataInitializer implements CommandLineRunner {
     }
 
     private void initializeDemoData() {
-        // 初始化代码经验
-        initializeCodeExperiences();
-
-        // 初始化React经验
+        // 初始化React经验（包含原CODE经验迁移后的数据）
         initializeReactExperiences();
 
         // 初始化常识经验
         initializeCommonExperiences();
     }
 
-    private void initializeCodeExperiences() {
-        // Java日志规范经验
+    private void initializeReactExperiences() {
+        // === 原 CODE 经验迁移为 REACT 类型 ===
+
+        // Java日志规范经验（原CODE类型，迁移为REACT）
         Experience javaLoggingExp = new Experience(
-                ExperienceType.CODE,
+                ExperienceType.REACT,
                 "Java日志格式规范",
                 "按照要求，日志格式应该为：类名 + 目标方法 + 打印原因\n\n" +
                 "```java\n" +
@@ -61,17 +59,16 @@ public class ExperienceDataInitializer implements CommandLineRunner {
                 "    log.info(\"ClassName#methodName - reason=具体原因描述\");\n" +
                 "}\n" +
                 "```\n\n" +
-                "这样的格式便于日志分析和问题排查。",
-                ExperienceScope.GLOBAL
+                "这样的格式便于日志分析和问题排查。"
         );
-        javaLoggingExp.setLanguage("java");
         javaLoggingExp.setTags(Set.of("logging", "format", "standard"));
         javaLoggingExp.getMetadata().setSource("manual");
         javaLoggingExp.getMetadata().setConfidence(1.0);
+        javaLoggingExp.setDisclosureStrategy(DisclosureStrategy.PROGRESSIVE);
 
-        // Spring Boot异常处理经验
+        // Spring Boot异常处理经验（原CODE类型，迁移为REACT）
         Experience springExceptionExp = new Experience(
-                ExperienceType.CODE,
+                ExperienceType.REACT,
                 "Spring Boot统一异常处理",
                 "使用@ControllerAdvice进行全局异常处理：\n\n" +
                 "```java\n" +
@@ -84,26 +81,26 @@ public class ExperienceDataInitializer implements CommandLineRunner {
                 "        return ResponseEntity.status(500).body(new ErrorResponse(\"Internal Server Error\"));\n" +
                 "    }\n" +
                 "}\n" +
-                "```",
-                ExperienceScope.TEAM
+                "```"
         );
-        springExceptionExp.setLanguage("java");
+        springExceptionExp.getMetadata().setTenantIdList(List.of("demo-team"));
         springExceptionExp.setTags(Set.of("spring-boot", "exception-handling", "controller-advice"));
         springExceptionExp.getMetadata().setSource("manual");
         springExceptionExp.getMetadata().setConfidence(0.9);
+        springExceptionExp.setDisclosureStrategy(DisclosureStrategy.PROGRESSIVE);
 
         experienceRepository.save(javaLoggingExp);
         experienceRepository.save(springExceptionExp);
 
-        // FastIntent example: CODE experience (skip code-generator when matched)
-        Experience fastCode = new Experience(
-                ExperienceType.CODE,
+        // FastIntent example: 原CODE经验迁移为REACT + write_code ToolCallSpec
+        Experience fastWriteCode = new Experience(
+                ExperienceType.REACT,
                 "FastIntent: tenant=demo direct function execution",
-                "When tenant=demo, skip LLM code generation and directly execute handle_demo_request.",
-                ExperienceScope.GLOBAL
+                "When tenant=demo, skip LLM code generation and directly execute handle_demo_request via write_code."
         );
-        fastCode.setLanguage("python");
-        fastCode.setTags(Set.of("fast-intent", "demo"));
+        fastWriteCode.getMetadata().setTenantIdList(List.of("demo"));
+        fastWriteCode.setTags(Set.of("fast-intent", "demo"));
+        fastWriteCode.setDisclosureStrategy(DisclosureStrategy.DIRECT);
 
         FastIntentConfig cfg = new FastIntentConfig();
         cfg.setEnabled(true);
@@ -115,21 +112,28 @@ public class ExperienceDataInitializer implements CommandLineRunner {
         FastIntentConfig.MatchExpression match = new FastIntentConfig.MatchExpression();
         match.setCondition(cond);
         cfg.setMatch(match);
-        fastCode.setFastIntentConfig(cfg);
+        fastWriteCode.setFastIntentConfig(cfg);
 
+        // 使用 ReactArtifact + write_code ToolCallSpec 替代原 CodeArtifact
         ExperienceArtifact artifact = new ExperienceArtifact();
-        ExperienceArtifact.CodeArtifact codeArtifact = new ExperienceArtifact.CodeArtifact();
-        codeArtifact.setLanguage("python");
-        codeArtifact.setFunctionName("handle_demo_request");
-        codeArtifact.setParameters(List.of());
-        codeArtifact.setCode("def handle_demo_request():\n    return 'I am MoLiHong'\n");
-        artifact.setCode(codeArtifact);
-        fastCode.setArtifact(artifact);
+        ExperienceArtifact.ReactArtifact reactArtifact = new ExperienceArtifact.ReactArtifact();
+        ExperienceArtifact.ToolPlan plan = new ExperienceArtifact.ToolPlan();
+        ExperienceArtifact.ToolCallSpec writeCodeCall = new ExperienceArtifact.ToolCallSpec();
+        writeCodeCall.setToolName("write_code");
+        writeCodeCall.setArguments(java.util.Map.of(
+                "functionName", "handle_demo_request",
+                "description", "Handle demo request",
+                "parameters", List.of(),
+                "code", "def handle_demo_request():\n    return 'I am MoLiHong'\n"
+        ));
+        plan.setToolCalls(List.of(writeCodeCall));
+        reactArtifact.setPlan(plan);
+        artifact.setReact(reactArtifact);
+        fastWriteCode.setArtifact(artifact);
 
-        experienceRepository.save(fastCode);
-    }
+        experienceRepository.save(fastWriteCode);
 
-    private void initializeReactExperiences() {
+        // === 原有 REACT 经验 ===
         // 代码生成策略经验
         Experience codeGenExp = new Experience(
                 ExperienceType.REACT,
@@ -141,9 +145,9 @@ public class ExperienceDataInitializer implements CommandLineRunner {
                 "4. 生成代码时保持与项目风格一致\n" +
                 "5. 添加适当的注释和文档\n" +
                 "6. 考虑异常处理和边界情况\n\n" +
-                "优先使用项目中已有的工具类和框架，避免重复造轮子。",
-                ExperienceScope.TEAM
+                "优先使用项目中已有的工具类和框架，避免重复造轮子。"
         );
+        codeGenExp.getMetadata().setTenantIdList(List.of("demo-team"));
         codeGenExp.setTags(Set.of("code-generation", "best-practice", "strategy"));
         codeGenExp.getMetadata().setSource("learned");
         codeGenExp.getMetadata().setConfidence(0.8);
@@ -157,8 +161,7 @@ public class ExperienceDataInitializer implements CommandLineRunner {
                 "- 代码分析：使用analyze_code工具\n" +
                 "- 项目构建：使用build_project工具\n" +
                 "- 测试执行：使用run_tests工具\n\n" +
-                "在使用工具前，先检查必要的参数是否齐全，避免工具调用失败。",
-                ExperienceScope.GLOBAL
+                "在使用工具前，先检查必要的参数是否齐全，避免工具调用失败。"
         );
         toolSelectionExp.setTags(Set.of("tool-selection", "strategy", "efficiency"));
         toolSelectionExp.getMetadata().setSource("learned");
@@ -171,8 +174,7 @@ public class ExperienceDataInitializer implements CommandLineRunner {
         Experience fastReact = new Experience(
                 ExperienceType.REACT,
                 "FastIntent: 前缀 ping 走固定工具链",
-                "当用户以 ping 开头时，直接执行固定工具链。",
-                ExperienceScope.GLOBAL
+                "当用户以 ping 开头时，直接执行固定工具链。"
         );
         fastReact.setTags(Set.of("fast-intent", "react", "demo"));
 
@@ -188,15 +190,15 @@ public class ExperienceDataInitializer implements CommandLineRunner {
         fastReact.setFastIntentConfig(rCfg);
 
         ExperienceArtifact rArtifact = new ExperienceArtifact();
-        ExperienceArtifact.ReactArtifact reactArtifact = new ExperienceArtifact.ReactArtifact();
-        reactArtifact.setAssistantText("我将直接执行固定工具链。");
-        ExperienceArtifact.ToolPlan plan = new ExperienceArtifact.ToolPlan();
+        ExperienceArtifact.ReactArtifact fastReactArtifact = new ExperienceArtifact.ReactArtifact();
+        fastReactArtifact.setAssistantText("我将直接执行固定工具链。");
+        ExperienceArtifact.ToolPlan fastPlan = new ExperienceArtifact.ToolPlan();
         ExperienceArtifact.ToolCallSpec call1 = new ExperienceArtifact.ToolCallSpec();
         call1.setToolName("reply");
         call1.setArguments(java.util.Map.of("content", "pong"));
-        plan.setToolCalls(List.of(call1));
-        reactArtifact.setPlan(plan);
-        rArtifact.setReact(reactArtifact);
+        fastPlan.setToolCalls(List.of(call1));
+        fastReactArtifact.setPlan(fastPlan);
+        rArtifact.setReact(fastReactArtifact);
         fastReact.setArtifact(rArtifact);
 
         experienceRepository.save(fastReact);
@@ -213,8 +215,7 @@ public class ExperienceDataInitializer implements CommandLineRunner {
                 "3. 使用参数化查询，避免SQL注入\n" +
                 "4. 及时更新依赖库，修复已知安全漏洞\n" +
                 "5. 对敏感操作添加权限检查\n\n" +
-                "这些规范是强制性的，不得违反。",
-                ExperienceScope.GLOBAL
+                "这些规范是强制性的，不得违反。"
         );
         securityExp.setTags(Set.of("security", "mandatory", "best-practice"));
         securityExp.getMetadata().setSource("policy");
@@ -231,8 +232,7 @@ public class ExperienceDataInitializer implements CommandLineRunner {
                 "4. 单元测试覆盖率不低于70%\n" +
                 "5. 避免代码重复，提取公共逻辑\n" +
                 "6. 日志格式统一为：类名 + 目标方法 + 打印原因\n\n" +
-                "请在代码生成时严格遵循这些要求。",
-                ExperienceScope.GLOBAL
+                "请在代码生成时严格遵循这些要求。"
         );
         qualityExp.setTags(Set.of("code-quality", "standards", "mandatory"));
         qualityExp.getMetadata().setSource("policy");

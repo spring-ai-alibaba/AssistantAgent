@@ -28,6 +28,8 @@ import com.alibaba.assistant.agent.extension.experience.spi.ExperienceProvider;
 import com.alibaba.assistant.agent.extension.search.tools.SearchCodeactToolFactory;
 import com.alibaba.assistant.agent.extension.search.tools.UnifiedSearchCodeactTool;
 import com.alibaba.assistant.agent.common.enums.Language;
+import com.alibaba.assistant.agent.extension.prompt.CodeactToolSignatureInjectionToolCallback;
+import com.alibaba.assistant.agent.extension.prompt.PromptContributionToolCallback;
 import com.alibaba.cloud.ai.graph.agent.hook.Hook;
 import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import org.slf4j.Logger;
@@ -36,6 +38,7 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -85,6 +88,11 @@ public class CodeactAgentConfig {
 			【代码编写规范】
 			⚠️ 重要：代码在 GraalVM Python 沙箱中执行，请遵循以下规范：
 			
+			0. 代码整洁规范（强制）：
+			   - 禁止在代码中使用三引号 docstring（\"\"\"...\"\"\"），因为三引号会破坏 JSON 参数格式
+			   - 禁止生成任何形式的注释（包括 # 注释和多行注释）
+			   - 代码应通过清晰的变量命名和函数结构来自解释
+			
 			1. 函数必须返回字典格式的结果：
 			   return {"success": True, "result": value, "message": "描述信息"}
 			   return {"success": False, "error": "错误描述"}
@@ -97,7 +105,6 @@ public class CodeactAgentConfig {
 			
 			3. 纯Python计算示例（推荐）：
 			   def calculate_sum(a, b):
-			       \"\"\"计算两数之和\"\"\"
 			       try:
 			           result = a + b
 			           return {"success": True, "sum": result, "message": f"{a} + {b} = {result}"}
@@ -138,6 +145,31 @@ public class CodeactAgentConfig {
 			✅ 使用已知的React工具（send_success_message等）回复用户
 			✅ 从错误信息中学习并重新生成代码
 			✅ 主动尝试，快速迭代
+
+			<experience_usage>
+			【经验使用规范】
+			
+			你会收到一批已预取的经验候选，或在工具列表中看到 `search_exp` / `read_exp`：
+			
+			1. COMMON 经验回答"这是什么"：
+			   - 用于产品术语、名词解释、概念边界、字段/规范理解
+			
+			2. REACT / TOOL 经验回答"怎么做"：
+			   - REACT 经验用于流程、决策、策略参考
+			   - TOOL 经验用于能力判断、工具选择与调用路径判断
+			
+			3. 使用顺序：
+			   - 如果已预取到候选，优先从这些候选里选合适的 id
+			   - 若经验已按 `DIRECT` 方式直接披露，可直接利用其内容
+			   - 若存在匹配当前任务的 REACT `PROGRESSIVE` 候选，优先调用 `read_exp` 获取完整正文；若 DIRECT / COMMON / TOOL 已足够支撑正确实现，也可直接继续
+			   - 只有当当前候选明显不足、缺少方向或缺少相关能力时，再调用 `search_exp`
+			
+			4. TOOL 调用路径判断：
+			   - `REACT_DIRECT`：表示该工具具备在 React 阶段直接 function call 的资格，但仅适用于单个工具一次调用即可完成任务的场景
+			   - `CODE_ONLY`：表示该工具只能通过 `write_code` + `execute_code` 使用
+			   - 不要把 `CODE_ONLY` 工具误当成 React 直调工具
+			   - 即使工具是 `REACT_DIRECT`，只要任务需要组合多个工具、流程编排或结果再加工，也应走 `write_code`
+			</experience_usage>
 
 			记住：你是代码驱动的Agent！编写返回结果的纯Python函数，执行后用React工具回复用户！
 			""";
@@ -185,6 +217,7 @@ public class CodeactAgentConfig {
 	 * @param triggerCodeactTools Trigger模块的工具列表（可选）
 	 * @param unifiedSearchCodeactTool 统一搜索工具（可选）
 	 * @param mcpToolCallbackProvider MCP工具提供者（由MCP Client Boot Starter自动注入，可选）
+	 * @param springDiscoveredCodeactTools 容器中其它 {@link CodeactTool} Bean（如 start 模块自定义 {@code @Component} 工具）
 	 */
 	@Bean
 	public CodeactAgent grayscaleCodeactAgent(
@@ -193,10 +226,14 @@ public class CodeactAgentConfig {
 			@Autowired(required = false) SearchCodeactToolFactory searchCodeactToolFactory,
 			@Autowired(required = false) List<TriggerCodeactTool> triggerCodeactTools,
 			@Autowired(required = false) UnifiedSearchCodeactTool unifiedSearchCodeactTool,
+			@Autowired(required = false) List<CodeactTool> springDiscoveredCodeactTools,
 			@Autowired(required = false) ToolCallbackProvider mcpToolCallbackProvider,
             @Autowired(required = false) ExperienceProvider experienceProvider,
             @Autowired(required = false) ExperienceExtensionProperties experienceExtensionProperties,
-            @Autowired(required = false) FastIntentService fastIntentService) {
+            @Autowired(required = false) FastIntentService fastIntentService,
+            @Autowired(required = false) PromptContributionToolCallback promptContributionToolCallback,
+            @Autowired(required = false) CodeactToolSignatureInjectionToolCallback codeactToolSignatureInjectionToolCallback,
+            @Autowired(required = false) @Qualifier("experienceDisclosureTools") List<ToolCallback> experienceDisclosureTools) {
 
 		logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=创建 CodeactAgent");
 		logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=配置 MemorySaver 以支持多轮对话上下文保持");
@@ -230,6 +267,20 @@ public class CodeactAgentConfig {
 		if (triggerCodeactTools != null && !triggerCodeactTools.isEmpty()) {
 			allCodeactTools.addAll(triggerCodeactTools);
 			logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=添加TriggerCodeactTools, count={}", triggerCodeactTools.size());
+		}
+
+		// 注册仅实现 CodeactTool 的 Spring Bean（例如 assistant-agent-start 下的 @Component 自定义工具）
+		if (springDiscoveredCodeactTools != null) {
+			for (CodeactTool tool : springDiscoveredCodeactTools) {
+				if (tool instanceof ReplyCodeactTool || tool instanceof SearchCodeactTool || tool instanceof TriggerCodeactTool) {
+					continue;
+				}
+				allCodeactTools.add(tool);
+				logger.info(
+						"CodeactAgentConfig#grayscaleCodeactAgent - reason=添加 Spring 注册的自定义 CodeactTool, class={}, name={}",
+						tool.getClass().getSimpleName(),
+						tool.getToolDefinition() != null ? tool.getToolDefinition().name() : "null");
+			}
 		}
 
 		// 添加 MCP 动态工具（通过 MCP Client Boot Starter 注入的 ToolCallbackProvider）
@@ -271,8 +322,27 @@ public class CodeactAgentConfig {
 				.enableInitialCodeGen(true)
 				.allowIO(false)
 				.allowNativeAccess(false)
-				.executionTimeout(30000)
-                .tools(replyCodeactTools != null ? replyCodeactTools.toArray(new ToolCallback[0]) : new ToolCallback[0])
+				.executionTimeout(30000);
+
+                // Merge reply tools + prompt contribution placeholder tool
+                List<ToolCallback> reactTools = new ArrayList<>();
+                if (replyCodeactTools != null) {
+                    reactTools.addAll(replyCodeactTools);
+                }
+                if (promptContributionToolCallback != null) {
+                    reactTools.add(promptContributionToolCallback);
+                    logger.info("CodeactAgentConfig - reason=注入 PromptContributionToolCallback 占位工具");
+                }
+                if (codeactToolSignatureInjectionToolCallback != null) {
+                    reactTools.add(codeactToolSignatureInjectionToolCallback);
+                    logger.info("CodeactAgentConfig - reason=注入 CodeactToolSignatureInjectionToolCallback 占位工具");
+                }
+                if (experienceDisclosureTools != null && !experienceDisclosureTools.isEmpty()) {
+                    reactTools.addAll(experienceDisclosureTools);
+                    logger.info("CodeactAgentConfig - reason=注入经验披露工具(search_exp/read_exp), count={}", experienceDisclosureTools.size());
+                }
+
+                builder.tools(reactTools.toArray(new ToolCallback[0]))
                 .codeactTools(allCodeactTools)
                 .hooks(allHooks)
 				.experienceProvider(experienceProvider)
@@ -349,4 +419,3 @@ public class CodeactAgentConfig {
 		return new ArrayList<>();
 	}
 }
-
