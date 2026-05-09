@@ -217,6 +217,7 @@ public class CodeactAgentConfig {
 	 * @param triggerCodeactTools Trigger模块的工具列表（可选）
 	 * @param unifiedSearchCodeactTool 统一搜索工具（可选）
 	 * @param mcpToolCallbackProvider MCP工具提供者（由MCP Client Boot Starter自动注入，可选）
+	 * @param springDiscoveredCodeactTools 容器中其它 {@link CodeactTool} Bean（如 start 模块自定义 {@code @Component} 工具）
 	 */
 	@Bean
 	public CodeactAgent grayscaleCodeactAgent(
@@ -225,6 +226,7 @@ public class CodeactAgentConfig {
 			@Autowired(required = false) SearchCodeactToolFactory searchCodeactToolFactory,
 			@Autowired(required = false) List<TriggerCodeactTool> triggerCodeactTools,
 			@Autowired(required = false) UnifiedSearchCodeactTool unifiedSearchCodeactTool,
+			@Autowired(required = false) List<CodeactTool> springDiscoveredCodeactTools,
 			@Autowired(required = false) ToolCallbackProvider mcpToolCallbackProvider,
             @Autowired(required = false) ExperienceProvider experienceProvider,
             @Autowired(required = false) ExperienceExtensionProperties experienceExtensionProperties,
@@ -265,6 +267,20 @@ public class CodeactAgentConfig {
 		if (triggerCodeactTools != null && !triggerCodeactTools.isEmpty()) {
 			allCodeactTools.addAll(triggerCodeactTools);
 			logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=添加TriggerCodeactTools, count={}", triggerCodeactTools.size());
+		}
+
+		// 注册仅实现 CodeactTool 的 Spring Bean（例如 assistant-agent-start 下的 @Component 自定义工具）
+		if (springDiscoveredCodeactTools != null) {
+			for (CodeactTool tool : springDiscoveredCodeactTools) {
+				if (tool instanceof ReplyCodeactTool || tool instanceof SearchCodeactTool || tool instanceof TriggerCodeactTool) {
+					continue;
+				}
+				allCodeactTools.add(tool);
+				logger.info(
+						"CodeactAgentConfig#grayscaleCodeactAgent - reason=添加 Spring 注册的自定义 CodeactTool, class={}, name={}",
+						tool.getClass().getSimpleName(),
+						tool.getToolDefinition() != null ? tool.getToolDefinition().name() : "null");
+			}
 		}
 
 		// 添加 MCP 动态工具（通过 MCP Client Boot Starter 注入的 ToolCallbackProvider）
