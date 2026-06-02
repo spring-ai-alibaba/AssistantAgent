@@ -13,6 +13,21 @@ public interface SkillExchangeService {
 
     String exportAllSkills(ExperienceType type);
 
+    /**
+     * 将 experience 还原为与导入互逆的 skill 包（zip）。
+     *
+     * <p>导出内容包括：
+     * <ul>
+     *     <li>SKILL.md：根据当前 experience 的 frontmatter 与 content 重建</li>
+     *     <li>references/、scripts/、assets/ 等原始文件，按原相对路径写回</li>
+     *     <li>package.json：若 experience 关联了 CLI TOOL 经验，则根据 artifact 还原 cli 字段</li>
+     * </ul>
+     *
+     * @param experienceId 目标 experience id（接受 REACT 或 TOOL 任一侧）
+     * @return zip 字节内容
+     */
+    byte[] exportSkillPackage(String experienceId);
+
     ExperienceVO previewSkillImport(String skillMarkdown);
 
     /**

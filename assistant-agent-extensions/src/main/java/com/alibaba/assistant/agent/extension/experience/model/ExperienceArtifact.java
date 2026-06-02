@@ -14,6 +14,9 @@ import java.util.Map;
  *     <li>REACT：可直接构造 AssistantMessage(toolCalls + 可选文本) 进入 tool 执行</li>
  *     <li>TOOL：提供工具连接信息和Schema，用于创建 CodeactTool</li>
  * </ul>
+ *
+ * <p>注意：skill package 的文件资源由顶层 {@link Experience#getReferences()} 与
+ * {@link Experience#getAssets()} 承载，artifact 不再保有 packageBundle 字段。
  */
 public class ExperienceArtifact implements Serializable {
 
@@ -124,7 +127,7 @@ public class ExperienceArtifact implements Serializable {
         private static final long serialVersionUID = 1L;
 
         /**
-         * 工具来源类型：mcp / a2a / http
+         * 工具来源类型：mcp / a2a / http / cli
          */
         private String source;
 
@@ -142,6 +145,33 @@ public class ExperienceArtifact implements Serializable {
         private String httpMethod;
         private String httpUrl;
         private String httpBodyTemplate;
+
+        // --- CLI 运行时信息 ---
+        /**
+         * 该 TOOL 绑定的 CLI provider id
+         * 一个 provider 对应唯一的 TOOL experience（{@code cli_<providerId>_tool}）。
+         */
+        private String providerId;
+
+        /**
+         * 允许执行的命令前缀正则（必须以 ^ 锚定，例如 "^dbs($|\\s)"）。
+         * 模型提交的 {@code command} 参数在分段后，首个 token 必须匹配该正则才会被执行。
+         */
+        private String commandAllowPattern;
+
+        /**
+         * 允许作为管道下游的外部可执行文件白名单（如 jq/grep 等）。
+         * 若为 {@code null} 或空，则仅允许没有管道的命令。
+         */
+        private java.util.List<String> pipeAllowlist;
+
+        private String runnerImage;
+        private String sandboxTemplate;
+        private String executionMode;
+        private String authProfile;
+        private String authProvider;
+        private String loginCommandTemplate;
+        private String outputFormat;
 
         /**
          * 工具输入 Schema（JSON Schema 格式字符串）
@@ -243,6 +273,86 @@ public class ExperienceArtifact implements Serializable {
             this.httpBodyTemplate = httpBodyTemplate;
         }
 
+        public String getRunnerImage() {
+            return runnerImage;
+        }
+
+        public void setRunnerImage(String runnerImage) {
+            this.runnerImage = runnerImage;
+        }
+
+        public String getSandboxTemplate() {
+            return sandboxTemplate;
+        }
+
+        public void setSandboxTemplate(String sandboxTemplate) {
+            this.sandboxTemplate = sandboxTemplate;
+        }
+
+        public String getExecutionMode() {
+            return executionMode;
+        }
+
+        public void setExecutionMode(String executionMode) {
+            this.executionMode = executionMode;
+        }
+
+        public String getAuthProfile() {
+            return authProfile;
+        }
+
+        public void setAuthProfile(String authProfile) {
+            this.authProfile = authProfile;
+        }
+
+        public String getAuthProvider() {
+            return authProvider;
+        }
+
+        public void setAuthProvider(String authProvider) {
+            this.authProvider = authProvider;
+        }
+
+        public String getLoginCommandTemplate() {
+            return loginCommandTemplate;
+        }
+
+        public void setLoginCommandTemplate(String loginCommandTemplate) {
+            this.loginCommandTemplate = loginCommandTemplate;
+        }
+
+        public String getProviderId() {
+            return providerId;
+        }
+
+        public void setProviderId(String providerId) {
+            this.providerId = providerId;
+        }
+
+        public String getCommandAllowPattern() {
+            return commandAllowPattern;
+        }
+
+        public void setCommandAllowPattern(String commandAllowPattern) {
+            this.commandAllowPattern = commandAllowPattern;
+        }
+
+        public java.util.List<String> getPipeAllowlist() {
+            return pipeAllowlist;
+        }
+
+        public void setPipeAllowlist(java.util.List<String> pipeAllowlist) {
+            this.pipeAllowlist = pipeAllowlist;
+        }
+
+        public String getOutputFormat() {
+            return outputFormat;
+        }
+
+        public void setOutputFormat(String outputFormat) {
+            this.outputFormat = outputFormat;
+        }
+
         public String getInputSchema() {
             return inputSchema;
         }
@@ -275,5 +385,5 @@ public class ExperienceArtifact implements Serializable {
             this.codeactToolName = codeactToolName;
         }
     }
-}
 
+}

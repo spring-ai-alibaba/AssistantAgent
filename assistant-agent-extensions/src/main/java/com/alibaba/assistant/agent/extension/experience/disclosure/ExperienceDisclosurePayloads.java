@@ -353,6 +353,121 @@ public final class ExperienceDisclosurePayloads {
         }
     }
 
+    public static class ReferenceManifestEntry implements Serializable {
+
+        @Serial
+        private static final long serialVersionUID = 1L;
+
+        private String path;
+        private String mediaType;
+        private String description;
+        private Long size;
+
+        public String getPath() { return path; }
+        public void setPath(String path) { this.path = path; }
+        public String getMediaType() { return mediaType; }
+        public void setMediaType(String mediaType) { this.mediaType = mediaType; }
+        public String getDescription() { return description; }
+        public void setDescription(String description) { this.description = description; }
+        public Long getSize() { return size; }
+        public void setSize(Long size) { this.size = size; }
+    }
+
+    public static class AssetManifestEntry implements Serializable {
+
+        @Serial
+        private static final long serialVersionUID = 1L;
+
+        private String path;
+        private String mediaType;
+        private String role;
+        private String description;
+        private Long size;
+
+        public String getPath() { return path; }
+        public void setPath(String path) { this.path = path; }
+        public String getMediaType() { return mediaType; }
+        public void setMediaType(String mediaType) { this.mediaType = mediaType; }
+        public String getRole() { return role; }
+        public void setRole(String role) { this.role = role; }
+        public String getDescription() { return description; }
+        public void setDescription(String description) { this.description = description; }
+        public Long getSize() { return size; }
+        public void setSize(Long size) { this.size = size; }
+    }
+
+    public static class ReadExpDocRequest implements Serializable {
+
+        @Serial
+        private static final long serialVersionUID = 1L;
+
+        private String id;
+        private List<String> paths = new ArrayList<>();
+
+        public String getId() { return id; }
+        public void setId(String id) { this.id = id; }
+        public List<String> getPaths() { return paths; }
+        public void setPaths(List<String> paths) { this.paths = paths != null ? paths : new ArrayList<>(); }
+    }
+
+    public static class ReadExpDocResponse implements Serializable {
+
+        @Serial
+        private static final long serialVersionUID = 1L;
+
+        private String id;
+        private List<ReadExpDocument> documents = new ArrayList<>();
+        /** Non-fatal per-path errors (e.g., "path is an asset"); empty on success. */
+        private List<ReadExpDocError> errors = new ArrayList<>();
+
+        public String getId() { return id; }
+        public void setId(String id) { this.id = id; }
+        public List<ReadExpDocument> getDocuments() { return documents; }
+        public void setDocuments(List<ReadExpDocument> documents) {
+            this.documents = documents != null ? documents : new ArrayList<>();
+        }
+        public List<ReadExpDocError> getErrors() { return errors; }
+        public void setErrors(List<ReadExpDocError> errors) {
+            this.errors = errors != null ? errors : new ArrayList<>();
+        }
+    }
+
+    public static class ReadExpDocument implements Serializable {
+
+        @Serial
+        private static final long serialVersionUID = 1L;
+
+        private String path;
+        private String mediaType;
+        private String content;
+
+        public String getPath() { return path; }
+        public void setPath(String path) { this.path = path; }
+        public String getMediaType() { return mediaType; }
+        public void setMediaType(String mediaType) { this.mediaType = mediaType; }
+        public String getContent() { return content; }
+        public void setContent(String content) { this.content = content; }
+    }
+
+    public static class ReadExpDocError implements Serializable {
+
+        @Serial
+        private static final long serialVersionUID = 1L;
+
+        private String path;
+        private String reason;
+
+        public ReadExpDocError() {}
+        public ReadExpDocError(String path, String reason) {
+            this.path = path;
+            this.reason = reason;
+        }
+        public String getPath() { return path; }
+        public void setPath(String path) { this.path = path; }
+        public String getReason() { return reason; }
+        public void setReason(String reason) { this.reason = reason; }
+    }
+
     public static class ReadExpResponse implements Serializable {
 
         @Serial
@@ -371,6 +486,24 @@ public final class ExperienceDisclosurePayloads {
         private ToolInvocationPath toolInvocationPath;
         private String callableToolName;
         private ExperienceArtifact artifact;
+        private List<ReferenceManifestEntry> referenceManifest = new ArrayList<>();
+        private List<AssetManifestEntry> assetManifest = new ArrayList<>();
+
+        public List<ReferenceManifestEntry> getReferenceManifest() {
+            return referenceManifest;
+        }
+
+        public void setReferenceManifest(List<ReferenceManifestEntry> referenceManifest) {
+            this.referenceManifest = referenceManifest != null ? referenceManifest : new ArrayList<>();
+        }
+
+        public List<AssetManifestEntry> getAssetManifest() {
+            return assetManifest;
+        }
+
+        public void setAssetManifest(List<AssetManifestEntry> assetManifest) {
+            this.assetManifest = assetManifest != null ? assetManifest : new ArrayList<>();
+        }
 
         public boolean isFound() {
             return found;

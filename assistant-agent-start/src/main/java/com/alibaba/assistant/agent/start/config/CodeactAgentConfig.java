@@ -30,7 +30,9 @@ import com.alibaba.assistant.agent.extension.search.tools.UnifiedSearchCodeactTo
 import com.alibaba.assistant.agent.common.enums.Language;
 import com.alibaba.assistant.agent.extension.prompt.CodeactToolSignatureInjectionToolCallback;
 import com.alibaba.assistant.agent.extension.prompt.PromptContributionToolCallback;
+import com.alibaba.assistant.agent.start.interceptor.modelInterceptor.DashScopeMultimodalEndpointInterceptor;
 import com.alibaba.cloud.ai.graph.agent.hook.Hook;
+import com.alibaba.cloud.ai.graph.agent.interceptor.ModelInterceptor;
 import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +43,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -217,14 +220,17 @@ public class CodeactAgentConfig {
 	 * @param triggerCodeactTools Trigger模块的工具列表（可选）
 	 * @param unifiedSearchCodeactTool 统一搜索工具（可选）
 	 * @param mcpToolCallbackProvider MCP工具提供者（由MCP Client Boot Starter自动注入，可选）
+	 * @param springDiscoveredCodeactTools 容器中其它 {@link CodeactTool} Bean（如 start 模块自定义 {@code @Component} 工具）
 	 */
 	@Bean
 	public CodeactAgent grayscaleCodeactAgent(
 			ChatModel chatModel,
+            @Autowired(required = false) Environment environment,
 			@Autowired(required = false) List<ReplyCodeactTool> replyCodeactTools,
 			@Autowired(required = false) SearchCodeactToolFactory searchCodeactToolFactory,
 			@Autowired(required = false) List<TriggerCodeactTool> triggerCodeactTools,
 			@Autowired(required = false) UnifiedSearchCodeactTool unifiedSearchCodeactTool,
+			@Autowired(required = false) List<CodeactTool> springDiscoveredCodeactTools,
 			@Autowired(required = false) ToolCallbackProvider mcpToolCallbackProvider,
             @Autowired(required = false) ExperienceProvider experienceProvider,
             @Autowired(required = false) ExperienceExtensionProperties experienceExtensionProperties,
@@ -267,6 +273,20 @@ public class CodeactAgentConfig {
 			logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=添加TriggerCodeactTools, count={}", triggerCodeactTools.size());
 		}
 
+		// 注册仅实现 CodeactTool 的 Spring Bean（例如 assistant-agent-start 下的 @Component 自定义工具）
+		if (springDiscoveredCodeactTools != null) {
+			for (CodeactTool tool : springDiscoveredCodeactTools) {
+				if (tool instanceof ReplyCodeactTool || tool instanceof SearchCodeactTool || tool instanceof TriggerCodeactTool) {
+					continue;
+				}
+				allCodeactTools.add(tool);
+				logger.info(
+						"CodeactAgentConfig#grayscaleCodeactAgent - reason=添加 Spring 注册的自定义 CodeactTool, class={}, name={}",
+						tool.getClass().getSimpleName(),
+						tool.getToolDefinition() != null ? tool.getToolDefinition().name() : "null");
+			}
+		}
+
 		// 添加 MCP 动态工具（通过 MCP Client Boot Starter 注入的 ToolCallbackProvider）
 		// 配置方式参考 mcp-client-spring-boot.md，在 application.properties 中配置：
 		// spring.ai.mcp.client.streamable-http.connections.my-server.url=https://mcp.example.com
@@ -296,6 +316,9 @@ public class CodeactAgentConfig {
         /*---------------------准备hooks-------------------*/
         logger.info("CodeactAgentConfig#grayscaleCodeactAgent - reason=统一配置 Hooks, total={}",
                 allHooks != null ? allHooks.size() : 0);
+
+        List<ModelInterceptor> modelInterceptors = new ArrayList<>();
+        modelInterceptors.add(new DashScopeMultimodalEndpointInterceptor(environment));
 
 		CodeactAgent.CodeactAgentBuilder builder = CodeactAgent.builder()
 				.name("CodeactAgent")

@@ -471,15 +471,7 @@ public class GraalCodeExecutor {
 			return "None";
 		}
 		if (value instanceof String) {
-			// 转义特殊字符并使用三引号处理多行字符串
-			String str = (String) value;
-			if (str.contains("\n") || str.contains("\"") || str.contains("'")) {
-				// 使用三引号，转义其中的三引号
-				String escaped = str.replace("\\", "\\\\").replace("\"\"\"", "\\\"\\\"\\\"");
-				return "\"\"\"" + escaped + "\"\"\"";
-			} else {
-				return "\"" + str.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
-			}
+			return toPythonStringLiteral((String) value);
 		}
 		if (value instanceof Number) {
 			return value.toString();
@@ -513,6 +505,22 @@ public class GraalCodeExecutor {
 		// 其他复杂对象类型：尝试使用 Jackson 序列化为 JSON，然后在 Python 中解析
 		// 这样可以正确处理 Attachment 等 POJO 对象，而不是简单地调用 toString()
 		return convertComplexObjectToPythonLiteral(value);
+	}
+
+	static String toPythonStringLiteral(String value) {
+		if (value == null) {
+			return "None";
+		}
+		try {
+			return JSON_MAPPER.writeValueAsString(value);
+		} catch (JsonProcessingException e) {
+			logger.warn("GraalCodeExecutor#toPythonStringLiteral - reason=JSON字符串序列化失败, error={}", e.getMessage());
+			return "\"" + value.replace("\\", "\\\\")
+					.replace("\"", "\\\"")
+					.replace("\r", "\\r")
+					.replace("\n", "\\n")
+					.replace("\t", "\\t") + "\"";
+		}
 	}
 
 	/**

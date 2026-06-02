@@ -84,6 +84,16 @@ public class Experience {
      */
     private ExperienceMetadata metadata;
 
+    /**
+     * 渐进披露第三层（L3）面向 LLM 的参考文档。仅通过 {@code read_exp_doc} 按路径读取。
+     */
+    private List<ReferenceEntry> references = new ArrayList<>();
+
+    /**
+     * 仅在沙箱内使用的附件（脚本/静态资源/评估数据）。不会通过 {@code read_exp_doc} 披露。
+     */
+    private List<AssetEntry> assets = new ArrayList<>();
+
     public Experience() {
         this.id = UUID.randomUUID().toString();
         this.createdAt = Instant.now();
@@ -237,6 +247,22 @@ public class Experience {
 
     public void setMetadata(ExperienceMetadata metadata) {
         this.metadata = metadata != null ? metadata : new ExperienceMetadata();
+    }
+
+    public List<ReferenceEntry> getReferences() {
+        return references;
+    }
+
+    public void setReferences(List<ReferenceEntry> references) {
+        this.references = references != null ? references : new ArrayList<>();
+    }
+
+    public List<AssetEntry> getAssets() {
+        return assets;
+    }
+
+    public void setAssets(List<AssetEntry> assets) {
+        this.assets = assets != null ? assets : new ArrayList<>();
     }
 
     /**

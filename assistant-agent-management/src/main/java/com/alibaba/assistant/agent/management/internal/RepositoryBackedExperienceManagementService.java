@@ -11,6 +11,7 @@ import com.alibaba.assistant.agent.management.model.ExperienceUpdateRequest;
 import com.alibaba.assistant.agent.management.model.ExperienceVO;
 import com.alibaba.assistant.agent.management.model.PageResult;
 import com.alibaba.assistant.agent.management.spi.ExperienceManagementService;
+import com.alibaba.assistant.agent.management.spi.ReferenceSummarizer;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -23,15 +24,23 @@ public class RepositoryBackedExperienceManagementService implements ExperienceMa
 
     private final ExperienceRepository repository;
     private final ExperienceToolInvocationClassifier toolInvocationClassifier;
+    private final ReferenceSummarizer referenceSummarizer;
 
     public RepositoryBackedExperienceManagementService(ExperienceRepository repository) {
-        this(repository, null);
+        this(repository, null, null);
     }
 
     public RepositoryBackedExperienceManagementService(ExperienceRepository repository,
                                                        ExperienceToolInvocationClassifier toolInvocationClassifier) {
+        this(repository, toolInvocationClassifier, null);
+    }
+
+    public RepositoryBackedExperienceManagementService(ExperienceRepository repository,
+                                                       ExperienceToolInvocationClassifier toolInvocationClassifier,
+                                                       ReferenceSummarizer referenceSummarizer) {
         this.repository = repository;
         this.toolInvocationClassifier = toolInvocationClassifier;
+        this.referenceSummarizer = referenceSummarizer != null ? referenceSummarizer : new NoopReferenceSummarizer();
     }
 
     @Override
@@ -135,6 +144,52 @@ public class RepositoryBackedExperienceManagementService implements ExperienceMa
             counts.put(type, (long) repository.findAllByType(type).size());
         }
         return counts;
+    }
+
+    @Override
+    public com.alibaba.assistant.agent.extension.experience.model.AssetEntry loadAsset(String id, String path) {
+        if (id == null || path == null) {
+            return null;
+        }
+        Experience exp = repository.findById(id).orElse(null);
+        if (exp == null || exp.getAssets() == null) {
+            return null;
+        }
+        for (var a : exp.getAssets()) {
+            if (path.equals(a.getPath())) {
+                return a;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public int resummarizeReferences(String id) {
+        if (id == null) {
+            return 0;
+        }
+        Experience exp = repository.findById(id).orElse(null);
+        if (exp == null || exp.getReferences() == null || exp.getReferences().isEmpty()) {
+            return 0;
+        }
+        int updated = 0;
+        for (var ref : exp.getReferences()) {
+            String content = ref.getContent();
+            if (content == null || content.isBlank()) {
+                continue;
+            }
+            String oldDesc = ref.getDescription();
+            String newDesc = DescriptionResolver.resolve(ref.getPath(), content, referenceSummarizer);
+            if (newDesc != null && !newDesc.equals(oldDesc)) {
+                ref.setDescription(newDesc);
+                updated++;
+            }
+        }
+        if (updated > 0) {
+            exp.touch();
+            repository.save(exp);
+        }
+        return updated;
     }
 
     private List<Experience> collectExperiences(ExperienceType type) {

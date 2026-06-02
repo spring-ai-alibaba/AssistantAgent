@@ -315,7 +315,9 @@ public class BaseReplyCodeactTool implements ReplyCodeactTool {
 	 */
 	private String buildInputSchemaFromParameterSchema() {
 		if (parameterSchema == null || parameterSchema.getParameters().isEmpty()) {
-			return "{}";
+			// 必须返回合法 JSON Schema 对象, 否则部分模型提供方(如 idealab Anthropic 兼容层)会
+			// 拒 400: tools.N.custom.input_schema.type: Field required
+			return "{\"type\":\"object\",\"properties\":{}}";
 		}
 
 		Map<String, Object> schema = new LinkedHashMap<>();

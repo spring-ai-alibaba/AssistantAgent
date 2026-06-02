@@ -1,6 +1,8 @@
 package com.alibaba.assistant.agent.management.internal;
 
 import com.alibaba.assistant.agent.management.model.SkillPackage;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +38,7 @@ public class SkillPackageParser {
 
     private static final int TAR_BLOCK_SIZE = 512;
     private static final long MAX_ENTRY_SIZE = 10 * 1024 * 1024; // 10MB per file
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * 从 tgz（gzipped tar）输入流解析 skill 包
@@ -262,6 +265,13 @@ public class SkillPackageParser {
         }
 
         String json = new String(pkgJsonData, StandardCharsets.UTF_8);
+        try {
+            Map<String, Object> packageMetadata = objectMapper.readValue(json, new TypeReference<>() {
+            });
+            pkg.setPackageMetadata(packageMetadata);
+        } catch (Exception e) {
+            log.warn("SkillPackageParser#enrichFromPackageJson - failed to parse package.json as structured metadata", e);
+        }
         // 简单的 JSON 字段提取（避免引入额外 JSON 库依赖）
         String name = extractJsonString(json, "name");
         String version = extractJsonString(json, "version");

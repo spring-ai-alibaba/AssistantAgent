@@ -97,6 +97,11 @@ const ExpConsole = (() => {
       fallback: 'Fallback',
       fastIntentMatchJson: 'Fast Intent Match JSON',
       artifactJson: 'Artifact JSON',
+      referencesLabel: 'References',
+      assetsLabel: 'Assets',
+      resummarizeBtn: 'Re-summarize',
+      resummarizeOk: 'Updated {n} references',
+      resummarizeFail: 'Re-summarize failed',
       propertiesJson: 'Metadata Properties JSON',
       importSkillTitle: 'Import SKILL',
       importExperienceModal: 'Import Experience (from SKILL)',
@@ -126,6 +131,7 @@ const ExpConsole = (() => {
       toastImportFailed: 'Import failed: {message}',
       toastPreviewFailed: 'Preview failed: {message}',
       toastExportFailed: 'Export failed: {message}',
+      toastExportDownloaded: 'Downloaded {filename}.',
       toastLoadToolsFailed: 'Failed to load tools: {message}',
       toastRequestFailed: 'Request failed ({status})',
       toastUpdated: 'Experience updated.',
@@ -225,6 +231,11 @@ const ExpConsole = (() => {
       fallback: '回退策略',
       fastIntentMatchJson: '快速意图匹配 JSON',
       artifactJson: 'Artifact JSON',
+      referencesLabel: '参考文档 References',
+      assetsLabel: '资源文件 Assets',
+      resummarizeBtn: '重新总结',
+      resummarizeOk: '已更新 {n} 个参考文档描述',
+      resummarizeFail: '重新总结失败',
       propertiesJson: '元数据属性 JSON',
       importSkillTitle: '导入 SKILL',
       importExperienceModal: '导入经验（来自 SKILL）',
@@ -254,6 +265,7 @@ const ExpConsole = (() => {
       toastImportFailed: '导入失败: {message}',
       toastPreviewFailed: '预览失败: {message}',
       toastExportFailed: '导出失败: {message}',
+      toastExportDownloaded: '已下载 {filename}。',
       toastLoadToolsFailed: '加载工具失败: {message}',
       toastRequestFailed: '请求失败 ({status})',
       toastUpdated: '经验已更新。',
@@ -347,6 +359,10 @@ const ExpConsole = (() => {
     dom.formFastIntentMatch = $('#form-fastintent-match');
     dom.formArtifactJson = $('#form-artifact-json');
     dom.formPropertiesJson = $('#form-properties-json');
+    dom.formGroupReferences = $('#form-group-references');
+    dom.formReferencesList = $('#form-references-list');
+    dom.formGroupAssets = $('#form-group-assets');
+    dom.formAssetsList = $('#form-assets-list');
     dom.skillImportModal = $('#skill-import-modal');
     dom.skillImportContent = $('#skill-import-content');
     dom.skillPreviewArea = $('#skill-preview-area');
@@ -598,6 +614,8 @@ const ExpConsole = (() => {
     setText('form-label-fastintent-fallback', t('fallback'));
     setText('form-label-fastintent-match', t('fastIntentMatchJson'));
     setText('form-label-artifact-json', t('artifactJson'));
+    setText('form-label-references', t('referencesLabel'));
+    setText('form-label-assets', t('assetsLabel'));
     setText('form-label-properties-json', t('propertiesJson'));
 
     setText('modal-cancel', t('cancel'));
@@ -1337,6 +1355,8 @@ const ExpConsole = (() => {
       dom.formFastIntentMatch.value = stringifyJson(exp.fastIntentConfig ? exp.fastIntentConfig.match : null);
       dom.formArtifactJson.value = stringifyJson(exp.artifact);
       dom.formPropertiesJson.value = stringifyJson(exp.properties);
+      renderReferencesAndAssets(exp);
+      wireResummarizeButton(exp.id);
 
       openModal(t('editExperienceModal'), true);
     } catch (err) {
@@ -1454,6 +1474,99 @@ const ExpConsole = (() => {
     return TOOL_INVOCATION_PATH_DEFAULT;
   }
 
+  function wireResummarizeButton(experienceId) {
+    const btn = document.getElementById('btn-resummarize');
+    if (!btn || !experienceId) {
+      return;
+    }
+    btn.textContent = t('resummarizeBtn');
+    btn.onclick = async () => {
+      btn.disabled = true;
+      const original = btn.textContent;
+      btn.textContent = '…';
+      try {
+        const resp = await fetch(`${API_BASE}/experiences/${encodeURIComponent(experienceId)}/resummarize`, {
+          method: 'POST',
+        });
+        if (!resp.ok) {
+          throw new Error('HTTP ' + resp.status);
+        }
+        const payload = await resp.json();
+        const n = payload.updated ?? 0;
+        showToast(t('resummarizeOk', { n }), 'success');
+        // Reload experience to reflect new descriptions
+        const detailResp = await fetch(`${API_BASE}/experiences/${encodeURIComponent(experienceId)}`);
+        if (detailResp.ok) {
+          const exp = await detailResp.json();
+          renderReferencesAndAssets(exp);
+        }
+      } catch (err) {
+        showToast(t('resummarizeFail') + ': ' + err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = original;
+      }
+    };
+  }
+
+  function renderReferencesAndAssets(exp) {
+    const refs = (exp && Array.isArray(exp.references)) ? exp.references : [];
+    const assets = (exp && Array.isArray(exp.assets)) ? exp.assets : [];
+    if (dom.formGroupReferences) {
+      dom.formGroupReferences.hidden = refs.length === 0;
+      if (refs.length > 0) {
+        dom.formReferencesList.innerHTML = refs.map(r => {
+          const size = r.size != null ? ` · ${r.size}B` : '';
+          const desc = r.description ? ` — ${escapeHtml(r.description)}` : '';
+          const preview = r.content ? `<details><summary style="cursor:pointer;color:#888;">content</summary><pre style="white-space:pre-wrap;margin:4px 0;">${escapeHtml(r.content)}</pre></details>` : '';
+          return `<div style="padding:4px 0;border-bottom:1px solid #eee;"><strong>${escapeHtml(r.path || '')}</strong><span style="color:#888;">${size}</span>${desc}${preview}</div>`;
+        }).join('');
+      }
+    }
+    if (dom.formGroupAssets) {
+      dom.formGroupAssets.hidden = assets.length === 0;
+      if (assets.length > 0) {
+        dom.formAssetsList.innerHTML = assets.map(a => {
+          const role = a.role ? ` [${escapeHtml(a.role)}]` : '';
+          const size = a.size != null ? ` · ${a.size}B` : '';
+          const desc = a.description ? ` — ${escapeHtml(a.description)}` : '';
+          const avail = a.contentAvailable
+            ? ` <a href="#" data-asset-path="${escapeHtml(a.path || '')}" class="asset-fetch-link" style="color:#0969da;">[load content]</a>`
+            : '';
+          return `<div style="padding:4px 0;border-bottom:1px solid #eee;" data-asset-row="${escapeHtml(a.path || '')}"><strong>${escapeHtml(a.path || '')}</strong><span style="color:#888;">${role}${size}</span>${desc}${avail}</div>`;
+        }).join('');
+        dom.formAssetsList.querySelectorAll('.asset-fetch-link').forEach(link => {
+          link.addEventListener('click', async (ev) => {
+            ev.preventDefault();
+            const path = link.getAttribute('data-asset-path');
+            try {
+              const encoded = path.split('/').map(encodeURIComponent).join('/');
+              const resp = await fetch(`${API_BASE}/experiences/${encodeURIComponent(exp.id)}/assets/${encoded}`);
+              if (!resp.ok) {
+                throw new Error('HTTP ' + resp.status);
+              }
+              const payload = await resp.json();
+              const row = dom.formAssetsList.querySelector(`[data-asset-row="${CSS.escape(path)}"]`);
+              if (row) {
+                const pre = document.createElement('pre');
+                pre.style.whiteSpace = 'pre-wrap';
+                pre.style.margin = '4px 0';
+                pre.style.background = '#f6f8fa';
+                pre.style.padding = '4px';
+                const content = payload.content || '';
+                pre.textContent = content.length > 2000 ? content.slice(0, 2000) + '…(truncated)' : content;
+                row.appendChild(pre);
+                link.remove();
+              }
+            } catch (err) {
+              showToast('Load asset failed: ' + err.message, 'error');
+            }
+          });
+        });
+      }
+    }
+  }
+
 
   // ═══════════════════════════════════════════════════════
   // Delete
@@ -1564,7 +1677,7 @@ const ExpConsole = (() => {
   function renderImportResult(result) {
     let html = '';
 
-    // Preview experience info
+    // React experience summary
     if (result.experience) {
       const exp = result.experience;
       dom.skillPreviewArea.hidden = false;
@@ -1574,6 +1687,39 @@ const ExpConsole = (() => {
         <div class="preview-field"><span class="preview-label">${escapeHtml(t('previewDescription'))}: </span><span class="preview-value">${escapeHtml(exp.description || t('notAvailable'))}</span></div>
         ${exp.tags && exp.tags.length ? `<div class="preview-field"><span class="preview-label">${escapeHtml(t('previewTags'))}: </span><span class="preview-value">${exp.tags.map(tag => escapeHtml(tag)).join(', ')}</span></div>` : ''}
       `;
+    }
+
+    // Tool experience (CLI binding)
+    if (result.toolExperience) {
+      const tool = result.toolExperience;
+      html += `<div class="import-result-section"><div class="import-result-section-title">Tool Experience (CLI)</div>
+        <div class="preview-field"><span class="preview-label">Name: </span><span class="preview-value">${escapeHtml(tool.name || '')}</span></div>
+        <div class="preview-field"><span class="preview-label">ID: </span><span class="preview-value">${escapeHtml(tool.id || '')}</span></div>
+        <div class="preview-field"><span class="preview-label">${escapeHtml(t('previewDescription'))}: </span><span class="preview-value">${escapeHtml(tool.description || '')}</span></div>
+      </div>`;
+    }
+
+    // References
+    if (result.references && result.references.length) {
+      html += `<div class="import-result-section"><div class="import-result-section-title">${escapeHtml(t('referencesLabel'))} (${result.references.length})</div><ul class="import-result-list">`;
+      for (const r of result.references) {
+        const desc = r.description ? ` — ${escapeHtml(r.description)}` : '';
+        const size = r.size != null ? ` · ${r.size}B` : '';
+        html += `<li><strong>${escapeHtml(r.path || '')}</strong><span style="color:#888;">${size}</span>${desc}</li>`;
+      }
+      html += `</ul></div>`;
+    }
+
+    // Assets
+    if (result.assets && result.assets.length) {
+      html += `<div class="import-result-section"><div class="import-result-section-title">${escapeHtml(t('assetsLabel'))} (${result.assets.length})</div><ul class="import-result-list">`;
+      for (const a of result.assets) {
+        const role = a.role ? ` [${escapeHtml(a.role)}]` : '';
+        const size = a.size != null ? ` · ${a.size}B` : '';
+        const desc = a.description ? ` — ${escapeHtml(a.description)}` : '';
+        html += `<li><strong>${escapeHtml(a.path || '')}</strong><span style="color:#888;">${role}${size}</span>${desc}</li>`;
+      }
+      html += `</ul></div>`;
     }
 
     // Processed files
@@ -1682,19 +1828,19 @@ const ExpConsole = (() => {
         return;
       }
       try {
-        const result = await api.previewSkillPackage(selectedFile);
-        if (result.experience) {
-          openImportForm(result.experience);
-          // Show info toast about skipped files / warnings
-          if (result.skippedFiles && result.skippedFiles.length) {
-            const skippedNames = result.skippedFiles.map(sf => sf.path).join(', ');
-            showToast(t('skippedFiles') + ': ' + skippedNames, 'info');
-          }
-          if (result.warnings && result.warnings.length) {
-            showToast(result.warnings.join('; '), 'error');
-          }
-        } else {
-          showToast(t('toastImportFailed', { message: 'No experience data found in package' }), 'error');
+        // Directly call /import-package — preserves references/assets and creates
+        // tool experience alongside react experience.
+        const result = await api.importSkillPackage(selectedFile);
+        renderImportResult(result);
+        if (result.warnings && result.warnings.length) {
+          showToast(result.warnings.join('; '), 'error');
+        }
+        showToast(t('toastImportSuccess') || 'Import successful', 'success');
+        closeSkillImport();
+        // Refresh list + open detail drawer on the newly created react experience
+        if (result.importedId) {
+          await loadExperiences();
+          setTimeout(() => { openEditModal(result.importedId); }, 200);
         }
       } catch (err) {
         showToast(t('toastImportFailed', { message: err.message }), 'error');
@@ -1721,12 +1867,43 @@ const ExpConsole = (() => {
 
   async function exportAsSkill(id) {
     try {
-      const result = await api.exportSkill(id);
-      dom.skillExportContent.value = result.content || result;
-      dom.skillExportModal.hidden = false;
+      // 触发 zip 下载（无损还原 SKILL.md / references / assets / package.json）
+      const url = API_BASE + '/skills/export-package/' + encodeURIComponent(id);
+      const resp = await fetch(url);
+      if (!resp.ok) {
+        const text = await resp.text().catch(() => '');
+        throw new Error(text || `HTTP ${resp.status}`);
+      }
+      const blob = await resp.blob();
+      const filename = parseFilenameFromContentDisposition(resp.headers.get('content-disposition'))
+        || (id + '.zip');
+      triggerDownload(blob, filename);
+      showToast(t('toastExportDownloaded', { filename }), 'success');
     } catch (err) {
       showToast(t('toastExportFailed', { message: err.message }), 'error');
     }
+  }
+
+  function parseFilenameFromContentDisposition(header) {
+    if (!header) return null;
+    // RFC 5987: filename*=UTF-8''xxx
+    const starMatch = header.match(/filename\*=UTF-8''([^;]+)/i);
+    if (starMatch) {
+      try { return decodeURIComponent(starMatch[1]); } catch (_) { /* fallthrough */ }
+    }
+    const plainMatch = header.match(/filename="?([^";]+)"?/i);
+    return plainMatch ? plainMatch[1] : null;
+  }
+
+  function triggerDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   function closeSkillExport() {

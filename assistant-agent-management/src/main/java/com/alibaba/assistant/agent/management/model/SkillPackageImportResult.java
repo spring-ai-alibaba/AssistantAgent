@@ -1,5 +1,8 @@
 package com.alibaba.assistant.agent.management.model;
 
+import com.alibaba.assistant.agent.extension.experience.model.AssetEntry;
+import com.alibaba.assistant.agent.extension.experience.model.ReferenceEntry;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,6 +23,26 @@ public class SkillPackageImportResult {
      * 导入后的经验预览
      */
     private ExperienceVO experience;
+
+    /**
+     * 导入后生成的 TOOL 类型经验 ID（CLI-bound package）
+     */
+    private String importedToolId;
+
+    /**
+     * 导入后的 TOOL 类型经验预览
+     */
+    private ExperienceVO toolExperience;
+
+    /**
+     * 本次导入生成的 reference 条目列表（供管理页预览）
+     */
+    private List<ReferenceEntry> references = new ArrayList<>();
+
+    /**
+     * 本次导入生成的 asset 条目列表（供管理页预览；content 可能已置空以避免载荷过大）
+     */
+    private List<AssetEntry> assets = new ArrayList<>();
 
     /**
      * 成功处理的文件路径列表
@@ -87,6 +110,38 @@ public class SkillPackageImportResult {
 
     public void setExperience(ExperienceVO experience) {
         this.experience = experience;
+    }
+
+    public String getImportedToolId() {
+        return importedToolId;
+    }
+
+    public void setImportedToolId(String importedToolId) {
+        this.importedToolId = importedToolId;
+    }
+
+    public ExperienceVO getToolExperience() {
+        return toolExperience;
+    }
+
+    public void setToolExperience(ExperienceVO toolExperience) {
+        this.toolExperience = toolExperience;
+    }
+
+    public List<ReferenceEntry> getReferences() {
+        return references;
+    }
+
+    public void setReferences(List<ReferenceEntry> references) {
+        this.references = references != null ? references : new ArrayList<>();
+    }
+
+    public List<AssetEntry> getAssets() {
+        return assets;
+    }
+
+    public void setAssets(List<AssetEntry> assets) {
+        this.assets = assets != null ? assets : new ArrayList<>();
     }
 
     public List<String> getProcessedFiles() {

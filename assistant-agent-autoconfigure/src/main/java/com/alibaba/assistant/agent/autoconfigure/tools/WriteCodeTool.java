@@ -232,12 +232,16 @@ public class WriteCodeTool implements BiFunction<WriteCodeTool.Request, ToolCont
 	private static final String WRITE_CODE_DESCRIPTION = """
 		使用指定的名称和完整代码注册一个 Python 函数。
 		
+		⚠️ 四个参数都是必需的，缺一不可。**尤其是 `code`**：必须在本次调用中直接传入完整函数体的 Python 源码字符串，不能只传 functionName/description/parameters 然后期望后续再补 code —— 缺少 `code` 会立即报错 "Error: code is required"。
+		
 		必需参数：
 		- functionName：函数名称（snake_case 格式，例如 'calculate_sum'）
 		- description：函数功能的简要描述
 		- parameters：函数参数名的字符串数组。只写参数名，不要包含类型或描述。无参数时传空数组 []。
 		  正确示例：["a", "b"]、["query"]、[]
-		- code：完整的 Python 函数代码，包含 'def' 语句和完整实现
+		- code：完整的 Python 函数代码，必须以 'def function_name(...):' 开头并包含完整函数体；不能是空字符串、不能只写签名、不能省略
+		
+		⚠️ 一次性编排：对于一个完整任务，应在单次 `write_code` 中写出**覆盖全流程**的函数（含所有工具调用、分支、汇总、最终回复），而不是拆成 step0/step1/... 多次 write_code + execute_code。
 		
 		代码编写规范：
 		1. 函数结构：

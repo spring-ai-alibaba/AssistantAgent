@@ -156,6 +156,14 @@ public final class CodeactStateKeys {
 	 */
 	public static final String EXPERIENCE_ALLOWED_REACT_TOOL_NAMES = "experience_allowed_react_tool_names";
 
+	/**
+	 * 本 session 中已成功调用过 {@code read_exp} 的 experience id 集合；
+	 * {@code read_exp_doc} 的 session gate 依赖该状态。
+	 *
+	 * <p>类型：List&lt;String&gt;
+	 */
+	public static final String EXPERIENCE_READ_EXP_IDS = "experience_read_exp_ids";
+
 	// ==================== Session级别代码存储 ====================
 
 	/**

@@ -7,7 +7,9 @@ import com.alibaba.assistant.agent.management.model.SkillPackage;
 import com.alibaba.assistant.agent.management.model.SkillPackageImportResult;
 import com.alibaba.assistant.agent.management.spi.SkillExchangeService;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 @RestController
@@ -65,6 +68,28 @@ public class SkillExchangeController {
     public ResponseEntity<Map<String, String>> exportSkill(@PathVariable("id") String id) {
         String content = service.exportSkill(id);
         return ResponseEntity.ok(Map.of("content", content));
+    }
+
+    @GetMapping("/export-package/{id}")
+    public ResponseEntity<byte[]> exportSkillPackage(@PathVariable("id") String id) {
+        byte[] zipBytes = service.exportSkillPackage(id);
+        String filename = sanitizeFilename(id) + ".zip";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("application/zip"));
+        headers.setContentDisposition(
+                org.springframework.http.ContentDisposition.attachment()
+                        .filename(filename, StandardCharsets.UTF_8)
+                        .build());
+        headers.setContentLength(zipBytes.length);
+        return ResponseEntity.ok().headers(headers).body(zipBytes);
+    }
+
+    private static String sanitizeFilename(String value) {
+        if (value == null || value.isBlank()) {
+            return "skill";
+        }
+        String trimmed = value.trim().replaceAll("[\\\\/:*?\"<>|]+", "_");
+        return trimmed.length() > 80 ? trimmed.substring(0, 80) : trimmed;
     }
 
     @GetMapping("/export")

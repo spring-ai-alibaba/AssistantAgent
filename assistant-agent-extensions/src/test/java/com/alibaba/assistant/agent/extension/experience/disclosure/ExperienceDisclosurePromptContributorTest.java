@@ -129,6 +129,11 @@ class ExperienceDisclosurePromptContributorTest {
         // Verify guidance text (Chinese body with tool references)
         assertTrue(text.contains("search_exp"));
         assertTrue(text.contains("read_exp"));
+        assertTrue(text.contains("read_exp_doc"), "prompt must describe read_exp_doc");
+        assertTrue(text.contains("referenceManifest") || text.contains("manifest"),
+                "prompt must mention manifest");
+        assertTrue(text.contains("/workspace/") || text.contains("沙箱"),
+                "prompt must describe sandbox workspace for assets");
         assertTrue(text.contains("PROGRESSIVE"));
         assertTrue(text.contains("DIRECT"));
     }

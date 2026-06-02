@@ -244,6 +244,14 @@
           <label class="form-label" for="form-artifact-json" id="form-label-artifact-json">Artifact JSON</label>
           <textarea id="form-artifact-json" class="form-textarea form-textarea--mono" rows="10" placeholder='{"react":{"assistantText":"...","plan":{"toolCalls":[]}}}'></textarea>
         </div>
+        <div class="form-group" id="form-group-references" hidden>
+          <label class="form-label" id="form-label-references">References <button type="button" id="btn-resummarize" class="btn btn--ghost" style="margin-left:8px;font-size:12px;padding:2px 8px;">Re-summarize</button></label>
+          <div id="form-references-list" class="form-textarea form-textarea--mono" style="min-height:80px;max-height:240px;overflow:auto;padding:8px;white-space:pre-wrap;"></div>
+        </div>
+        <div class="form-group" id="form-group-assets" hidden>
+          <label class="form-label" id="form-label-assets">Assets</label>
+          <div id="form-assets-list" class="form-textarea form-textarea--mono" style="min-height:80px;max-height:240px;overflow:auto;padding:8px;white-space:pre-wrap;"></div>
+        </div>
         <div class="form-group" id="form-group-properties-json">
           <label class="form-label" for="form-properties-json" id="form-label-properties-json">Metadata Properties JSON</label>
           <textarea id="form-properties-json" class="form-textarea form-textarea--mono" rows="6" placeholder='{"scenario":"新建变更"}'></textarea>
