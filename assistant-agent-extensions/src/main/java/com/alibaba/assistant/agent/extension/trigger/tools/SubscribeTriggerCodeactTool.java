@@ -172,7 +172,7 @@ public class SubscribeTriggerCodeactTool implements TriggerCodeactTool {
 				        },
 				        "schedule_value": {
 				            "type": "string",
-				            "description": "调度值：CRON模式为cron表达式；FIXED_DELAY/FIXED_RATE模式为毫秒数(如3分钟=180000)；ONE_TIME模式为ISO时间戳"
+				            "description": "调度值：CRON模式为6位cron表达式（秒 分 时 日 月 周，例如每天凌晨2点为 0 0 2 * * *）；FIXED_DELAY/FIXED_RATE模式为毫秒数(如3分钟=180000)；ONE_TIME模式为ISO时间戳"
 				        },
 				        "condition_function": {
 				            "type": "string",
@@ -225,7 +225,7 @@ public class SubscribeTriggerCodeactTool implements TriggerCodeactTool {
 			.addParameter(ParameterNode.builder()
 				.name("schedule_value")
 				.type(ParameterType.STRING)
-				.description("调度值：CRON模式为cron表达式；FIXED_DELAY/FIXED_RATE模式为毫秒数(如3分钟=180000)；ONE_TIME模式为ISO时间戳")
+				.description("调度值：CRON模式为6位cron表达式（秒 分 时 日 月 周，例如每天凌晨2点为 0 0 2 * * *）；FIXED_DELAY/FIXED_RATE模式为毫秒数(如3分钟=180000)；ONE_TIME模式为ISO时间戳")
 				.required(true)
 				.build())
 			.addParameter(ParameterNode.builder()
@@ -267,11 +267,11 @@ public class SubscribeTriggerCodeactTool implements TriggerCodeactTool {
 					result = trigger_tools.subscribe_trigger(
 					    name="daily_task",
 					    schedule_mode="CRON",
-					    schedule_value="0 0 * * *",
+					    schedule_value="0 0 0 * * *",
 					    execute_function="print('Daily execution')"
 					)
 					print(f"Trigger ID: {result['trigger_id']}")
-					""", "创建一个每天午夜执行的触发器，并打印触发器 ID"))
+					""", "创建一个每天午夜执行的触发器（cron格式为6位：秒 分 时 日 月 周），并打印触发器 ID"))
 			.addFewShot(new CodeExample("创建一个3分钟后提醒的触发器", """
 					# 3分钟 = 3 * 60 * 1000 = 180000毫秒
 					delay_ms = 3 * 60 * 1000  # 分钟 * 秒 * 毫秒

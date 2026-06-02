@@ -59,7 +59,55 @@ public class SkillPackageImportResult {
      */
     private List<String> warnings = new ArrayList<>();
 
+    /**
+     * 同名冲突信息。当导入时检测到已有同名 REACT skill 且调用方未指定冲突策略时设置。
+     * 此时 {@link #importedId} 为空，前端应根据该字段提示用户选择「替换」或「保留两者」。
+     */
+    private ConflictInfo conflict;
+
     public SkillPackageImportResult() {
+    }
+
+    /**
+     * 同名冲突详情
+     */
+    public static class ConflictInfo {
+        private String existingId;
+        private String existingName;
+        private String existingToolId;
+
+        public ConflictInfo() {
+        }
+
+        public ConflictInfo(String existingId, String existingName, String existingToolId) {
+            this.existingId = existingId;
+            this.existingName = existingName;
+            this.existingToolId = existingToolId;
+        }
+
+        public String getExistingId() {
+            return existingId;
+        }
+
+        public void setExistingId(String existingId) {
+            this.existingId = existingId;
+        }
+
+        public String getExistingName() {
+            return existingName;
+        }
+
+        public void setExistingName(String existingName) {
+            this.existingName = existingName;
+        }
+
+        public String getExistingToolId() {
+            return existingToolId;
+        }
+
+        public void setExistingToolId(String existingToolId) {
+            this.existingToolId = existingToolId;
+        }
     }
 
     /**
@@ -186,5 +234,17 @@ public class SkillPackageImportResult {
 
     public boolean hasWarnings() {
         return warnings != null && !warnings.isEmpty();
+    }
+
+    public ConflictInfo getConflict() {
+        return conflict;
+    }
+
+    public void setConflict(ConflictInfo conflict) {
+        this.conflict = conflict;
+    }
+
+    public boolean hasConflict() {
+        return conflict != null;
     }
 }

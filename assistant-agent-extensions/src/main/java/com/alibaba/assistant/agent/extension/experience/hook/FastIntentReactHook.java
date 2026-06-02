@@ -244,11 +244,11 @@ public class FastIntentReactHook extends AgentHook implements Prioritized {
         }
         if (state != null) {
             state.value("tenant_id", String.class).ifPresent(context::setTenantId);
-            state.value("user_id", String.class).ifPresent(context::setTenantId);
+            state.value("user_id", String.class).ifPresent(context::setUserId);
         }
         if (config != null) {
             config.metadata("tenant_id").ifPresent(id -> context.setTenantId(String.valueOf(id)));
-            config.metadata("user_id").ifPresent(id -> context.setTenantId(String.valueOf(id)));
+            config.metadata("user_id").ifPresent(id -> context.setUserId(String.valueOf(id)));
         }
         return context;
     }
