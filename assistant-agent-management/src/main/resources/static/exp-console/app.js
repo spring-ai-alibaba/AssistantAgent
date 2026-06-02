@@ -141,6 +141,10 @@ const ExpConsole = (() => {
       toastSourceSyncFailed: 'Sync failed: {message}',
       toastSourceSyncPartial: 'Sync finished with {count} issue(s).',
       toastSkillImported: 'SKILL imported successfully.',
+      skillConflictTitle: 'Duplicate skill detected',
+      skillConflictMessage: 'A skill named "{name}" already exists. Replace it or keep both?',
+      skillConflictReplace: 'Replace existing',
+      skillConflictKeepBoth: 'Keep both',
       toastCopied: 'Copied to clipboard.',
       toastNameRequired: 'Name is required.',
       toastContentRequired: 'Content is required.',
@@ -275,6 +279,10 @@ const ExpConsole = (() => {
       toastSourceSyncFailed: '同步失败: {message}',
       toastSourceSyncPartial: '同步完成，但有 {count} 个问题。',
       toastSkillImported: 'SKILL 导入成功。',
+      skillConflictTitle: '检测到同名 Skill',
+      skillConflictMessage: '已存在同名 Skill「{name}」，请选择处理方式：替换旧的还是保留两者？',
+      skillConflictReplace: '替换旧的',
+      skillConflictKeepBoth: '保留两者',
       toastCopied: '已复制到剪贴板。',
       toastNameRequired: '名称不能为空。',
       toastContentRequired: '内容不能为空。',
@@ -519,10 +527,11 @@ const ExpConsole = (() => {
       return apiFetch('/skills/preview', { method: 'POST', body: { content } });
     },
 
-    importSkillPackage(file) {
+    importSkillPackage(file, conflictStrategy) {
       const formData = new FormData();
       formData.append('file', file);
-      return apiFetchRaw('/skills/import-package', { method: 'POST', body: formData });
+      const qs = conflictStrategy ? ('?conflictStrategy=' + encodeURIComponent(conflictStrategy)) : '';
+      return apiFetchRaw('/skills/import-package' + qs, { method: 'POST', body: formData });
     },
 
     previewSkillPackage(file) {
@@ -1821,6 +1830,37 @@ const ExpConsole = (() => {
     openModal(t('importExperienceModal'), false);
   }
 
+  function promptSkillConflict(existingName) {
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:10000;';
+      const safeName = escapeHtml(existingName || '');
+      overlay.innerHTML = `
+        <div class="modal" style="position:relative;background:#fff;border-radius:8px;padding:20px 24px;max-width:480px;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+          <button type="button" data-choice="cancel" aria-label="Close" style="position:absolute;top:10px;right:12px;border:0;background:transparent;color:#999;font-size:20px;line-height:1;cursor:pointer;padding:4px;">&times;</button>
+          <h3 style="margin:0 0 12px 0;font-size:16px;">${t('skillConflictTitle')}</h3>
+          <p style="margin:0 0 20px 0;color:#444;line-height:1.6;">${t('skillConflictMessage', { name: safeName })}</p>
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button type="button" class="btn" data-choice="KEEP_BOTH">${t('skillConflictKeepBoth')}</button>
+            <button type="button" class="btn btn-primary" data-choice="REPLACE">${t('skillConflictReplace')}</button>
+          </div>
+        </div>
+      `;
+      const cleanup = (val) => {
+        document.body.removeChild(overlay);
+        resolve(val);
+      };
+      overlay.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-choice]');
+        if (!btn) return;
+        const choice = btn.dataset.choice;
+        cleanup(choice === 'cancel' ? null : choice);
+      });
+      document.body.appendChild(overlay);
+    });
+  }
+
   async function submitSkillImport() {
     if (currentImportMode === 'upload') {
       if (!selectedFile) {
@@ -1828,16 +1868,22 @@ const ExpConsole = (() => {
         return;
       }
       try {
-        // Directly call /import-package — preserves references/assets and creates
-        // tool experience alongside react experience.
-        const result = await api.importSkillPackage(selectedFile);
+        // First attempt: no strategy. Backend may report a duplicate-name conflict.
+        let result = await api.importSkillPackage(selectedFile);
+        if (result && result.conflict && !result.importedId) {
+          const choice = await promptSkillConflict(result.conflict.existingName);
+          if (!choice) {
+            return; // user cancelled — keep modal open
+          }
+          result = await api.importSkillPackage(selectedFile, choice);
+        }
         renderImportResult(result);
         if (result.warnings && result.warnings.length) {
           showToast(result.warnings.join('; '), 'error');
         }
         showToast(t('toastImportSuccess') || 'Import successful', 'success');
         closeSkillImport();
-        // Refresh list + open detail drawer on the newly created react experience
+        // Refresh list + open detail drawer on the newly created/updated react experience
         if (result.importedId) {
           await loadExperiences();
           setTimeout(() => { openEditModal(result.importedId); }, 200);

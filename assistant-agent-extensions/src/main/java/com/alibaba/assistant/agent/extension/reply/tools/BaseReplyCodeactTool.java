@@ -51,6 +51,10 @@ import java.util.*;
 public class BaseReplyCodeactTool implements ReplyCodeactTool {
 
 	private static final Logger log = LoggerFactory.getLogger(BaseReplyCodeactTool.class);
+	private static final String USER_ID_METADATA_KEY = "user_id";
+	private static final String TRACE_ID_METADATA_KEY = "trace_id";
+	private static final String CHANNEL_TYPE_METADATA_KEY = "channel_type";
+	private static final String CHANNEL_ID_METADATA_KEY = "channel_id";
 
 	private final String toolName;
 
@@ -480,12 +484,23 @@ public class BaseReplyCodeactTool implements ReplyCodeactTool {
 			log.warn("BaseReplyCodeactTool#buildExecutionContext - reason=未能获取sessionId(threadId), toolName={}", toolName);
 		}
 
-		// 从 metadata 获取 userId 和 traceId
-		ToolContextHelper.getFromMetadata(toolContext, "user_id").ifPresent(builder::userId);
-		ToolContextHelper.getFromMetadata(toolContext, "trace_id").ifPresent(builder::traceId);
+		// 从 metadata 获取基础上下文字段
+		ToolContextHelper.getFromMetadata(toolContext, USER_ID_METADATA_KEY).ifPresent(builder::userId);
+		ToolContextHelper.getFromMetadata(toolContext, TRACE_ID_METADATA_KEY).ifPresent(builder::traceId);
+
+		// 将 channel 相关信息注入 extensions，供 reply 渠道实现自行读取。
+		copyMetadataToExtension(toolContext, builder, CHANNEL_TYPE_METADATA_KEY);
+		copyMetadataToExtension(toolContext, builder, CHANNEL_ID_METADATA_KEY);
 
 		return builder.build();
 	}
 
-}
+	private void copyMetadataToExtension(ToolContext toolContext, ChannelExecutionContext.Builder builder, String key) {
+		ToolContextHelper.getFromMetadata(toolContext, key).ifPresent(value -> {
+			builder.extension(key, value);
+			log.debug("BaseReplyCodeactTool#buildExecutionContext - reason=注入metadata到extensions, toolName={}, key={}",
+					toolName, key);
+		});
+	}
 
+}

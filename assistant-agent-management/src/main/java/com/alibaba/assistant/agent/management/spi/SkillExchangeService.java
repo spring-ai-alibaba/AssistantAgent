@@ -2,6 +2,7 @@ package com.alibaba.assistant.agent.management.spi;
 
 import com.alibaba.assistant.agent.extension.experience.model.ExperienceType;
 import com.alibaba.assistant.agent.management.model.ExperienceVO;
+import com.alibaba.assistant.agent.management.model.SkillImportConflictStrategy;
 import com.alibaba.assistant.agent.management.model.SkillPackage;
 import com.alibaba.assistant.agent.management.model.SkillPackageImportResult;
 
@@ -40,7 +41,22 @@ public interface SkillExchangeService {
      * @return 导入结果，包含处理/跳过的文件明细
      */
     default SkillPackageImportResult importSkillPackage(SkillPackage skillPackage) {
-        // 默认实现：退化为仅导入 SKILL.md 文本
+        return importSkillPackage(skillPackage, null);
+    }
+
+    /**
+     * 导入 skill 包，并指定同名冲突的处理策略。
+     *
+     * <p>策略为 {@code null} 时，若检测到已存在同名 REACT skill，则不落库，
+     * 在结果的 {@code conflict} 字段中回传已存在经验信息，由调用方提示用户决策。
+     *
+     * @param skillPackage     解析后的 skill 包
+     * @param conflictStrategy 冲突策略；可为 {@code null}
+     * @return 导入结果
+     */
+    default SkillPackageImportResult importSkillPackage(SkillPackage skillPackage,
+                                                        SkillImportConflictStrategy conflictStrategy) {
+        // 默认实现：退化为仅导入 SKILL.md 文本（不区分冲突策略）
         SkillPackageImportResult result = new SkillPackageImportResult();
         if (skillPackage.hasSkillMd()) {
             String id = importSkill(skillPackage.getSkillMdContent());

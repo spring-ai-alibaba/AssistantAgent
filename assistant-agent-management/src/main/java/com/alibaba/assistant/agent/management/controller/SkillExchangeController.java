@@ -3,6 +3,7 @@ package com.alibaba.assistant.agent.management.controller;
 import com.alibaba.assistant.agent.extension.experience.model.ExperienceType;
 import com.alibaba.assistant.agent.management.internal.SkillPackageParser;
 import com.alibaba.assistant.agent.management.model.ExperienceVO;
+import com.alibaba.assistant.agent.management.model.SkillImportConflictStrategy;
 import com.alibaba.assistant.agent.management.model.SkillPackage;
 import com.alibaba.assistant.agent.management.model.SkillPackageImportResult;
 import com.alibaba.assistant.agent.management.spi.SkillExchangeService;
@@ -51,10 +52,15 @@ public class SkillExchangeController {
     }
 
     @PostMapping("/import-package")
-    public ResponseEntity<SkillPackageImportResult> importPackage(@RequestParam("file") MultipartFile file) throws IOException {
+    public ResponseEntity<SkillPackageImportResult> importPackage(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(name = "conflictStrategy", required = false) SkillImportConflictStrategy conflictStrategy) throws IOException {
         SkillPackage pkg = packageParser.parseAuto(file.getInputStream());
-        SkillPackageImportResult result = service.importSkillPackage(pkg);
-        return ResponseEntity.status(HttpStatus.CREATED).body(result);
+        SkillPackageImportResult result = service.importSkillPackage(pkg, conflictStrategy);
+        // 检测到同名冲突且未指定策略时返回 200（含 conflict 字段）；正常导入返回 201
+        HttpStatus status = result.hasConflict() && result.getImportedId() == null
+                ? HttpStatus.OK : HttpStatus.CREATED;
+        return ResponseEntity.status(status).body(result);
     }
 
     @PostMapping("/preview-package")

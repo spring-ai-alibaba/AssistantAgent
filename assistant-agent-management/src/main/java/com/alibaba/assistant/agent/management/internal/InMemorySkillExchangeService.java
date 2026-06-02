@@ -9,6 +9,7 @@ import com.alibaba.assistant.agent.extension.experience.model.ExperienceType;
 import com.alibaba.assistant.agent.extension.experience.model.ReferenceEntry;
 import com.alibaba.assistant.agent.extension.experience.spi.ExperienceRepository;
 import com.alibaba.assistant.agent.management.model.ExperienceVO;
+import com.alibaba.assistant.agent.management.model.SkillImportConflictStrategy;
 import com.alibaba.assistant.agent.management.model.SkillPackage;
 import com.alibaba.assistant.agent.management.model.SkillPackageImportResult;
 import com.alibaba.assistant.agent.management.spi.ReferenceSummarizer;
@@ -239,7 +240,13 @@ public class InMemorySkillExchangeService implements SkillExchangeService {
 
     @Override
     public SkillPackageImportResult importSkillPackage(SkillPackage skillPackage) {
-        PreparedSkillImport prepared = prepareSkillPackageImport(skillPackage);
+        return importSkillPackage(skillPackage, null);
+    }
+
+    @Override
+    public SkillPackageImportResult importSkillPackage(SkillPackage skillPackage,
+                                                       SkillImportConflictStrategy conflictStrategy) {
+        PreparedSkillImport prepared = prepareSkillPackageImport(skillPackage, conflictStrategy);
         if (prepared.reactExperience == null) {
             return prepared.result;
         }
@@ -259,7 +266,8 @@ public class InMemorySkillExchangeService implements SkillExchangeService {
 
     @Override
     public SkillPackageImportResult previewSkillPackageImport(SkillPackage skillPackage) {
-        PreparedSkillImport prepared = prepareSkillPackageImport(skillPackage);
+        // 预览阶段以 KEEP_BOTH 策略生成预览（不实际落库），冲突信息由 prepareSkillPackageImport 回填
+        PreparedSkillImport prepared = prepareSkillPackageImport(skillPackage, SkillImportConflictStrategy.KEEP_BOTH);
         if (prepared.reactExperience == null) {
             return prepared.result;
         }
@@ -271,7 +279,8 @@ public class InMemorySkillExchangeService implements SkillExchangeService {
         return prepared.result;
     }
 
-    private PreparedSkillImport prepareSkillPackageImport(SkillPackage skillPackage) {
+    private PreparedSkillImport prepareSkillPackageImport(SkillPackage skillPackage,
+                                                          SkillImportConflictStrategy conflictStrategy) {
         SkillPackageImportResult result = new SkillPackageImportResult();
         if (!skillPackage.hasSkillMd()) {
             result.addWarning("No SKILL.md found in package");
@@ -279,10 +288,43 @@ public class InMemorySkillExchangeService implements SkillExchangeService {
         }
 
         Experience existingReact = findExistingReactExperienceByPackage(skillPackage).orElse(null);
-        Map<String, String> existingDescriptionsByHash = buildDescriptionCache(existingReact);
 
+        // 提前解析 frontmatter 中的 name，回退用 react 经验名做同名查找
         Experience reactExperience = parseSkillMarkdown(skillPackage.getSkillMdContent());
         enrichExperienceFromPackage(reactExperience, skillPackage);
+
+        if (existingReact == null) {
+            existingReact = findExistingReactExperienceByName(reactExperience.getName()).orElse(null);
+        }
+
+        // 同名冲突时始终回传 conflict 信息；仅当调用方未指定策略时才跳过落库
+        if (existingReact != null) {
+            String existingToolId = null;
+            List<String> related = existingReact.getRelatedExperiences();
+            if (related != null) {
+                for (String relatedId : related) {
+                    if (relatedId != null && relatedId.startsWith("cli:")) {
+                        existingToolId = relatedId;
+                        break;
+                    }
+                }
+            }
+            result.setConflict(new SkillPackageImportResult.ConflictInfo(
+                    existingReact.getId(), existingReact.getName(), existingToolId));
+            if (conflictStrategy == null) {
+                return new PreparedSkillImport(result, null, null);
+            }
+        }
+
+        Map<String, String> existingDescriptionsByHash = buildDescriptionCache(existingReact);
+
+        // REPLACE 策略：复用已存在经验的 ID，使 repository.save 走更新路径
+        if (existingReact != null && conflictStrategy == SkillImportConflictStrategy.REPLACE) {
+            reactExperience.setId(existingReact.getId());
+            if (existingReact.getCreatedAt() != null) {
+                reactExperience.setCreatedAt(existingReact.getCreatedAt());
+            }
+        }
 
         List<ReferenceEntry> references = new ArrayList<>();
         List<AssetEntry> assets = new ArrayList<>();
@@ -316,6 +358,15 @@ public class InMemorySkillExchangeService implements SkillExchangeService {
         }
         return repository.findAllByType(ExperienceType.REACT).stream()
                 .filter(e -> skillPackage.getName().equalsIgnoreCase(e.getName()))
+                .findFirst();
+    }
+
+    private Optional<Experience> findExistingReactExperienceByName(String name) {
+        if (name == null || name.isBlank()) {
+            return Optional.empty();
+        }
+        return repository.findAllByType(ExperienceType.REACT).stream()
+                .filter(e -> name.equalsIgnoreCase(e.getName()))
                 .findFirst();
     }
 
